@@ -1,14 +1,16 @@
 import EditCountry from "@/components/admin/countries/EditCountry"
 import { getCountryTranslations } from "@/lib/actions/countries.actions"
 
+type Params = Promise<{ id: string }>
+
 type Props = {
-    params: {
-        id: string
-    }
+    params: Params
 }
 
 export default async function EditCountryPage({ params }: Props) {
-    const countryTranslations = await getCountryTranslations(params.id)
+    const { id } = await params
+
+    const countryTranslations = await getCountryTranslations(id)
 
     return <EditCountry countryTranslations={countryTranslations} />
 }
