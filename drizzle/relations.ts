@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { users, academics, academicAthletic, profiles, sports, academicSport, academicTranslations, account, cities, addresses, coaches, bookings, packages, bookingSessions, branches, branchFacility, facilities, branchSport, branchTranslations, states, cityTranslations, coachPackage, coachProgram, programs, coachSpokenLanguage, spokenLanguages, coachSport, countries, countryTranslations, facilityTranslations, permissions, modelHasPermissions, roles, modelHasRoles, otpVerifications, pages, pageTranslations, roleHasPermissions, schedules, session, spokenLanguageTranslations, sportTranslations, stateTranslations, wishlist } from "./schema";
+import { users, academics, academicAthletic, profiles, sports, academicSport, academicTranslations, cities, addresses, coaches, bookings, packages, bookingSessions, branches, branchFacility, facilities, branchSport, branchTranslations, states, cityTranslations, coachPackage, coachProgram, programs, coachSpokenLanguage, spokenLanguages, coachSport, countries, countryTranslations, facilityTranslations, permissions, modelHasPermissions, roles, modelHasRoles, otpVerifications, pages, pageTranslations, roleHasPermissions, schedules, spokenLanguageTranslations, sportTranslations, stateTranslations, wishlist } from "./schema";
 
 export const academicsRelations = relations(academics, ({one, many}) => ({
 	user: one(users, {
@@ -11,17 +11,16 @@ export const academicsRelations = relations(academics, ({one, many}) => ({
 	academicTranslations: many(academicTranslations),
 	branches: many(branches),
 	coaches: many(coaches),
+	programs: many(programs),
 	wishlists: many(wishlist),
 }));
 
 export const usersRelations = relations(users, ({many}) => ({
 	academics: many(academics),
 	academicAthletics: many(academicAthletic),
-	accounts: many(account),
 	addresses: many(addresses),
 	otpVerifications: many(otpVerifications),
 	profiles: many(profiles),
-	sessions: many(session),
 	wishlists: many(wishlist),
 }));
 
@@ -77,13 +76,6 @@ export const academicTranslationsRelations = relations(academicTranslations, ({o
 	academic: one(academics, {
 		fields: [academicTranslations.academicId],
 		references: [academics.id]
-	}),
-}));
-
-export const accountRelations = relations(account, ({one}) => ({
-	user: one(users, {
-		fields: [account.userId],
-		references: [users.id]
 	}),
 }));
 
@@ -238,6 +230,10 @@ export const coachProgramRelations = relations(coachProgram, ({one}) => ({
 export const programsRelations = relations(programs, ({one, many}) => ({
 	coachPrograms: many(coachProgram),
 	packages: many(packages),
+	academic: one(academics, {
+		fields: [programs.academicId],
+		references: [academics.id]
+	}),
 	branch: one(branches, {
 		fields: [programs.branchId],
 		references: [branches.id]
@@ -351,13 +347,6 @@ export const schedulesRelations = relations(schedules, ({one}) => ({
 	package: one(packages, {
 		fields: [schedules.packageId],
 		references: [packages.id]
-	}),
-}));
-
-export const sessionRelations = relations(session, ({one}) => ({
-	user: one(users, {
-		fields: [session.userId],
-		references: [users.id]
 	}),
 }));
 

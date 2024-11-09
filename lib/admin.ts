@@ -1,18 +1,19 @@
 'use server'
 
-import { db } from "@/db";
-import { auth } from "./auth";
-import { headers } from "next/headers";
+import { auth, signIn } from "@/auth"
+import { cache } from "react"
 
-export async function isAdmin() {
-    const session = await auth.api.getSession({
-        headers: await headers()
-    });
-    
-    if (!session?.user?.id) {
-        return false;
-    }
+export const isAdmin = cache(async () => {
+    const session = await auth()
 
+    return session?.user?.role === 'admin'
+})
 
-    return session.user.role === 'admin'
+export const signInAdmin = async (email: string, password: string) => {
+    await signIn('credentials', {
+        email,
+        password,
+        redirect: true,
+        callbackUrl: '/admin'
+    })
 }

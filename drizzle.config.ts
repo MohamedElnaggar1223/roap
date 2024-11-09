@@ -5,10 +5,10 @@ export default defineConfig({
     out: './drizzle',
     dialect: 'mysql',
     dbCredentials: {
-        host: 'localhost',
-        user: 'root',
+        host: process.env.DB_HOST!,
+        user: process.env.DB_USER!,
         password: process.env.DB_PASSWORD,
-        database: 'roap',
-        port: 3306
+        database: process.env.DB_NAME!,
+        port: parseInt(process.env.DB_PORT!)
     }
 })

@@ -1,4 +1,4 @@
-// import { mysqlTable, mysqlSchema, AnyMySqlColumn, foreignKey, unique, varchar, double, timestamp, longtext, mysqlEnum, text, index, date, int, mediumtext, time } from "drizzle-orm/mysql-core"
+// import { mysqlTable, mysqlSchema, AnyMySqlColumn, foreignKey, unique, varchar, double, timestamp, longtext, text, mysqlEnum, date, int, mediumtext, index, char, time } from "drizzle-orm/mysql-core"
 // import { sql } from "drizzle-orm"
 
 // export const academics = mysqlTable("academics", {
@@ -10,7 +10,7 @@
 // 	updatedAt: timestamp("updated_at", { mode: 'string' }).default('NULL'),
 // 	image: varchar({ length: 255 }).default('NULL'),
 // 	policy: longtext().default('NULL'),
-// 	status: mysqlEnum(['pending','accepted','rejected']).default('\'pending\'').notNull(),
+// 	extra: varchar({ length: 255 }).default('NULL'),
 // },
 // (table) => {
 // 	return {
@@ -22,7 +22,7 @@
 // 	id: bigint({ mode: "number" }).autoincrement().notNull(),
 // 	academicId: bigint("academic_id", { mode: "number" }).notNull().references(() => academics.id, { onDelete: "restrict", onUpdate: "restrict" } ),
 // 	userId: bigint("user_id", { mode: "number" }).notNull().references(() => users.id, { onDelete: "restrict", onUpdate: "restrict" } ),
-// 	profileId: bigint("profile_id", { mode: "number" }).default('NULL').references(() => profiles.id, { onDelete: "restrict", onUpdate: "restrict" } ),
+// 	profileId: bigint("profile_id", { mode: "number" }).default('NULL').references(() => profiles.id, { onDelete: "cascade", onUpdate: "restrict" } ),
 // 	sportId: bigint("sport_id", { mode: "number" }).default('NULL').references(() => sports.id, { onDelete: "restrict", onUpdate: "restrict" } ),
 // 	createdAt: timestamp("created_at", { mode: 'string' }).default('NULL'),
 // 	updatedAt: timestamp("updated_at", { mode: 'string' }).default('NULL'),
@@ -51,23 +51,6 @@
 // 	}
 // });
 
-// export const account = mysqlTable("account", {
-// 	id: varchar({ length: 255 }).notNull(),
-// 	accountId: varchar({ length: 255 }).notNull(),
-// 	providerId: varchar({ length: 255 }).notNull(),
-// 	userId: bigint({ mode: "number" }).notNull().references(() => users.id, { onDelete: "restrict", onUpdate: "restrict" } ),
-// 	accessToken: text().default('NULL'),
-// 	refreshToken: text().default('NULL'),
-// 	idToken: text().default('NULL'),
-// 	expiresAt: timestamp({ mode: 'string' }).default('NULL'),
-// 	password: text().default('NULL'),
-// },
-// (table) => {
-// 	return {
-// 		userId: index("userId").on(table.userId),
-// 	}
-// });
-
 // export const addresses = mysqlTable("addresses", {
 // 	id: bigint({ mode: "number" }).autoincrement().notNull(),
 // 	streetAddress: varchar("street_address", { length: 255 }).notNull(),
@@ -86,7 +69,7 @@
 // export const bookings = mysqlTable("bookings", {
 // 	id: bigint({ mode: "number" }).autoincrement().notNull(),
 // 	status: mysqlEnum(['success','rejected','pending']).default('\'pending\'').notNull(),
-// 	coachId: bigint("coach_id", { mode: "number" }).notNull().references(() => coaches.id, { onDelete: "cascade", onUpdate: "restrict" } ),
+// 	coachId: bigint("coach_id", { mode: "number" }).default('NULL').references(() => coaches.id, { onDelete: "cascade", onUpdate: "restrict" } ),
 // 	profileId: bigint("profile_id", { mode: "number" }).default('NULL').references(() => profiles.id, { onDelete: "cascade", onUpdate: "restrict" } ),
 // 	packageId: bigint("package_id", { mode: "number" }).notNull().references(() => packages.id, { onDelete: "cascade", onUpdate: "restrict" } ),
 // 	price: double().notNull(),
@@ -104,7 +87,7 @@
 // 	from: varchar({ length: 255 }).notNull(),
 // 	to: varchar({ length: 255 }).notNull(),
 // 	status: mysqlEnum(['pending','accepted','upcoming','rejected','cancelled']).default('\'pending\'').notNull(),
-// 	bookingId: bigint("booking_id", { mode: "number" }).notNull().references(() => bookings.id, { onDelete: "restrict", onUpdate: "restrict" } ),
+// 	bookingId: bigint("booking_id", { mode: "number" }).notNull().references(() => bookings.id, { onDelete: "cascade", onUpdate: "restrict" } ),
 // 	createdAt: timestamp("created_at", { mode: 'string' }).default('NULL'),
 // 	updatedAt: timestamp("updated_at", { mode: 'string' }).default('NULL'),
 // });
@@ -132,7 +115,7 @@
 
 // export const branchFacility = mysqlTable("branch_facility", {
 // 	id: bigint({ mode: "number" }).autoincrement().notNull(),
-// 	branchId: bigint("branch_id", { mode: "number" }).notNull().references(() => branches.id, { onDelete: "restrict", onUpdate: "restrict" } ),
+// 	branchId: bigint("branch_id", { mode: "number" }).notNull().references(() => branches.id, { onDelete: "cascade", onUpdate: "restrict" } ),
 // 	facilityId: bigint("facility_id", { mode: "number" }).notNull().references(() => facilities.id, { onDelete: "restrict", onUpdate: "restrict" } ),
 // 	createdAt: timestamp("created_at", { mode: 'string' }).default('NULL'),
 // 	updatedAt: timestamp("updated_at", { mode: 'string' }).default('NULL'),
@@ -140,7 +123,7 @@
 
 // export const branchSport = mysqlTable("branch_sport", {
 // 	id: bigint({ mode: "number" }).autoincrement().notNull(),
-// 	branchId: bigint("branch_id", { mode: "number" }).notNull().references(() => branches.id, { onDelete: "restrict", onUpdate: "restrict" } ),
+// 	branchId: bigint("branch_id", { mode: "number" }).notNull().references(() => branches.id, { onDelete: "cascade", onUpdate: "restrict" } ),
 // 	sportId: bigint("sport_id", { mode: "number" }).notNull().references(() => sports.id, { onDelete: "restrict", onUpdate: "restrict" } ),
 // 	createdAt: timestamp("created_at", { mode: 'string' }).default('NULL'),
 // 	updatedAt: timestamp("updated_at", { mode: 'string' }).default('NULL'),
@@ -196,6 +179,7 @@
 // export const coaches = mysqlTable("coaches", {
 // 	id: bigint({ mode: "number" }).autoincrement().notNull(),
 // 	name: varchar({ length: 255 }).notNull(),
+// 	title: varchar({ length: 255 }).default('NULL'),
 // 	image: varchar({ length: 255 }).default('NULL'),
 // 	bio: text().default('NULL'),
 // 	gender: varchar({ length: 255 }).default('NULL'),
@@ -209,8 +193,8 @@
 
 // export const coachPackage = mysqlTable("coach_package", {
 // 	id: bigint({ mode: "number" }).autoincrement().notNull(),
-// 	coachId: bigint("coach_id", { mode: "number" }).notNull().references(() => coaches.id, { onDelete: "restrict", onUpdate: "restrict" } ),
-// 	packageId: bigint("package_id", { mode: "number" }).notNull().references(() => packages.id, { onDelete: "restrict", onUpdate: "restrict" } ),
+// 	coachId: bigint("coach_id", { mode: "number" }).notNull().references(() => coaches.id, { onDelete: "cascade", onUpdate: "restrict" } ),
+// 	packageId: bigint("package_id", { mode: "number" }).notNull().references(() => packages.id, { onDelete: "cascade", onUpdate: "restrict" } ),
 // 	createdAt: timestamp("created_at", { mode: 'string' }).default('NULL'),
 // 	updatedAt: timestamp("updated_at", { mode: 'string' }).default('NULL'),
 // });
@@ -218,7 +202,7 @@
 // export const coachProgram = mysqlTable("coach_program", {
 // 	id: bigint({ mode: "number" }).autoincrement().notNull(),
 // 	coachId: bigint("coach_id", { mode: "number" }).notNull().references(() => coaches.id, { onDelete: "restrict", onUpdate: "restrict" } ),
-// 	programId: bigint("program_id", { mode: "number" }).notNull().references(() => programs.id, { onDelete: "restrict", onUpdate: "restrict" } ),
+// 	programId: bigint("program_id", { mode: "number" }).notNull().references(() => programs.id, { onDelete: "cascade", onUpdate: "restrict" } ),
 // 	createdAt: timestamp("created_at", { mode: 'string' }).default('NULL'),
 // 	updatedAt: timestamp("updated_at", { mode: 'string' }).default('NULL'),
 // });
@@ -233,7 +217,7 @@
 
 // export const coachSport = mysqlTable("coach_sport", {
 // 	id: bigint({ mode: "number" }).autoincrement().notNull(),
-// 	coachId: bigint("coach_id", { mode: "number" }).notNull().references(() => coaches.id, { onDelete: "restrict", onUpdate: "restrict" } ),
+// 	coachId: bigint("coach_id", { mode: "number" }).notNull().references(() => coaches.id, { onDelete: "cascade", onUpdate: "restrict" } ),
 // 	sportId: bigint("sport_id", { mode: "number" }).notNull().references(() => sports.id, { onDelete: "restrict", onUpdate: "restrict" } ),
 // 	createdAt: timestamp("created_at", { mode: 'string' }).default('NULL'),
 // 	updatedAt: timestamp("updated_at", { mode: 'string' }).default('NULL'),
@@ -380,8 +364,7 @@
 // });
 
 // export const notifications = mysqlTable("notifications", {
-// 	// Warning: Can't parse uuid from database
-// 	// uuidType: uuid("id").notNull(),
+// 	id: char({ length: 36 }).notNull(),
 // 	type: varchar({ length: 255 }).notNull(),
 // 	notifiableType: varchar("notifiable_type", { length: 255 }).notNull(),
 // 	notifiableId: bigint("notifiable_id", { mode: "number" }).notNull(),
@@ -414,7 +397,7 @@
 
 // export const packages = mysqlTable("packages", {
 // 	id: bigint({ mode: "number" }).autoincrement().notNull(),
-// 	name: varchar({ length: 255 }).notNull(),
+// 	name: varchar({ length: 255 }).default('\'Assessment Package\'').notNull(),
 // 	price: double().notNull(),
 // 	// you can use { mode: 'date' }, if you want to have Date as type for this column
 // 	startDate: date("start_date", { mode: 'string' }).notNull(),
@@ -422,9 +405,10 @@
 // 	endDate: date("end_date", { mode: 'string' }).notNull(),
 // 	sessionPerWeek: int("session_per_week").default(0).notNull(),
 // 	sessionDuration: int("session_duration").default('NULL'),
-// 	programId: bigint("program_id", { mode: "number" }).notNull().references(() => programs.id, { onDelete: "restrict", onUpdate: "restrict" } ),
+// 	programId: bigint("program_id", { mode: "number" }).notNull().references(() => programs.id, { onDelete: "cascade", onUpdate: "restrict" } ),
 // 	createdAt: timestamp("created_at", { mode: 'string' }).default('NULL'),
 // 	updatedAt: timestamp("updated_at", { mode: 'string' }).default('NULL'),
+// 	memo: text().default('NULL'),
 // });
 
 // export const pages = mysqlTable("pages", {
@@ -466,8 +450,7 @@
 // 	status: varchar({ length: 255 }).default('\'pending\'').notNull(),
 // 	referableType: varchar("referable_type", { length: 255 }).notNull(),
 // 	referableId: bigint("referable_id", { mode: "number" }).notNull(),
-// 	// Warning: Can't parse uuid from database
-// 	// uuidType: uuid("reference_number").notNull(),
+// 	referenceNumber: char("reference_number", { length: 36 }).notNull(),
 // 	createdAt: timestamp("created_at", { mode: 'string' }).default('NULL'),
 // 	updatedAt: timestamp("updated_at", { mode: 'string' }).default('NULL'),
 // },
@@ -519,30 +502,30 @@
 // 	birthday: date({ mode: 'string' }).default('NULL'),
 // 	userId: bigint("user_id", { mode: "number" }).notNull().references(() => users.id, { onDelete: "restrict", onUpdate: "restrict" } ),
 // 	image: varchar({ length: 255 }).default('NULL'),
-// 	relationship: varchar({ length: 255 }).default('\'primer\'').notNull(),
+// 	relationship: varchar({ length: 255 }).default('\'self\'').notNull(),
 // 	createdAt: timestamp("created_at", { mode: 'string' }).default('NULL'),
 // 	updatedAt: timestamp("updated_at", { mode: 'string' }).default('NULL'),
 // },
 // (table) => {
 // 	return {
-// 		profilesUserIdNameUnique: unique("profiles_user_id_name_unique").on(table.userId, table.name),
 // 		profilesRelationshipBirthdayNameUserIdUnique: unique("profiles_relationship_birthday_name_user_id_unique").on(table.relationship, table.birthday, table.name, table.userId),
 // 	}
 // });
 
 // export const programs = mysqlTable("programs", {
 // 	id: bigint({ mode: "number" }).autoincrement().notNull(),
-// 	type: mysqlEnum(['TEAM','PRIVATE']).notNull(),
+// 	academicId: bigint("academic_id", { mode: "number" }).default('NULL').references(() => academics.id, { onDelete: "cascade", onUpdate: "restrict" } ),
+// 	type: mysqlEnum(['TEAM','PRIVATE']).default('NULL'),
 // 	numberOfSeats: int("number_of_seats").default('NULL'),
-// 	branchId: bigint("branch_id", { mode: "number" }).notNull().references(() => branches.id, { onDelete: "restrict", onUpdate: "restrict" } ),
-// 	sportId: bigint("sport_id", { mode: "number" }).notNull().references(() => sports.id, { onDelete: "restrict", onUpdate: "restrict" } ),
-// 	gender: varchar({ length: 255 }).notNull(),
-// 	name: varchar({ length: 255 }).notNull(),
+// 	branchId: bigint("branch_id", { mode: "number" }).default('NULL').references(() => branches.id, { onDelete: "cascade", onUpdate: "restrict" } ),
+// 	sportId: bigint("sport_id", { mode: "number" }).default('NULL').references(() => sports.id, { onDelete: "restrict", onUpdate: "restrict" } ),
+// 	gender: varchar({ length: 255 }).default('NULL'),
+// 	name: varchar({ length: 255 }).default('NULL'),
 // 	description: varchar({ length: 255 }).default('NULL'),
 // 	// you can use { mode: 'date' }, if you want to have Date as type for this column
-// 	startDateOfBirth: date("start_date_of_birth", { mode: 'string' }).notNull(),
+// 	startDateOfBirth: date("start_date_of_birth", { mode: 'string' }).default('NULL'),
 // 	// you can use { mode: 'date' }, if you want to have Date as type for this column
-// 	endDateOfBirth: date("end_date_of_birth", { mode: 'string' }).notNull(),
+// 	endDateOfBirth: date("end_date_of_birth", { mode: 'string' }).default('NULL'),
 // 	createdAt: timestamp("created_at", { mode: 'string' }).default('NULL'),
 // 	updatedAt: timestamp("updated_at", { mode: 'string' }).default('NULL'),
 // });
@@ -570,22 +553,10 @@
 // 	day: varchar({ length: 255 }).notNull(),
 // 	from: time().notNull(),
 // 	to: time().notNull(),
-// 	packageId: bigint("package_id", { mode: "number" }).notNull().references(() => packages.id, { onDelete: "restrict", onUpdate: "restrict" } ),
+// 	packageId: bigint("package_id", { mode: "number" }).notNull().references(() => packages.id, { onDelete: "cascade", onUpdate: "restrict" } ),
 // 	createdAt: timestamp("created_at", { mode: 'string' }).default('NULL'),
 // 	updatedAt: timestamp("updated_at", { mode: 'string' }).default('NULL'),
-// });
-
-// export const session = mysqlTable("session", {
-// 	id: varchar({ length: 255 }).notNull(),
-// 	expiresAt: timestamp({ mode: 'string' }).notNull(),
-// 	ipAddress: text().default('NULL'),
-// 	userAgent: text().default('NULL'),
-// 	userId: bigint({ mode: "number" }).notNull().references(() => users.id, { onDelete: "restrict", onUpdate: "restrict" } ),
-// },
-// (table) => {
-// 	return {
-// 		userId: index("userId").on(table.userId),
-// 	}
+// 	memo: text().default('NULL'),
 // });
 
 // export const sessions = mysqlTable("sessions", {
@@ -742,13 +713,6 @@
 // 		usersEmailUnique: unique("users_email_unique").on(table.email),
 // 		usersPhoneNumberUnique: unique("users_phone_number_unique").on(table.phoneNumber),
 // 	}
-// });
-
-// export const verification = mysqlTable("verification", {
-// 	id: varchar({ length: 255 }).notNull(),
-// 	identifier: varchar({ length: 255 }).notNull(),
-// 	value: varchar({ length: 255 }).notNull(),
-// 	expiresAt: timestamp({ mode: 'string' }).notNull(),
 // });
 
 // export const wishlist = mysqlTable("wishlist", {

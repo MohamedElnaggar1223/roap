@@ -64,6 +64,13 @@
       "when": 1731112543171,
       "tag": "0008_striped_bastion",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1731161708030,
+      "tag": "0009_easy_reavers",
+      "breakpoints": true
     }
   ]
 }

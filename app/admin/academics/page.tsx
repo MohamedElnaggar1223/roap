@@ -76,107 +76,107 @@ export default function AcademicsTable() {
 
   return (
     <div className="flex w-full items-start justify-center h-full">
-        <div className="space-y-4 max-w-7xl w-full border rounded-2xl p-4 bg-[#fafafa]">
+      <div className="space-y-4 max-w-7xl w-full border rounded-2xl p-4 bg-[#fafafa]">
         <Table>
-            <TableHeader>
+          <TableHeader>
             <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Entry Fees</TableHead>
-                <TableHead>Academic Lead</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className='sr-only'>Actions</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Description</TableHead>
+              <TableHead>Entry Fees</TableHead>
+              <TableHead>Academic Lead</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className='sr-only'>Actions</TableHead>
             </TableRow>
-            </TableHeader>
-            <TableBody>
+          </TableHeader>
+          <TableBody>
             {academics.map((academic) => (
-                <TableRow key={academic.id}>
+              <TableRow key={academic.id}>
                 <TableCell>{academic.slug}</TableCell>
                 <TableCell>{academic.policy ? academic.policy.substring(0, 100) + '...' : 'N/A'}</TableCell>
                 <TableCell>${academic.entryFees.toFixed(2)}</TableCell>
                 <TableCell>{academic.userName || 'N/A'}</TableCell>
                 <TableCell>{academic.status || 'pending'}</TableCell>
                 <TableCell>
-                    <div className="flex space-x-2">
-                    <Button className='flex items-center justify-center gap-2' variant="outline" size="sm" onClick={() => console.log('Edit', academic.id)}>
-                        <Edit />
-                        Edit
+                  <div className="flex space-x-2">
+                    <Button className='flex items-center justify-center gap-2' variant="outline" onClick={() => console.log('Edit', academic.id)}>
+                      <Edit />
+                      Edit
                     </Button>
-                    <Button className='flex items-center justify-center gap-2' variant="outline" size="sm" onClick={() => console.log('View', academic.id)}>
-                        <Eye />
-                        View
+                    <Button className='flex items-center justify-center gap-2' variant="outline" onClick={() => console.log('View', academic.id)}>
+                      <Eye />
+                      View
                     </Button>
-                    </div>
+                  </div>
                 </TableCell>
-                </TableRow>
+              </TableRow>
             ))}
-            </TableBody>
+          </TableBody>
         </Table>
 
         <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2">
             <p className="text-sm font-medium">Rows per page</p>
             <Select
-                value={meta.pageSize.toString()}
-                onValueChange={handlePageSizeChange}
-                disabled={isPending}
+              value={meta.pageSize.toString()}
+              onValueChange={handlePageSizeChange}
+              disabled={isPending}
             >
-                <SelectTrigger className="h-8 w-[70px]">
+              <SelectTrigger className="h-8 w-[70px]">
                 <SelectValue placeholder={meta.pageSize} />
-                </SelectTrigger>
-                <SelectContent side="top">
+              </SelectTrigger>
+              <SelectContent side="top">
                 {[10, 20, 30, 40, 50].map((size) => (
-                    <SelectItem key={size} value={size.toString()}>
+                  <SelectItem key={size} value={size.toString()}>
                     {size}
-                    </SelectItem>
+                  </SelectItem>
                 ))}
-                </SelectContent>
+              </SelectContent>
             </Select>
-            </div>
+          </div>
 
-            <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2">
             <Button
-                variant="outline"
-                size="icon"
-                onClick={() => handlePageChange(1)}
-                disabled={meta.page === 1 || isPending}
+              variant="outline"
+              size="icon"
+              onClick={() => handlePageChange(1)}
+              disabled={meta.page === 1 || isPending}
             >
-                <ChevronsLeftIcon className="h-4 w-4" />
-                <span className="sr-only">First page</span>
+              <ChevronsLeftIcon className="h-4 w-4" />
+              <span className="sr-only">First page</span>
             </Button>
             <Button
-                variant="outline"
-                size="icon"
-                onClick={() => handlePageChange(meta.page - 1)}
-                disabled={meta.page === 1 || isPending}
+              variant="outline"
+              size="icon"
+              onClick={() => handlePageChange(meta.page - 1)}
+              disabled={meta.page === 1 || isPending}
             >
-                <ChevronLeftIcon className="h-4 w-4" />
-                <span className="sr-only">Previous page</span>
+              <ChevronLeftIcon className="h-4 w-4" />
+              <span className="sr-only">Previous page</span>
             </Button>
             <span className="text-sm">
-                Page {meta.page} of {meta.totalPages}
+              Page {meta.page} of {meta.totalPages}
             </span>
             <Button
-                variant="outline"
-                size="icon"
-                onClick={() => handlePageChange(meta.page + 1)}
-                disabled={meta.page === meta.totalPages || isPending}
+              variant="outline"
+              size="icon"
+              onClick={() => handlePageChange(meta.page + 1)}
+              disabled={meta.page === meta.totalPages || isPending}
             >
-                <ChevronRightIcon className="h-4 w-4" />
-                <span className="sr-only">Next page</span>
+              <ChevronRightIcon className="h-4 w-4" />
+              <span className="sr-only">Next page</span>
             </Button>
             <Button
-                variant="outline"
-                size="icon"
-                onClick={() => handlePageChange(meta.totalPages)}
-                disabled={meta.page === meta.totalPages || isPending}
+              variant="outline"
+              size="icon"
+              onClick={() => handlePageChange(meta.totalPages)}
+              disabled={meta.page === meta.totalPages || isPending}
             >
-                <ChevronsRightIcon className="h-4 w-4" />
-                <span className="sr-only">Last page</span>
+              <ChevronsRightIcon className="h-4 w-4" />
+              <span className="sr-only">Last page</span>
             </Button>
-            </div>
+          </div>
         </div>
-        </div>
+      </div>
     </div>
   )
 }

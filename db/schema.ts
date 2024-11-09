@@ -1,33 +1,6 @@
 import { sql } from "drizzle-orm";
-import { mysqlTable, unique, varchar, double, timestamp, longtext, text, mysqlEnum, date, int, mediumtext, index, time, bigint, tinyint, boolean } from "drizzle-orm/mysql-core"
+import { mysqlTable, unique, varchar, double, timestamp, longtext, text, mysqlEnum, date, int, mediumtext, index, time, bigint, tinyint } from "drizzle-orm/mysql-core"
 import { relations } from "drizzle-orm/relations";
-
-export const session = mysqlTable("session", {
-    id: varchar({ length: 255 }).notNull(),
-    expiresAt: timestamp({ mode: 'string' }).notNull(),
-    ipAddress: text().default('NULL'),
-    userAgent: text().default('NULL'),
-    userId: varchar({ length: 255 }).notNull().references(() => users.id, { onDelete: "restrict", onUpdate: "restrict" }),
-});
-
-export const accounts = mysqlTable("accounts", {
-    id: varchar({ length: 255 }).notNull(),
-    accountId: varchar({ length: 255 }).notNull(),
-    providerId: varchar({ length: 255 }).notNull(),
-    userId: varchar({ length: 255 }).notNull().references(() => users.id, { onDelete: "restrict", onUpdate: "restrict" }),
-    accessToken: text().default('NULL'),
-    refreshToken: text().default('NULL'),
-    idToken: text().default('NULL'),
-    expiresAt: timestamp({ mode: 'string' }).default('NULL'),
-    password: text().default('NULL'),
-});
-
-export const verification = mysqlTable("verification", {
-	id: varchar({ length: 255 }).notNull(),
-	identifier: varchar({ length: 255 }).notNull(),
-	value: varchar({ length: 255 }).notNull(),
-	expiresAt: timestamp({ mode: 'string' }).notNull(),
-});
 
 export const academics = mysqlTable("academics", {
 	id: bigint({ mode: "number" }).autoincrement().notNull(),
@@ -38,13 +11,13 @@ export const academics = mysqlTable("academics", {
 	updatedAt: timestamp("updated_at", { mode: 'string' }).default(sql`null`),
 	image: varchar({ length: 255 }).default(sql`null`),
 	policy: longtext().default(sql`null`),
-	status: mysqlEnum("status", ["accepted", "rejected", "pending"]).default('pending'),
+	status: mysqlEnum(['pending', 'accepted', 'rejected']).default('pending').notNull(),
 },
-(table) => {
-	return {
-		academicsSlugUnique: unique("academics_slug_unique").on(table.slug),
-	}
-});
+	(table) => {
+		return {
+			academicsSlugUnique: unique("academics_slug_unique").on(table.slug),
+		}
+	});
 
 export const academicAthletic = mysqlTable("academic_athletic", {
 	id: bigint({ mode: "number" }).autoincrement().notNull(),
@@ -251,7 +224,7 @@ export const coachSport = mysqlTable("coach_sport", {
 });
 
 export const countries = mysqlTable("countries", {
-	id: bigint({ mode: "number" }).autoincrement().notNull(),
+	id: bigint({ mode: "number" }).autoincrement().notNull().primaryKey(),
 	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`null`),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).default(sql`null`),
 });
@@ -713,39 +686,34 @@ export const subscriptionItems = mysqlTable("subscription_items", {
 		}
 	});
 
-export const usersAuth = mysqlTable("usersAuth", {
-    id: text("id").primaryKey(),
-    name: text('name').notNull(),
-    email: text('email').notNull().unique(),
-    emailVerified: boolean('emailVerified').notNull(),
-    image: text('image'),
-    createdAt: timestamp('createdAt').notNull(),
-    updatedAt: timestamp('updatedAt').notNull()
-});
-
 export const users = mysqlTable("users", {
-    id: text("id").primaryKey(),
-    name: text('name').notNull(),
-    email: text('email').notNull().unique(),
-    emailVerified: boolean('emailVerified').notNull(),
-    image: text('image'),
-    createdAt: timestamp('createdAt').notNull(),
-    updatedAt: timestamp('updatedAt').notNull(),
-    phone_number: text('phone_number').unique(),
-    google_id: text('google_id'),
-    apple_id: text('apple_id'),
-    is_athletic: int('is_athletic').notNull().default(0),
-    role: mysqlEnum('role', ['user', 'admin', 'academic']).notNull().default('user'),
-    email_verified_at: timestamp('email_verified_at'),
-    password: text('password'),
-    remember_token: text('remember_token'),
-    device_token: text('device_token'),
-    stripe_id: text('stripe_id'),
-    pm_type: text('pm_type'),
-    pm_last_four: text('pm_last_four'),
-    trial_ends_at: timestamp('trial_ends_at'),
-    deleted_at: timestamp('deleted_at'),
-});
+	id: bigint({ mode: "number" }).autoincrement().notNull(),
+	name: varchar({ length: 255 }).default(sql`null`),
+	email: varchar({ length: 255 }).default(sql`null`),
+	phoneNumber: varchar("phone_number", { length: 255 }).default(sql`null`),
+	googleId: varchar("google_id", { length: 255 }).default(sql`null`),
+	appleId: varchar("apple_id", { length: 255 }).default(sql`null`),
+	isAthletic: tinyint("is_athletic").default(0).notNull(),
+	emailVerifiedAt: timestamp("email_verified_at", { mode: 'string' }).default(sql`null`),
+	password: varchar({ length: 255 }).default(sql`null`),
+	rememberToken: varchar("remember_token", { length: 100 }).default(sql`null`),
+	deviceToken: varchar("device_token", { length: 400 }).default(sql`null`),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`null`),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).default(sql`null`),
+	stripeId: varchar("stripe_id", { length: 255 }).default(sql`null`),
+	pmType: varchar("pm_type", { length: 255 }).default(sql`null`),
+	pmLastFour: varchar("pm_last_four", { length: 4 }).default(sql`null`),
+	trialEndsAt: timestamp("trial_ends_at", { mode: 'string' }).default(sql`null`),
+	deletedAt: timestamp("deleted_at", { mode: 'string' }).default(sql`null`),
+	role: mysqlEnum(['academic', 'user', 'admin']).default('user').notNull(),
+},
+	(table) => {
+		return {
+			stripeIdIdx: index('users_stripe_id_index').on(table.stripeId),
+			usersEmailUnique: unique("users_email_unique").on(table.email),
+			usersPhoneNumberUnique: unique("users_phone_number_unique").on(table.phoneNumber),
+		}
+	});
 
 export const wishlist = mysqlTable("wishlist", {
 	id: bigint({ mode: "number" }).autoincrement().notNull(),
