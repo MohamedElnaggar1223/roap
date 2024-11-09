@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-import * as schema from '@/drizzle/schema'
+import * as schema from '@/db/schema'
 
 const connection = await mysql.createConnection({
     host: 'localhost',
