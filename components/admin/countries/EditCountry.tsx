@@ -29,6 +29,8 @@ import {
 import { useDebouncedCallback } from 'use-debounce'
 import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { addCountryTranslation, deleteCountryTranslations } from "@/lib/actions/countries.actions";
+import { addCountryTranslationSchema } from "@/lib/validations/countries";
 
 type CountryTranslation = {
     id: number;
@@ -38,6 +40,7 @@ type CountryTranslation = {
 
 type Props = {
     countryTranslations: CountryTranslation[]
+    countryId: string
 }
 
 const updateMainTranslationSchema = z.object({
@@ -49,19 +52,21 @@ const updateMainTranslationSchema = z.object({
     }),
 })
 
-export default function EditCountry({ countryTranslations }: Props) {
+export default function EditCountry({ countryTranslations, countryId }: Props) {
 
     const mainTranslation = countryTranslations.find(countryTranslation => countryTranslation.locale === 'en')
 
     const router = useRouter()
 
     const [loading, setLoading] = useState(false)
-    const [isPending, startTransition] = useTransition()
     const [selectedRows, setSelectedRows] = useState<number[]>([])
     const [countryTranslationsData, setCountryTranslationsData] = useState<CountryTranslation[]>(countryTranslations)
     const [searchQuery, setSearchQuery] = useState('')
     const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false)
     const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+    const [newTranslationOpen, setNewTranslationOpen] = useState(false)
+    const [newTranslationLoading, setNewTranslationLoading] = useState(false)
+    const [newTranslationError, setNewTranslationError] = useState('')
 
     const formMainTranslation = useForm<z.infer<typeof updateMainTranslationSchema>>({
         resolver: zodResolver(updateMainTranslationSchema),
@@ -76,6 +81,23 @@ export default function EditCountry({ countryTranslations }: Props) {
         // await updateMainTranslation(values)
         router.push('/admin/countries')
         setLoading(false)
+    }
+
+    const formNewTranslation = useForm<z.infer<typeof addCountryTranslationSchema>>({
+        resolver: zodResolver(addCountryTranslationSchema),
+        defaultValues: {
+            name: '',
+            locale: '',
+            countryId: countryId,
+        },
+    })
+
+    async function onSubmitNewTranslation(values: z.infer<typeof addCountryTranslationSchema>) {
+        setNewTranslationLoading(true)
+        await addCountryTranslation(values)
+        router.push('/admin/countries')
+        setNewTranslationLoading(false)
+        setNewTranslationOpen(false)
     }
 
     const handleDelete = () => { }
@@ -112,10 +134,12 @@ export default function EditCountry({ countryTranslations }: Props) {
         debouncedSearch(value)
     }
 
-    const handleBulkDelete = () => {
+    const handleBulkDelete = async () => {
         setBulkDeleteLoading(true)
-        // Implement bulk delete logic here
+        await deleteCountryTranslations(selectedRows)
+        router.refresh()
         setBulkDeleteLoading(false)
+        setBulkDeleteOpen(false)
     }
 
     return (
@@ -168,7 +192,7 @@ export default function EditCountry({ countryTranslations }: Props) {
                 <div className="space-y-4 divide-y max-w-7xl w-full border rounded-2xl p-4 bg-[#fafafa]">
                     <div className="flex w-full items-center justify-between p-1.5">
                         <p className='font-semibold'>Translations</p>
-                        <Button variant="outline" className='bg-main text-white hover:bg-main-hovered hover:text-white' size="sm">
+                        <Button onClick={() => setNewTranslationOpen(true)} variant="outline" className='bg-main text-white hover:bg-main-hovered hover:text-white' size="sm">
                             <PlusIcon stroke='#fff' className="h-4 w-4" />
                             New Translation
                         </Button>
@@ -250,14 +274,67 @@ export default function EditCountry({ countryTranslations }: Props) {
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button variant="destructive" onClick={handleBulkDelete} className='flex items-center gap-2'>
+                        <Button disabled={bulkDeleteLoading} variant="destructive" onClick={handleBulkDelete} className='flex items-center gap-2'>
+                            {bulkDeleteLoading && <Loader2 className='mr-2 h-5 w-5 animate-spin' />}
                             <Trash2Icon className="h-4 w-4" />
                             Delete
                         </Button>
-                        <Button onClick={() => setBulkDeleteOpen(false)} className='flex items-center gap-2'>
+                        <Button disabled={bulkDeleteLoading} onClick={() => setBulkDeleteOpen(false)} className='flex items-center gap-2'>
                             Cancel
                         </Button>
                     </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            <Dialog open={newTranslationOpen} onOpenChange={setNewTranslationOpen}>
+                <DialogContent className='font-geist'>
+                    <DialogHeader>
+                        <DialogTitle className='font-medium'>Create country translation</DialogTitle>
+                    </DialogHeader>
+                    <Form {...formNewTranslation}>
+                        <form onSubmit={formNewTranslation.handleSubmit(onSubmitNewTranslation)} className="space-y-4 w-full max-w-7xl">
+                            <div className="max-w-7xl flex max-lg:flex-wrap items-center justify-center w-full gap-4 border rounded-2xl p-6">
+                                <FormField
+                                    control={formNewTranslation.control}
+                                    name="name"
+                                    render={({ field }) => (
+                                        <FormItem className='flex-1'>
+                                            <FormLabel>Name</FormLabel>
+                                            <FormControl>
+                                                <Input disabled={loading} className='max-w-[570px] focus-visible:ring-main focus-visible:ring-2' placeholder="" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={formNewTranslation.control}
+                                    name="locale"
+                                    render={({ field }) => (
+                                        <FormItem className='flex-1'>
+                                            <FormLabel>Locale</FormLabel>
+                                            <FormControl>
+                                                <Input disabled={loading} className='max-w-[570px] focus-visible:ring-main focus-visible:ring-2' placeholder="" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                            </div>
+                            <DialogFooter>
+                                <div className="space-y-4 max-w-7xl w-full space-x-2">
+                                    <Button disabled={newTranslationLoading} type='submit' variant="outline" className='bg-main text-white hover:bg-main-hovered hover:text-white' size="default">
+                                        {newTranslationLoading && <Loader2 className='mr-2 h-5 w-5 animate-spin' />}
+                                        Create
+                                    </Button>
+                                    <Button onClick={() => setNewTranslationOpen(false)} disabled={newTranslationLoading} type='button' variant="outline" size="default">
+                                        Cancel
+                                    </Button>
+                                </div>
+                            </DialogFooter>
+                        </form>
+                    </Form>
                 </DialogContent>
             </Dialog>
         </>

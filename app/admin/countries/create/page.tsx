@@ -40,6 +40,11 @@ export default function CreateCountryPage() {
         setLoading(false)
     }
 
+    const handleCancel = () => {
+        form.reset()
+        router.push('/admin/countries')
+    }
+
     return (
         <div className="flex flex-col w-full items-center justify-start h-full gap-6">
             <div className="flex max-w-7xl items-center justify-between gap-2 w-full">
@@ -82,7 +87,7 @@ export default function CreateCountryPage() {
                             {loading && <Loader2 className='mr-2 h-5 w-5 animate-spin' />}
                             Create
                         </Button>
-                        <Button disabled={loading} type='button' variant="outline" size="default">
+                        <Button onClick={handleCancel} disabled={loading} type='button' variant="outline" size="default">
                             Cancel
                         </Button>
                     </div>

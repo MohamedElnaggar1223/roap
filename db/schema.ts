@@ -230,7 +230,7 @@ export const countries = mysqlTable("countries", {
 });
 
 export const countryTranslations = mysqlTable("country_translations", {
-	id: bigint({ mode: "number" }).autoincrement().notNull(),
+	id: bigint({ mode: "number" }).autoincrement().notNull().primaryKey(),
 	countryId: bigint("country_id", { mode: "number" }).notNull().references(() => countries.id, { onDelete: "cascade", onUpdate: "restrict" }),
 	locale: varchar({ length: 255 }).notNull(),
 	name: varchar({ length: 255 }).notNull(),

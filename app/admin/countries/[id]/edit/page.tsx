@@ -12,5 +12,5 @@ export default async function EditCountryPage({ params }: Props) {
 
     const countryTranslations = await getCountryTranslations(id)
 
-    return <EditCountry countryTranslations={countryTranslations} />
+    return <EditCountry countryTranslations={countryTranslations} countryId={id} />
 }

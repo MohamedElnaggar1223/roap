@@ -1,11 +1,11 @@
 'use server'
 
-import { SQL, asc, eq, sql } from 'drizzle-orm'
+import { SQL, asc, eq, sql, inArray } from 'drizzle-orm'
 import { db } from '@/db'
 import { countries, countryTranslations } from '@/db/schema'
 import { isAdmin } from '../admin'
 import { z } from 'zod'
-import { addCountrySchema } from '../validations/countries'
+import { addCountrySchema, addCountryTranslationSchema } from '../validations/countries'
 import { revalidatePath } from 'next/cache'
 import { cache } from 'react'
 
@@ -93,4 +93,63 @@ export const getCountryTranslations = cache(async (id: string) => {
         .where(eq(countryTranslations.countryId, parseInt(id)))
 
     return data
+})
+
+export const deleteCountries = cache(async (ids: number[]) => {
+    const isAdminRes = await isAdmin()
+
+    if (!isAdminRes) return {
+        data: null,
+        error: 'You are not authorized to perform this action',
+    }
+
+    await db.delete(countries).where(inArray(countries.id, ids))
+
+    revalidatePath('/admin/countries')
+})
+
+export const deleteCountryTranslations = cache(async (ids: number[]) => {
+    const isAdminRes = await isAdmin()
+
+    if (!isAdminRes) return {
+        data: null,
+        error: 'You are not authorized to perform this action',
+    }
+
+    await db.delete(countryTranslations).where(inArray(countryTranslations.id, ids))
+
+    revalidatePath('/admin/countries')
+})
+
+export const addCountryTranslation = cache(async (data: z.infer<typeof addCountryTranslationSchema>) => {
+    try {
+        const isAdminRes = await isAdmin()
+
+        if (!isAdminRes) return {
+            data: null,
+            error: 'You are not authorized to perform this action',
+        }
+
+        const { name, locale, countryId } = data
+
+        const countryTranslationCreated = await db.insert(countryTranslations).values({
+            id: sql`DEFAULT`,
+            countryId: parseInt(countryId),
+            locale,
+            name,
+        }).$returningId()
+
+        if (!countryTranslationCreated || !countryTranslationCreated.length) return {
+            data: null,
+            error: 'Something went wrong',
+        }
+
+        revalidatePath('/admin/countries')
+    }
+    catch (error: any) {
+        return {
+            data: null,
+            error: error.message,
+        }
+    }
 })
