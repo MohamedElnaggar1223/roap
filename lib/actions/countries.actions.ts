@@ -31,14 +31,31 @@ export async function getPaginatedCountries(
     const data = await db
         .select({
             id: countries.id,
-            name: countryTranslations.name,
-            locale: countryTranslations.locale,
+            name: sql<string>`t.name`,
+            locale: sql<string>`t.locale`,
         })
         .from(countries)
-        .leftJoin(countryTranslations, eq(countries.id, countryTranslations.countryId))
+        .innerJoin(
+            sql`(
+                SELECT ct.country_id, ct.name, ct.locale
+                FROM ${countryTranslations} ct
+                WHERE ct.locale = 'en'
+                UNION
+                SELECT ct.country_id, ct.name, ct.locale
+                FROM ${countryTranslations} ct
+                WHERE ct.country_id NOT IN (
+                    SELECT country_id 
+                    FROM ${countryTranslations} 
+                    WHERE locale = 'en'
+                )
+            ) t`,
+            sql`t.country_id = ${countries.id}`
+        )
         .orderBy(orderBy)
         .limit(pageSize)
         .offset(offset)
+
+    console.log(data)
 
     const [{ count }] = await db
         .select({ count: sql`count(*)`.mapWith(Number) })
@@ -95,7 +112,7 @@ export const getCountryTranslations = cache(async (id: string) => {
     return data
 })
 
-export const deleteCountries = cache(async (ids: number[]) => {
+export const deleteCountries = async (ids: number[]) => {
     const isAdminRes = await isAdmin()
 
     if (!isAdminRes) return {
@@ -106,9 +123,9 @@ export const deleteCountries = cache(async (ids: number[]) => {
     await db.delete(countries).where(inArray(countries.id, ids))
 
     revalidatePath('/admin/countries')
-})
+}
 
-export const deleteCountryTranslations = cache(async (ids: number[]) => {
+export const deleteCountryTranslations = async (ids: number[], countryId: string) => {
     const isAdminRes = await isAdmin()
 
     if (!isAdminRes) return {
@@ -118,10 +135,10 @@ export const deleteCountryTranslations = cache(async (ids: number[]) => {
 
     await db.delete(countryTranslations).where(inArray(countryTranslations.id, ids))
 
-    revalidatePath('/admin/countries')
-})
+    revalidatePath(`/admin/countries/${countryId}/edit`)
+}
 
-export const addCountryTranslation = cache(async (data: z.infer<typeof addCountryTranslationSchema>) => {
+export const addCountryTranslation = async (data: z.infer<typeof addCountryTranslationSchema>) => {
     try {
         const isAdminRes = await isAdmin()
 
@@ -144,12 +161,108 @@ export const addCountryTranslation = cache(async (data: z.infer<typeof addCountr
             error: 'Something went wrong',
         }
 
-        revalidatePath('/admin/countries')
+        revalidatePath(`/admin/countries/${countryId}/edit`)
+
+        return {
+            data: countryTranslationCreated[0]?.id,
+            error: null,
+        }
     }
     catch (error: any) {
         return {
             data: null,
             error: error.message,
         }
+    }
+}
+
+export const editCountryTranslation = async (data: { name: string, locale: string }, id: number) => {
+    try {
+        const isAdminRes = await isAdmin()
+
+        if (!isAdminRes) return {
+            data: null,
+            error: 'You are not authorized to perform this action',
+        }
+
+        const { name, locale } = data
+
+        await db.update(countryTranslations).set({
+            name,
+            locale,
+        }).where(eq(countryTranslations.id, id))
+
+        revalidatePath(`/admin/countries/${id}/edit`)
+
+        return {
+            data: id,
+            error: null,
+        }
+    }
+    catch (error: any) {
+        return {
+            data: null,
+            error: error.message,
+        }
+    }
+}
+
+export const deleteCountry = async (id: number) => {
+    const isAdminRes = await isAdmin()
+
+    if (!isAdminRes) return {
+        data: null,
+        error: 'You are not authorized to perform this action',
+    }
+
+    await db.delete(countries).where(eq(countries.id, id))
+
+    revalidatePath('/admin/countries')
+}
+
+export const getAllCountries = cache(async () => {
+    const AdminRes = await isAdmin()
+
+    if (!AdminRes) return {
+        data: [],
+        error: 'You are not authorized to perform this action',
+    }
+
+    const data = await db.select({
+        id: countries.id,
+        name: countryTranslations.name,
+        locale: countryTranslations.locale,
+        translationId: countryTranslations.id,
+    })
+        .from(countries)
+        .leftJoin(countryTranslations, eq(countryTranslations.countryId, countries.id))
+
+
+    const finalData = data.reduce((acc, curr) => {
+        const existingCountry = acc.find(country => country.id === curr.id);
+
+        if (existingCountry) {
+            existingCountry.countryTranslations.push({
+                id: curr.translationId ?? 0,
+                name: curr.name ?? '',
+                locale: curr.locale ?? '',
+            });
+        } else {
+            acc.push({
+                id: curr.id,
+                countryTranslations: [{
+                    id: curr.translationId ?? 0,
+                    name: curr.name ?? '',
+                    locale: curr.locale ?? '',
+                }]
+            });
+        }
+
+        return acc;
+    }, [] as { id: number; countryTranslations: { id: number; name: string; locale: string; }[] }[]);
+
+    return {
+        data: finalData,
+        error: null,
     }
 })

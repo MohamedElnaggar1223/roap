@@ -29,15 +29,16 @@ import {
     PlusIcon,
     Trash2Icon,
 } from "lucide-react"
-import { deleteCountries, getPaginatedCountries } from '@/lib/actions/countries.actions'
+import { deleteStates, getPaginatedStates } from '@/lib/actions/states.actions'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
-type Country = {
+type State = {
     id: number
     name: string | null
     locale: string | null
+    countryName: string | null
 }
 
 type PaginationMeta = {
@@ -47,11 +48,10 @@ type PaginationMeta = {
     totalPages: number
 }
 
-export default function CountriesTable() {
-
+export default function StatesTable() {
     const router = useRouter()
 
-    const [countries, setCountries] = useState<Country[]>([])
+    const [states, setStates] = useState<State[]>([])
     const [meta, setMeta] = useState<PaginationMeta>({
         page: 1,
         pageSize: 10,
@@ -63,25 +63,25 @@ export default function CountriesTable() {
     const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false)
     const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
 
-    const fetchCountries = (page: number, pageSize: number) => {
+    const fetchStates = (page: number, pageSize: number) => {
         startTransition(async () => {
-            const result = await getPaginatedCountries(page, pageSize)
-            setCountries(result?.data)
+            const result = await getPaginatedStates(page, pageSize)
+            setStates(result?.data)
             setMeta(result?.meta)
             setSelectedRows([])
         })
     }
 
     useEffect(() => {
-        fetchCountries(meta.page, meta.pageSize)
+        fetchStates(meta.page, meta.pageSize)
     }, [])
 
     const handlePageChange = (newPage: number) => {
-        fetchCountries(newPage, meta.pageSize)
+        fetchStates(newPage, meta.pageSize)
     }
 
     const handlePageSizeChange = (newPageSize: string) => {
-        fetchCountries(1, parseInt(newPageSize))
+        fetchStates(1, parseInt(newPageSize))
     }
 
     const handleRowSelect = (id: number) => {
@@ -92,15 +92,15 @@ export default function CountriesTable() {
 
     const handleSelectAll = () => {
         setSelectedRows(
-            selectedRows.length === countries.length ? [] : countries.map(country => country.id)
+            selectedRows.length === states.length ? [] : states.map(state => state.id)
         )
     }
 
     const handleBulkDelete = async () => {
         setBulkDeleteLoading(true)
-        await deleteCountries(selectedRows)
+        await deleteStates(selectedRows)
         router.refresh()
-        fetchCountries(meta.page, meta.pageSize)
+        fetchStates(meta.page, meta.pageSize)
         setBulkDeleteLoading(false)
         setBulkDeleteOpen(false)
     }
@@ -109,12 +109,11 @@ export default function CountriesTable() {
         <>
             <div className="flex flex-col w-full items-center justify-start h-full gap-6">
                 <div className="flex max-w-7xl items-center justify-between gap-2 w-full">
-                    <h1 className="text-3xl font-bold">Countries</h1>
+                    <h1 className="text-3xl font-bold">States</h1>
                     <div className="flex items-center gap-2">
                         {selectedRows.length > 0 && (
                             <Button
                                 variant="destructive"
-
                                 onClick={() => setBulkDeleteOpen(true)}
                                 className="flex items-center gap-2"
                             >
@@ -122,10 +121,10 @@ export default function CountriesTable() {
                                 Delete Selected ({selectedRows.length})
                             </Button>
                         )}
-                        <Link href="/admin/countries/create">
+                        <Link href="/admin/states/create">
                             <Button variant="outline" className='bg-main text-white hover:bg-main-hovered hover:text-white' >
                                 <PlusIcon stroke='#fff' className="h-4 w-4" />
-                                New Country
+                                New State
                             </Button>
                         </Link>
                     </div>
@@ -136,33 +135,35 @@ export default function CountriesTable() {
                             <TableRow>
                                 <TableHead className="w-[50px]">
                                     <Checkbox
-                                        checked={selectedRows.length === countries.length && countries.length > 0}
+                                        checked={selectedRows.length === states.length && states.length > 0}
                                         onCheckedChange={handleSelectAll}
                                         aria-label="Select all"
                                     />
                                 </TableHead>
                                 <TableHead>Name</TableHead>
+                                <TableHead>Country</TableHead>
                                 <TableHead className='sr-only'>Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {countries.map((country) => (
-                                <TableRow key={country.id.toString() + country.name}>
+                            {states.map((state) => (
+                                <TableRow key={state.id.toString() + state.name + state.countryName}>
                                     <TableCell>
                                         <Checkbox
-                                            checked={selectedRows.includes(country.id)}
-                                            onCheckedChange={() => handleRowSelect(country.id)}
-                                            aria-label={`Select ${country.name}`}
+                                            checked={selectedRows.includes(state.id)}
+                                            onCheckedChange={() => handleRowSelect(state.id)}
+                                            aria-label={`Select ${state.name}`}
                                         />
                                     </TableCell>
-                                    <TableCell>{country.name}</TableCell>
+                                    <TableCell>{state.name}</TableCell>
+                                    <TableCell>{state.countryName}</TableCell>
                                     <TableCell>
                                         <div className="flex space-x-2 items-center justify-end">
-                                            <Button onClick={() => router.push(`/admin/countries/${country.id.toString()}/edit`)} className='flex items-center justify-center gap-2' variant="outline" >
+                                            <Button onClick={() => router.push(`/admin/states/${state.id.toString()}/edit`)} className='flex items-center justify-center gap-2' variant="outline" >
                                                 <Edit className="h-4 w-4" />
                                                 Edit
                                             </Button>
-                                            <Button onClick={() => router.push(`/admin/countries/${country.id.toString()}/view`)} className='flex items-center justify-center gap-2' variant="outline" >
+                                            <Button onClick={() => router.push(`/admin/states/${state.id.toString()}/view`)} className='flex items-center justify-center gap-2' variant="outline" >
                                                 <Eye className="h-4 w-4" />
                                                 View
                                             </Button>
@@ -241,9 +242,9 @@ export default function CountriesTable() {
             <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
                 <DialogContent className='font-geist'>
                     <DialogHeader>
-                        <DialogTitle className='font-medium'>Delete Translations</DialogTitle>
+                        <DialogTitle className='font-medium'>Delete States</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to delete ({selectedRows.length}) countries?
+                            Are you sure you want to delete ({selectedRows.length}) states?
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>

@@ -157,14 +157,14 @@ export const cacheLocks = mysqlTable("cache_locks", {
 });
 
 export const cities = mysqlTable("cities", {
-	id: bigint({ mode: "number" }).autoincrement().notNull(),
+	id: bigint({ mode: "number" }).autoincrement().notNull().primaryKey(),
 	stateId: bigint("state_id", { mode: "number" }).notNull().references(() => states.id, { onDelete: "cascade", onUpdate: "restrict" }),
 	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`null`),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).default(sql`null`),
 });
 
 export const cityTranslations = mysqlTable("city_translations", {
-	id: bigint({ mode: "number" }).autoincrement().notNull(),
+	id: bigint({ mode: "number" }).autoincrement().notNull().primaryKey(),
 	cityId: bigint("city_id", { mode: "number" }).notNull().references(() => cities.id, { onDelete: "cascade", onUpdate: "restrict" }),
 	locale: varchar({ length: 255 }).notNull(),
 	name: varchar({ length: 255 }).notNull(),
@@ -629,14 +629,14 @@ export const sportTranslations = mysqlTable("sport_translations", {
 	});
 
 export const states = mysqlTable("states", {
-	id: bigint({ mode: "number" }).autoincrement().notNull(),
+	id: bigint({ mode: "number" }).autoincrement().notNull().primaryKey(),
 	countryId: bigint("country_id", { mode: "number" }).notNull().references(() => countries.id, { onDelete: "cascade", onUpdate: "restrict" }),
 	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`null`),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).default(sql`null`),
 });
 
 export const stateTranslations = mysqlTable("state_translations", {
-	id: bigint({ mode: "number" }).autoincrement().notNull(),
+	id: bigint({ mode: "number" }).autoincrement().notNull().primaryKey(),
 	stateId: bigint("state_id", { mode: "number" }).notNull().references(() => states.id, { onDelete: "cascade", onUpdate: "restrict" }),
 	locale: varchar({ length: 255 }).notNull(),
 	name: varchar({ length: 255 }).notNull(),

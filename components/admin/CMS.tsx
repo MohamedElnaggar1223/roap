@@ -54,7 +54,7 @@ export function CMS() {
 								</SidebarMenuSubItem>
 								<SidebarMenuSubItem key='states'>
 									<SidebarMenuSubButton asChild>
-										<Link href='#'>
+										<Link href='/admin/states'>
 											<span>States</span>
 										</Link>
 									</SidebarMenuSubButton>
