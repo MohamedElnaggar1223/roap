@@ -50,7 +50,7 @@ export default function AcademyHeader({ children }: Readonly<{ children: React.R
 
 	return (
 		<SidebarInset>
-			<header className="flex h-16 shrink-0 bg-[#E0E4D9] border-b-[#CDD1C7] border-b sticky top-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+			<header className="flex h-16 shrink-0 bg-[#E0E4D9] border-b-[#CDD1C7] border-b z-[10] sticky top-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
 				<div className="flex items-center gap-2 px-4">
 					<SidebarTrigger className="-ml-1" />
 					<Separator orientation="vertical" className="mr-2 h-4" />
