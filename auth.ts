@@ -40,7 +40,16 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
 
                 const user = await db.query.users.findFirst({
                     where: eq(users.email, credentials.email),
+                    columns: {
+                        id: true,
+                        email: true,
+                        name: true,
+                        password: true,
+                        role: true
+                    }
                 })
+
+                console.log(user)
 
                 if (!user || !user.password) {
                     throw new Error('User not found');

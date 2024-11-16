@@ -70,7 +70,8 @@ export default {
 				sm: 'calc(var(--radius) - 4px)'
 			},
 			fontFamily: {
-				geist: ['var(--font-geist)']
+				geist: ['var(--font-geist)'],
+				inter: ['var(--font-inter)'],
 			}
 		}
 	},

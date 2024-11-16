@@ -3,7 +3,7 @@ import { mysqlTable, unique, varchar, double, timestamp, longtext, text, mysqlEn
 import { relations } from "drizzle-orm/relations";
 
 export const academics = mysqlTable("academics", {
-	id: bigint({ mode: "number" }).autoincrement().notNull(),
+	id: bigint({ mode: "number" }).autoincrement().notNull().primaryKey(),
 	slug: varchar({ length: 255 }).notNull(),
 	entryFees: double("entry_fees").notNull(),
 	userId: bigint("user_id", { mode: "number" }).default(sql`null`).references(() => users.id, { onDelete: "restrict", onUpdate: "restrict" }),
@@ -687,7 +687,7 @@ export const subscriptionItems = mysqlTable("subscription_items", {
 	});
 
 export const users = mysqlTable("users", {
-	id: bigint({ mode: "number" }).autoincrement().notNull(),
+	id: bigint({ mode: "number" }).autoincrement().notNull().primaryKey(),
 	name: varchar({ length: 255 }).default(sql`null`),
 	email: varchar({ length: 255 }).default(sql`null`),
 	phoneNumber: varchar("phone_number", { length: 255 }).default(sql`null`),
