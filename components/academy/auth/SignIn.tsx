@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/form"
 import { z } from "zod"
 import { signIn } from "@/lib/actions/auth.actions"
+import Link from "next/link"
 
 export default function SignIn() {
     const router = useRouter()
@@ -69,7 +70,7 @@ export default function SignIn() {
                 description: "Signed in successfully!",
             })
 
-            router.push("/dashboard")
+            router.push("/calendar")
             router.refresh()
 
         } catch (error) {
@@ -161,6 +162,7 @@ export default function SignIn() {
                         </Form>
                     </CardContent>
                 </Card>
+                <p className='text-sm mt-4'>Don't have an account yet? <Link href='/sign-up' className='font-semibold underline'>Sign Up</Link></p>
             </div>
         </section>
     )

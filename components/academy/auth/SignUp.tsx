@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/form"
 import { z } from "zod"
 import { createAcademy } from "@/lib/actions/academics.actions"
+import Link from "next/link"
 
 export default function Component() {
     const router = useRouter()
@@ -238,6 +239,7 @@ export default function Component() {
                         </Form>
                     </CardContent>
                 </Card>
+                <p className='text-sm mt-4'>Already have an account? <Link href='/sign-in' className='font-semibold underline'>Sign In</Link></p>
             </div>
         </section>
     )
