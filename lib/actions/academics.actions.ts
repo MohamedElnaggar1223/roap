@@ -230,7 +230,7 @@ export const getCalendarSlots = async (
 
   console.log('allEvents: ', allEvents)
 
-  return await db
+  const filteredEvents = await db
     .select({
       id: bookingSessions.id,
       date: bookingSessions.date,
@@ -261,4 +261,8 @@ export const getCalendarSlots = async (
         sql`DATE(${bookingSessions.date}) <= DATE(${formattedEndDate})`
       )
     );
+
+  console.log('filteredEvents: ', filteredEvents)
+
+    return filteredEvents;
 }
