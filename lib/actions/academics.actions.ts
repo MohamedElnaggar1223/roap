@@ -199,6 +199,37 @@ export const getCalendarSlots = async (
   endDate: Date,
 ) => {
 
+  const formattedStartDate = startDate.toISOString().split('T')[0]
+  const formattedEndDate = endDate.toISOString().split('T')[0]
+
+  const allEvents = await db
+  .select({
+    id: bookingSessions.id,
+    date: bookingSessions.date,
+    startTime: bookingSessions.from,
+    endTime: bookingSessions.to,
+    status: bookingSessions.status,
+    programName: programs.name,
+    studentName: profiles.name,
+    studentBirthday: profiles.birthday,
+    branchName: branchTranslations.name,
+    sportName: sportTranslations.name,
+    packageName: packages.name,
+    coachName: coaches.name,
+  })
+  .from(bookingSessions)
+  .innerJoin(bookings, eq(bookingSessions.bookingId, bookings.id))
+  .innerJoin(profiles, eq(bookings.profileId, profiles.id))
+  .innerJoin(packages, eq(bookings.packageId, packages.id))
+  .innerJoin(programs, eq(packages.programId, programs.id))
+  .innerJoin(coaches, eq(bookings.coachId, coaches.id))
+  .innerJoin(branches, eq(programs.branchId, branches.id))
+  .innerJoin(branchTranslations, eq(branches.id, branchTranslations.branchId))
+  .innerJoin(sports, eq(programs.sportId, sports.id))
+  .innerJoin(sportTranslations, eq(sports.id, sportTranslations.sportId))
+
+  console.log('allEvents: ', allEvents)
+
   return await db
     .select({
       id: bookingSessions.id,
@@ -226,8 +257,8 @@ export const getCalendarSlots = async (
     .innerJoin(sportTranslations, eq(sports.id, sportTranslations.sportId))
     .where(
       and(
-        gte(bookingSessions.date, startDate.toISOString().split('T')[0]),
-        lte(bookingSessions.date, endDate.toISOString().split('T')[0]),
+        sql`DATE(${bookingSessions.date}) >= DATE(${formattedStartDate})`,
+        sql`DATE(${bookingSessions.date}) <= DATE(${formattedEndDate})`
       )
     );
 }

@@ -103,6 +103,8 @@ export default function Calendar() {
   //   },
   // ]
 
+  console.log(events)
+
   const fetchEvents = async (start: Date, end: Date) => {
     startTransition(async () => {
       const result = await getCalendarSlots(start, end)
