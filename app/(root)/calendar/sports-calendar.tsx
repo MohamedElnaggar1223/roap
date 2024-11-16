@@ -126,10 +126,15 @@ export default function Calendar() {
   }
 
   const getEventsForSlot = (date: Date, hour: number) => {
-    return events.filter(
-      (event) =>
-        isSameDay(new Date(event?.date!), date) && new Date(event?.date!).getHours() === hour
-    )
+    return events.filter((event) => {
+      if (!event.date || !event.startTime) return false
+      
+      // Parse the event date and start time
+      const eventDate = new Date(event.date)
+      const [eventHour] = event.startTime.split(':').map(Number)
+      
+      return isSameDay(eventDate, date) && eventHour === hour
+    })
   }
 
   const getMaxEventsForTimeSlot = (hour: number) => {
