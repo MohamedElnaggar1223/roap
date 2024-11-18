@@ -58,7 +58,7 @@ export default function ViewCity({ cityTranslations, cityId }: Props) {
                 <div className="flex max-w-7xl items-center justify-between gap-2 w-full">
                     <h1 className="text-3xl font-bold">View City</h1>
                     <div className="flex items-center gap-2">
-                        <Link href={`/admin/citys/${cityId}/edit`}>
+                        <Link href={`/admin/cities/${cityId}/edit`}>
                             <Button variant="outline" className='bg-main text-white hover:bg-main-hovered hover:text-white' >
                                 Edit
                             </Button>
