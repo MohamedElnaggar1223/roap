@@ -13,6 +13,9 @@ export default {
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
 				"main-dark": '#34d399',
+				"main-green": "#1F441F",
+				"main-yellow": "#C4DA59",
+				"main-white": "#F1F2E9",
 				main: 'rgb(5, 150, 105)',
 				"main-hovered": 'rgb(4, 120, 84)',
 				card: {

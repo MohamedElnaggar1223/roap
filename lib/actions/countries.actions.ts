@@ -41,13 +41,19 @@ export async function getPaginatedCountries(
                 FROM ${countryTranslations} ct
                 WHERE ct.locale = 'en'
                 UNION
-                SELECT ct.country_id, ct.name, ct.locale
-                FROM ${countryTranslations} ct
-                WHERE ct.country_id NOT IN (
-                    SELECT country_id 
-                    FROM ${countryTranslations} 
-                    WHERE locale = 'en'
-                )
+                SELECT ct2.country_id, ct2.name, ct2.locale
+                FROM ${countryTranslations} ct2
+                INNER JOIN (
+                    SELECT country_id, MIN(locale) as first_locale
+                    FROM ${countryTranslations}
+                    WHERE country_id NOT IN (
+                        SELECT country_id 
+                        FROM ${countryTranslations} 
+                        WHERE locale = 'en'
+                    )
+                    GROUP BY country_id
+                ) first_trans ON ct2.country_id = first_trans.country_id 
+                AND ct2.locale = first_trans.first_locale
             ) t`,
             sql`t.country_id = ${countries.id}`
         )
@@ -84,7 +90,9 @@ export const addCountry = async (data: z.infer<typeof addCountrySchema>) => {
 
     const countryCreated = await db.insert(countries).values({
         id: sql`DEFAULT`
-    }).$returningId()
+    }).returning({
+        id: countries.id,
+    })
 
     if (!countryCreated || !countryCreated.length) return {
         data: null,
@@ -154,7 +162,9 @@ export const addCountryTranslation = async (data: z.infer<typeof addCountryTrans
             countryId: parseInt(countryId),
             locale,
             name,
-        }).$returningId()
+        }).returning({
+            id: countryTranslations.id,
+        })
 
         if (!countryTranslationCreated || !countryTranslationCreated.length) return {
             data: null,

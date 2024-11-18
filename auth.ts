@@ -1,7 +1,7 @@
 import NextAuth from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
-import { db } from "./db";
-import { users } from "./db/schema";
+import { db } from "./old-db";
+import { users } from "./old-db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs"
 import type { DefaultSession } from "next-auth"
@@ -49,8 +49,6 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
                     }
                 })
 
-                console.log(user)
-
                 if (!user || !user.password) {
                     throw new Error('User not found');
                 }
@@ -89,5 +87,5 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
             return session
         }
     },
-    trustHost: true
+    trustHost: true,
 })

@@ -33,24 +33,8 @@ export async function getPaginatedCities(
             id: cities.id,
             name: sql<string>`t.name`,
             locale: sql<string>`t.locale`,
-            state: sql<string>`
-            COALESCE(
-                (
-                    SELECT ct.name 
-                    FROM ${stateTranslations} as ct 
-                    WHERE ct.state_id = ${cities.stateId} 
-                    AND ct.locale = 'en' 
-                    LIMIT 1
-                ),
-                (
-                    SELECT ct.name 
-                    FROM ${stateTranslations} as ct 
-                    WHERE ct.state_id = ${cities.stateId}
-                    LIMIT 1
-                )
-            )
-        `
-
+            state: sql<string>`st.name`,
+            stateLocale: sql<string>`st.locale`,
         })
         .from(cities)
         .leftJoin(states, eq(cities.stateId, states.id))
@@ -60,15 +44,43 @@ export async function getPaginatedCities(
                 FROM ${cityTranslations} ct
                 WHERE ct.locale = 'en'
                 UNION
-                SELECT ct.city_id, ct.name, ct.locale
-                FROM ${cityTranslations} ct
-                WHERE ct.city_id NOT IN (
-                    SELECT city_id 
-                    FROM ${cityTranslations} 
-                    WHERE locale = 'en'
-                )
+                SELECT ct2.city_id, ct2.name, ct2.locale
+                FROM ${cityTranslations} ct2
+                INNER JOIN (
+                    SELECT city_id, MIN(locale) as first_locale
+                    FROM ${cityTranslations}
+                    WHERE city_id NOT IN (
+                        SELECT city_id 
+                        FROM ${cityTranslations} 
+                        WHERE locale = 'en'
+                    )
+                    GROUP BY city_id
+                ) first_trans ON ct2.city_id = first_trans.city_id 
+                AND ct2.locale = first_trans.first_locale
             ) t`,
             sql`t.city_id = ${cities.id}`
+        )
+        .innerJoin(
+            sql`(
+                SELECT st.state_id, st.name, st.locale
+                FROM ${stateTranslations} st
+                WHERE st.locale = 'en'
+                UNION
+                SELECT st2.state_id, st2.name, st2.locale
+                FROM ${stateTranslations} st2
+                INNER JOIN (
+                    SELECT state_id, MIN(locale) as first_locale
+                    FROM ${stateTranslations}
+                    WHERE state_id NOT IN (
+                        SELECT state_id 
+                        FROM ${stateTranslations} 
+                        WHERE locale = 'en'
+                    )
+                    GROUP BY state_id
+                ) first_trans ON st2.state_id = first_trans.state_id 
+                AND st2.locale = first_trans.first_locale
+            ) st`,
+            sql`st.state_id = ${cities.stateId}`
         )
         .orderBy(orderBy)
         .limit(pageSize)
@@ -102,7 +114,9 @@ export const addCity = async (data: z.infer<typeof addCitySchema>) => {
     const cityCreated = await db.insert(cities).values({
         id: sql`DEFAULT`,
         stateId: parseInt(stateId),
-    }).$returningId()
+    }).returning({
+        id: cities.id
+    })
 
     if (!cityCreated || !cityCreated.length) return {
         data: null,
@@ -174,7 +188,9 @@ export const addCityTranslation = async (data: z.infer<typeof addCityTranslation
             cityId: parseInt(cityId),
             locale,
             name,
-        }).$returningId()
+        }).returning({
+            id: cityTranslations.id
+        })
 
         if (!cityTranslationCreated || !cityTranslationCreated.length) return {
             data: null,

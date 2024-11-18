@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/form"
 import { z } from "zod"
 import { signIn } from "@/lib/actions/auth.actions"
+import { signIn as nextAuthSignIn } from "next-auth/react"
 import Link from "next/link"
 
 export default function SignIn() {
@@ -42,14 +43,14 @@ export default function SignIn() {
         try {
             const result = await signIn(values)
 
-            if(result.error) {
-                if(result.error === "pending") {
+            if (result.error) {
+                if (result.error === "pending") {
                     toast({
                         title: "Application Pending",
                         description: "Your academy application is still under review. Please wait for admin approval.",
                         variant: "warning"
                     })
-                } else if(result.error === "rejected") {
+                } else if (result.error === "rejected") {
                     toast({
                         title: "Application Rejected",
                         description: "Your academy application has been rejected. Please contact support for more information.",
@@ -64,14 +65,31 @@ export default function SignIn() {
                 }
                 return
             }
+            else if (result.success) {
+                const resultNextAuth = await nextAuthSignIn("credentials", {
+                    email: values.email,
+                    password: values.password,
+                    redirect: false,
+                })
 
-            toast({
-                title: "Success",
-                description: "Signed in successfully!",
-            })
+                if (resultNextAuth?.error) {
+                    toast({
+                        title: "Error",
+                        description: resultNextAuth.error !== "Configuration" ? resultNextAuth.error : "Wrong Password",
+                        variant: "destructive"
+                    })
+                    return
+                }
 
-            router.push("/calendar")
-            router.refresh()
+                toast({
+                    title: "Success",
+                    description: "Signed in successfully!",
+                })
+
+                router.push("/calendar")
+                router.refresh()
+            }
+
 
         } catch (error) {
             toast({
@@ -104,7 +122,7 @@ export default function SignIn() {
                     <CardContent>
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
-                                <FormField 
+                                <FormField
                                     control={form.control}
                                     name="email"
                                     render={({ field }) => (
@@ -123,7 +141,7 @@ export default function SignIn() {
                                         </FormItem>
                                     )}
                                 />
-                                <FormField 
+                                <FormField
                                     control={form.control}
                                     name="password"
                                     render={({ field }) => (

@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 }
 
 import { Inter } from 'next/font/google'
- 
+
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
 export default async function RootLayout({
@@ -24,7 +24,7 @@ export default async function RootLayout({
 }>) {
 	const session = await auth()
 
-	if(!session?.user) return redirect("/sign-in") 
+	if (!session?.user) return redirect("/sign-in")
 
 	return (
 		<html lang="en">
@@ -33,14 +33,14 @@ export default async function RootLayout({
 			>
 				<SidebarProvider className='font-inter bg-[#E0E4D9]'>
 					<AcademySidebar />
-                    <main className='flex flex-col flex-1 font-inter bg-[#E0E4D9]'>
-                        <AcademyHeader>
-                            <section className='p-8 bg-[#E0E4D9] h-full'>
-                                {children}
+					<main className='flex flex-col flex-1 font-inter bg-[#E0E4D9]'>
+						<AcademyHeader>
+							<section className='p-4 bg-[#E0E4D9] h-full'>
+								{children}
 								<Toaster />
-                            </section>
-                        </AcademyHeader>
-                    </main>
+							</section>
+						</AcademyHeader>
+					</main>
 				</SidebarProvider>
 			</body>
 		</html>

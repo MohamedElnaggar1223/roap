@@ -33,42 +33,54 @@ export async function getPaginatedStates(
             id: states.id,
             name: sql<string>`t.name`,
             locale: sql<string>`t.locale`,
-            countryName: sql<string>`
-            COALESCE(
-                (
-                    SELECT ct.name 
-                    FROM ${countryTranslations} as ct 
-                    WHERE ct.country_id = ${states.countryId} 
-                    AND ct.locale = 'en' 
-                    LIMIT 1
-                ),
-                (
-                    SELECT ct.name 
-                    FROM ${countryTranslations} as ct 
-                    WHERE ct.country_id = ${states.countryId} 
-                    LIMIT 1
-                )
-            )
-        `
-
+            countryName: sql<string>`ct.name`,
+            countryLocale: sql<string>`ct.locale`
         })
         .from(states)
         .leftJoin(countries, eq(states.countryId, countries.id))
         .innerJoin(
             sql`(
-                SELECT ct.state_id, ct.name, ct.locale
-                FROM ${stateTranslations} ct
-                WHERE ct.locale = 'en'
+                SELECT st.state_id, st.name, st.locale
+                FROM ${stateTranslations} st
+                WHERE st.locale = 'en'
                 UNION
-                SELECT ct.state_id, ct.name, ct.locale
-                FROM ${stateTranslations} ct
-                WHERE ct.state_id NOT IN (
-                    SELECT state_id 
-                    FROM ${stateTranslations} 
-                    WHERE locale = 'en'
-                )
+                SELECT st2.state_id, st2.name, st2.locale
+                FROM ${stateTranslations} st2
+                INNER JOIN (
+                    SELECT state_id, MIN(locale) as first_locale
+                    FROM ${stateTranslations}
+                    WHERE state_id NOT IN (
+                        SELECT state_id 
+                        FROM ${stateTranslations} 
+                        WHERE locale = 'en'
+                    )
+                    GROUP BY state_id
+                ) first_trans ON st2.state_id = first_trans.state_id 
+                AND st2.locale = first_trans.first_locale
             ) t`,
             sql`t.state_id = ${states.id}`
+        )
+        .innerJoin(
+            sql`(
+                SELECT ct.country_id, ct.name, ct.locale
+                FROM ${countryTranslations} ct
+                WHERE ct.locale = 'en'
+                UNION
+                SELECT ct2.country_id, ct2.name, ct2.locale
+                FROM ${countryTranslations} ct2
+                INNER JOIN (
+                    SELECT country_id, MIN(locale) as first_locale
+                    FROM ${countryTranslations}
+                    WHERE country_id NOT IN (
+                        SELECT country_id 
+                        FROM ${countryTranslations} 
+                        WHERE locale = 'en'
+                    )
+                    GROUP BY country_id
+                ) first_trans ON ct2.country_id = first_trans.country_id 
+                AND ct2.locale = first_trans.first_locale
+            ) ct`,
+            sql`ct.country_id = ${states.countryId}`
         )
         .orderBy(orderBy)
         .limit(pageSize)
@@ -102,7 +114,9 @@ export const addState = async (data: z.infer<typeof addStateSchema>) => {
     const stateCreated = await db.insert(states).values({
         id: sql`DEFAULT`,
         countryId: parseInt(countryId),
-    }).$returningId()
+    }).returning({
+        id: states.id
+    })
 
     if (!stateCreated || !stateCreated.length) return {
         data: null,
@@ -174,7 +188,9 @@ export const addStateTranslation = async (data: z.infer<typeof addStateTranslati
             stateId: parseInt(stateId),
             locale,
             name,
-        }).$returningId()
+        }).returning({
+            id: stateTranslations.id
+        })
 
         if (!stateTranslationCreated || !stateTranslationCreated.length) return {
             data: null,
@@ -261,26 +277,34 @@ export const getCitiesByState = async (id: string) => {
         error: 'You are not authorized to perform this action',
     }
 
-    const data = await db.select({
-        id: cities.id,
-        name: sql<string>`t.name`,
-        translationId: sql<number>`t.id`,
-    })
+    const data = await db
+        .select({
+            id: cities.id,
+            name: sql<string>`t.name`,
+            translationId: sql<number>`t.id`,
+            locale: sql<string>`t.locale`,
+        })
         .from(cities)
         .innerJoin(
             sql`(
-            SELECT ct.city_id, ct.name, ct.id
-            FROM ${cityTranslations} ct
-            WHERE ct.locale = 'en'
-            UNION
-            SELECT ct.city_id, ct.name, ct.id
-            FROM ${cityTranslations} ct
-            WHERE ct.city_id NOT IN (
-                SELECT city_id 
-                FROM ${cityTranslations} 
-                WHERE locale = 'en'
-            )
-        ) t`,
+                SELECT ct.city_id, ct.name, ct.id, ct.locale
+                FROM ${cityTranslations} ct
+                WHERE ct.locale = 'en'
+                UNION
+                SELECT ct2.city_id, ct2.name, ct2.id, ct2.locale
+                FROM ${cityTranslations} ct2
+                INNER JOIN (
+                    SELECT city_id, MIN(locale) as first_locale
+                    FROM ${cityTranslations}
+                    WHERE city_id NOT IN (
+                        SELECT city_id 
+                        FROM ${cityTranslations} 
+                        WHERE locale = 'en'
+                    )
+                    GROUP BY city_id
+                ) first_trans ON ct2.city_id = first_trans.city_id 
+                AND ct2.locale = first_trans.first_locale
+            ) t`,
             sql`t.city_id = ${cities.id}`
         )
         .where(eq(cities.stateId, parseInt(id)))

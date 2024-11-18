@@ -3,12 +3,15 @@ import { db } from "@/db"
 import { users } from "@/db/schema"
 import { academics } from "@/db/schema"
 import { eq } from "drizzle-orm"
-import { signIn as nextAuthSignIn } from "@/auth"
 
 type SignInInput = {
     email: string
     password: string
 }
+
+// export async function signOut() {
+//     await nextAuthSignOut({ redirect: true, redirectTo: '/' })
+// }
 
 export async function signIn(data: SignInInput) {
     try {
@@ -46,17 +49,6 @@ export async function signIn(data: SignInInput) {
             if (academy.status === 'rejected') {
                 return { error: "rejected" }
             }
-        }
-
-        // If all checks pass, attempt to sign in
-        const result = await nextAuthSignIn("credentials", {
-            email: data.email,
-            password: data.password,
-            redirect: false,
-        })
-
-        if (result?.error) {
-            return { error: "Invalid credentials" }
         }
 
         return { success: true }
