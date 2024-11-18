@@ -49,7 +49,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
                     }
                 })
 
-                if (!user || !user.password) {
+                if (!user || !user.password || !user.email || !user.name || !user.role) {
                     throw new Error('User not found');
                 }
 
@@ -64,9 +64,9 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
 
                 return {
                     id: user.id.toString(),
-                    email: user.email,
-                    name: user.name,
-                    role: user.role
+                    email: user.email!,
+                    name: user.name!,
+                    role: user.role!
                 }
             }
         })
