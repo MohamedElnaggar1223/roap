@@ -112,8 +112,9 @@ export const addCity = async (data: z.infer<typeof addCitySchema>) => {
     const { name, locale, stateId } = data
 
     const cityCreated = await db.insert(cities).values({
-        id: sql`DEFAULT`,
         stateId: parseInt(stateId),
+        createdAt: sql`now()`,
+        updatedAt: sql`now()`,
     }).returning({
         id: cities.id
     })
@@ -127,6 +128,8 @@ export const addCity = async (data: z.infer<typeof addCitySchema>) => {
         cityId: cityCreated[0]?.id,
         locale,
         name,
+        createdAt: sql`now()`,
+        updatedAt: sql`now()`,
     })
 
     revalidatePath('/admin/cities')
@@ -184,10 +187,11 @@ export const addCityTranslation = async (data: z.infer<typeof addCityTranslation
         const { name, locale, cityId } = data
 
         const cityTranslationCreated = await db.insert(cityTranslations).values({
-            id: sql`DEFAULT`,
             cityId: parseInt(cityId),
             locale,
             name,
+            createdAt: sql`now()`,
+            updatedAt: sql`now()`,
         }).returning({
             id: cityTranslations.id
         })
@@ -227,16 +231,19 @@ export const editCityTranslation = async (data: { name: string, locale: string, 
             await db.update(cityTranslations).set({
                 name,
                 locale,
+                updatedAt: sql`now()`,
             }).where(eq(cityTranslations.id, id))
         }
         else {
             await Promise.all([
                 db.update(cities).set({
                     stateId: parseInt(data.stateId),
+                    updatedAt: sql`now()`,
                 }).where(eq(cities.id, parseInt(cityId))),
                 db.update(cityTranslations).set({
                     name,
                     locale,
+                    updatedAt: sql`now()`,
                 }).where(eq(cityTranslations.id, id))
             ])
         }

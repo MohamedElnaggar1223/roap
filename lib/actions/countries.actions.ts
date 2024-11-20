@@ -88,10 +88,10 @@ export const addCountry = async (data: z.infer<typeof addCountrySchema>) => {
 
     const { name, locale } = data
 
-    const countryCreated = await db.insert(countries).values({
-        id: sql`DEFAULT`
-    }).returning({
+    const countryCreated = await db.insert(countries).values({}).returning({
         id: countries.id,
+        createdAt: sql`now()`,
+        updatedAt: sql`now()`,
     })
 
     if (!countryCreated || !countryCreated.length) return {
@@ -158,10 +158,11 @@ export const addCountryTranslation = async (data: z.infer<typeof addCountryTrans
         const { name, locale, countryId } = data
 
         const countryTranslationCreated = await db.insert(countryTranslations).values({
-            id: sql`DEFAULT`,
             countryId: parseInt(countryId),
             locale,
             name,
+            createdAt: sql`now()`,
+            updatedAt: sql`now()`,
         }).returning({
             id: countryTranslations.id,
         })
@@ -200,6 +201,7 @@ export const editCountryTranslation = async (data: { name: string, locale: strin
         await db.update(countryTranslations).set({
             name,
             locale,
+            updatedAt: sql`now()`,
         }).where(eq(countryTranslations.id, id))
 
         revalidatePath(`/admin/countries/${id}/edit`)

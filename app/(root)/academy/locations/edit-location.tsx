@@ -3,13 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getAllSports } from '@/lib/actions/academics.actions';
 import { getAllFacilities } from '@/lib/actions/facilities.actions';
-import { createLocation } from '@/lib/actions/locations.actions';
-import { cn } from '@/lib/utils';
-import { Loader2, Plus, X } from 'lucide-react';
-import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import useSWR from 'swr'
+import { updateLocation } from '@/lib/actions/locations.actions';
+import { Loader2, X } from 'lucide-react';
 import { addLocationSchema } from '@/lib/validations/locations';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -23,85 +18,67 @@ import {
     FormMessage,
 } from '@/components/ui/form';
 import { Switch } from '@/components/ui/switch';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useRouter } from 'next/navigation'
+import { useState } from 'react';
+import useSWR from 'swr';
+import Image from 'next/image';
 
-type Props = {
-    sports: {
-        id: number;
-        image: string | null;
-        name: string;
-        locale: string;
-    }[];
+type Location = {
+    id: number
+    name: string
+    nameInGoogleMap: string | null
+    url: string | null
+    isDefault: boolean
+    sports: string[]
+    amenities: string[]
 }
 
-export default function AddNewLocation({ sports }: Props) {
+type Props = {
+    locationEdited: Location
+}
+
+export default function EditLocation({ locationEdited }: Props) {
     const router = useRouter()
 
+    const [editOpen, setEditOpen] = useState(false)
 
-    const [addNewSportOpen, setAddNewSportOpen] = useState(false)
+    const { data: sportsData } = useSWR(editOpen ? 'sports' : null, getAllSports)
+    const { data: amenitiesData } = useSWR(editOpen ? 'amenities' : null, getAllFacilities)
 
-    const { data: sportsData } = useSWR(addNewSportOpen ? 'sports' : null, getAllSports)
-    const { data: amenitiesData } = useSWR(addNewSportOpen ? 'amenities' : null, getAllFacilities)
-
-    const [selectedSports, setSelectedSports] = useState<number[]>([])
-    const [selectedAmenities, setSelectedAmenities] = useState<number[]>([])
+    const [selectedSports, setSelectedSports] = useState<number[]>(locationEdited?.sports.map(sport => parseInt(sport)) ?? [])
+    const [selectedAmenities, setSelectedAmenities] = useState<number[]>(locationEdited?.amenities.map(amenity => parseInt(amenity)) ?? [])
     const [loading, setLoading] = useState(false)
     const [sportsOpen, setSportsOpen] = useState(false)
     const [amenitiesOpen, setAmenitiesOpen] = useState(false)
 
+
     const form = useForm<z.infer<typeof addLocationSchema>>({
         resolver: zodResolver(addLocationSchema),
         defaultValues: {
-            name: '',
-            nameInGoogleMap: '',
-            url: '',
-            isDefault: false,
+            name: locationEdited.name,
+            nameInGoogleMap: locationEdited.nameInGoogleMap ?? '',
+            url: locationEdited.url ?? '',
+            isDefault: locationEdited.isDefault,
         }
     })
 
     const onSubmit = async (values: z.infer<typeof addLocationSchema>) => {
-        try {
-            setLoading(true)
-            const result = await createLocation({
-                facilities: selectedAmenities,
-                name: values.name,
-                nameInGoogleMap: values.nameInGoogleMap,
-                sports: selectedSports,
-                url: values.url,
-                isDefault: values.isDefault,
-            })
-
-            if (result.error) {
-                if (result?.field) {
-                    // Set error on specific field
-                    form.setError(result.field as "name" | "nameInGoogleMap" | "url", {
-                        type: 'custom',
-                        message: result.error
-                    })
-                    return
-                }
-                // Handle general error
-                form.setError('root', {
-                    type: 'custom',
-                    message: result.error
-                })
-                return
-            }
-
-            setAddNewSportOpen(false)
-            router.refresh()
-        } catch (error) {
-            console.error('Error creating location:', error)
-            form.setError('root', {
-                type: 'custom',
-                message: 'An unexpected error occurred'
-            })
-        } finally {
-            setLoading(false)
-        }
+        setLoading(true)
+        await updateLocation(locationEdited.id, {
+            facilities: selectedAmenities,
+            name: values.name,
+            nameInGoogleMap: values.nameInGoogleMap,
+            sports: selectedSports,
+            url: values.url,
+            isDefault: values.isDefault,
+        })
+        setLoading(false)
+        setEditOpen(false)
+        router.refresh()
     }
 
     const handleSelectSport = (id: number) => {
@@ -120,11 +97,15 @@ export default function AddNewLocation({ sports }: Props) {
 
     return (
         <>
-            <button onClick={() => setAddNewSportOpen(true)} className='flex text-nowrap items-center justify-center gap-2 rounded-3xl px-4 py-2 bg-main-green text-sm text-white'>
-                <Plus size={16} className='stroke-main-yellow' />
-                New Location
-            </button>
-            <Dialog open={addNewSportOpen} onOpenChange={setAddNewSportOpen}>
+            <Button variant="ghost" size="icon" onClick={() => setEditOpen(true)}>
+                <Image
+                    src='/images/edit.svg'
+                    alt='Edit'
+                    width={20}
+                    height={20}
+                />
+            </Button>
+            <Dialog open={editOpen} onOpenChange={setEditOpen}>
                 <DialogContent className='bg-main-white min-w-[560px]'>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full'>
@@ -133,7 +114,7 @@ export default function AddNewLocation({ sports }: Props) {
                                 <div className='flex items-center gap-2'>
                                     <button disabled={loading} type='submit' className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5'>
                                         {loading && <Loader2 className='h-5 w-5 animate-spin' />}
-                                        Create
+                                        Save
                                     </button>
                                 </div>
                             </DialogHeader>

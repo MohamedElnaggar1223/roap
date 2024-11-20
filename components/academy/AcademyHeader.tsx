@@ -11,7 +11,7 @@ export default function AcademyHeader({ children }: Readonly<{ children: React.R
 
 	const generateBreadcrumbs = () => {
 		// Remove the /admin prefix and split the remaining path
-		const paths = pathname?.replace('/admin', '').split('/').filter(Boolean);
+		const paths = pathname?.replace('/', '').split('/').filter(Boolean);
 
 		// If there are no paths, return an empty array
 		if (!paths?.length) {
@@ -32,7 +32,7 @@ export default function AcademyHeader({ children }: Readonly<{ children: React.R
 				// Calculate href - use '#' for non-linking pages, otherwise build the proper path
 				const href = isNonLinkingPage
 					? '#'
-					: `/admin/${paths.slice(0, paths.indexOf(path) + 1).join('/')}`;
+					: `/academy/${paths.slice(0, paths.indexOf(path) + 1).join('/')}`;
 
 				return (
 					<BreadcrumbItem key={path}>
@@ -54,7 +54,7 @@ export default function AcademyHeader({ children }: Readonly<{ children: React.R
 				<div className="flex items-center gap-2 px-4">
 					<SidebarTrigger className="-ml-1" />
 					<Separator orientation="vertical" className="mr-2 h-4" />
-					{pathname === '/admin' ? (
+					{pathname === '/' ? (
 						<Breadcrumb>
 							<BreadcrumbList>
 								<BreadcrumbItem>
@@ -66,7 +66,7 @@ export default function AcademyHeader({ children }: Readonly<{ children: React.R
 						<Breadcrumb>
 							<BreadcrumbList>
 								<BreadcrumbItem>
-									<BreadcrumbLink href="/admin">
+									<BreadcrumbLink href="/">
 										<Home className="h-4 w-4" />
 									</BreadcrumbLink>
 								</BreadcrumbItem>

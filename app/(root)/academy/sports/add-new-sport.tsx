@@ -47,6 +47,8 @@ export default function AddNewSport({ sports }: Props) {
         router.refresh()
     }
 
+    console.log(data)
+
     return (
         <>
             <button onClick={() => setAddNewSportOpen(true)} className='flex items-center justify-center gap-2 rounded-3xl px-4 py-2 bg-main-green text-sm text-white'>

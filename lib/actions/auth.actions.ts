@@ -2,7 +2,7 @@
 import { db } from "@/db"
 import { users } from "@/db/schema"
 import { academics } from "@/db/schema"
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 
 type SignInInput = {
     email: string
@@ -17,12 +17,14 @@ export async function signIn(data: SignInInput) {
     try {
         // First check if the user exists and get their role
         const user = await db.query.users.findFirst({
-            where: eq(users.email, data.email),
+            where: eq(sql`lower(${users.email})`, data.email.toLowerCase()),
             columns: {
                 id: true,
                 role: true,
             }
         })
+
+        console.log("User:", user, data)
 
         if (!user) {
             return { error: "User not found" }

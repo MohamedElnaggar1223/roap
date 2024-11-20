@@ -171,7 +171,6 @@ export async function createAcademy(data: z.infer<typeof academySignUpSchema>) {
 		const [newAcademy] = await db
 			.insert(academics)
 			.values({
-				id: sql`DEFAULT`,
 				slug,
 				entryFees: parseFloat(data.entryFees),
 				userId: newUser.id,
@@ -333,18 +332,29 @@ export const addSports = async (sportsIds: number[]) => {
 
 	if (!session?.user || session.user.role !== 'academic') return { error: 'You are not authorized to perform this action' }
 
-	const academy = await db.query.academics.findFirst({
-		where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
-		columns: {
-			id: true,
+	try {
+		const academy = await db.query.academics.findFirst({
+			where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
+			columns: {
+				id: true,
+			}
+		})
+
+		if (!academy) return { error: 'Academy not found' }
+
+		await Promise.all(sportsIds.map(async (id) => await db.insert(academicSport).values({ academicId: academy.id, sportId: id })))
+
+		revalidatePath('/academy/sports')
+	} catch (error) {
+		console.error('Error creating location:', error)
+		if ((error as any)?.code === '23505' && (error as any)?.constraint === 'branches_slug_unique') {
+			return {
+				error: 'A location with this name already exists',
+				field: 'name'
+			}
 		}
-	})
-
-	if (!academy) return { error: 'Academy not found' }
-
-	await Promise.all(sportsIds.map(async (id) => await db.insert(academicSport).values({ academicId: academy.id, sportId: id })))
-
-	revalidatePath('/academy/sports')
+		return { error: 'Failed to create location' }
+	}
 }
 
 export const deleteSport = async (id: number) => {

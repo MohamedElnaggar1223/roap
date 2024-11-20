@@ -112,7 +112,6 @@ export const addState = async (data: z.infer<typeof addStateSchema>) => {
     const { name, locale, countryId } = data
 
     const stateCreated = await db.insert(states).values({
-        id: sql`DEFAULT`,
         countryId: parseInt(countryId),
     }).returning({
         id: states.id
@@ -184,10 +183,11 @@ export const addStateTranslation = async (data: z.infer<typeof addStateTranslati
         const { name, locale, stateId } = data
 
         const stateTranslationCreated = await db.insert(stateTranslations).values({
-            id: sql`DEFAULT`,
             stateId: parseInt(stateId),
             locale,
             name,
+            createdAt: sql`now()`,
+            updatedAt: sql`now()`,
         }).returning({
             id: stateTranslations.id
         })
@@ -227,16 +227,19 @@ export const editStateTranslation = async (data: { name: string, locale: string,
             await db.update(stateTranslations).set({
                 name,
                 locale,
+                updatedAt: sql`now()`,
             }).where(eq(stateTranslations.id, id))
         }
         else {
             await Promise.all([
                 db.update(states).set({
                     countryId: parseInt(data.countryId),
+                    updatedAt: sql`now()`,
                 }).where(eq(states.id, parseInt(stateId))),
                 db.update(stateTranslations).set({
                     name,
                     locale,
+                    updatedAt: sql`now()`,
                 }).where(eq(stateTranslations.id, id))
             ])
         }
@@ -372,6 +375,7 @@ export const editCityTranslation = async (data: { name: string }, id: number) =>
 
     await db.update(cityTranslations).set({
         name: data.name,
+        updatedAt: sql`now()`,
     }).where(eq(cityTranslations.id, id))
 
     revalidatePath(`/admin/states`)

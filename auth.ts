@@ -2,7 +2,7 @@ import NextAuth from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { db } from "./db";
 import { users } from "./db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs"
 import type { DefaultSession } from "next-auth"
 
@@ -37,9 +37,8 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
 
                 if (typeof credentials.email !== 'string' || typeof credentials.password !== 'string') throw new Error('Invalid credentials');
 
-
                 const user = await db.query.users.findFirst({
-                    where: eq(users.email, credentials.email),
+                    where: eq(sql`lower(${users.email})`, credentials.email.toLowerCase()),
                     columns: {
                         id: true,
                         email: true,

@@ -6,11 +6,13 @@ export default async function LocationsPage() {
     const { data: locations, error } = await getLocations()
     const sports = await getAllSports('sports')
 
+    console.log(error)
+
     if (error) return null
 
     return (
         <section className='flex flex-col gap-4 w-full px-4'>
-            <LocationsDataTable data={locations!} sports={sports!} />
+            <LocationsDataTable data={locations!} sports={sports!} key={JSON.stringify(locations)} />
         </section>
     )
 }

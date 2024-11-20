@@ -38,6 +38,7 @@
     "next-auth": "^5.0.0-beta.25",
     "postgres": "^3.4.5",
     "react": "19.0.0-rc-66855b96-20241106",
+    "react-day-picker": "^8.10.1",
     "react-dom": "19.0.0-rc-66855b96-20241106",
     "react-hook-form": "^7.53.2",
     "swr": "^2.2.5",
