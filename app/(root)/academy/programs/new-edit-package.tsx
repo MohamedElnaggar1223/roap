@@ -26,6 +26,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Textarea } from '@/components/ui/textarea';
 import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const packageSchema = z.object({
     type: z.enum(["Term", "Monthly", "Full Season"]),
@@ -93,9 +94,32 @@ const days = {
     sat: "Saturday"
 }
 
+const months = [
+    { label: "January", value: 1 },
+    { label: "February", value: 2 },
+    { label: "March", value: 3 },
+    { label: "April", value: 4 },
+    { label: "May", value: 5 },
+    { label: "June", value: 6 },
+    { label: "July", value: 7 },
+    { label: "August", value: 8 },
+    { label: "September", value: 9 },
+    { label: "October", value: 10 },
+    { label: "November", value: 11 },
+    { label: "December", value: 12 }
+];
+
 export default function EditPackage({ packageEdited, open, onOpenChange, mutate, setEditedPackage, setCreatedPackages, index }: Props) {
     const router = useRouter()
     const [loading, setLoading] = useState(false)
+    const [selectedMonths, setSelectedMonths] = useState<number[]>(() => {
+        const startMonth = new Date(packageEdited.startDate).getMonth() + 1;
+        const endMonth = new Date(packageEdited.endDate).getMonth() + 1;
+        return Array.from(
+            { length: endMonth - startMonth + 1 },
+            (_, i) => startMonth + i
+        );
+    });
 
     console.log('packageEdited:', packageEdited)
 
@@ -106,7 +130,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                 packageEdited.name.includes('Monthly') ? 'Monthly' : 'Full Season',
             termNumber: packageEdited.name.startsWith('Term') ?
                 packageEdited.name.split(' ')[1] : undefined,
-            name: !packageEdited.name.startsWith('Term') ? packageEdited.name : '',
+            name: packageEdited.name.startsWith('Term') ? '' : packageEdited.name.startsWith('Monthly') ? packageEdited.name.split(' ')[1] : packageEdited.name,
             price: packageEdited.price.toString(),
             startDate: new Date(packageEdited.startDate),
             endDate: new Date(packageEdited.endDate),
@@ -132,7 +156,9 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                 setLoading(true)
                 const packageName = values.type === "Term" ?
                     `Term ${values.termNumber}` :
-                    values.name
+                    values.type === "Monthly" ?
+                        `Monthly ${values.name}` :
+                        values.name
 
                 const result = await updatePackage(packageEdited.id, {
                     name: packageName!,
@@ -179,7 +205,9 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                 console.log("test3")
                 const packageName = values.type === "Term" ?
                     `Term ${values.termNumber}` :
-                    values.name
+                    values.type === "Monthly" ?
+                        `Monthly ${values.name}` :
+                        values.name
 
                 setCreatedPackages(prev => prev.map((packageData, i) =>
                     i === index ? {
@@ -220,6 +248,54 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
             setLoading(false)
         }
     }
+
+    const handleMonthSelect = (monthValue: number, isChecked: boolean) => {
+        const currentYear = new Date().getFullYear();
+
+        if (isChecked) {
+            // If this is the first month being selected
+            if (selectedMonths.length === 0) {
+                setSelectedMonths([monthValue]);
+                // Set form dates for first month
+                form.setValue("startDate", new Date(currentYear, monthValue - 1, 1));
+                form.setValue("endDate", new Date(currentYear, monthValue - 1, 1));
+                return;
+            }
+
+            // Get min and max of current selection plus new month
+            const allMonths = [...selectedMonths, monthValue];
+            const firstMonth = Math.min(...allMonths);
+            const lastMonth = Math.max(...allMonths);
+
+            // Create array of all months in range
+            const monthsInRange = Array.from(
+                { length: lastMonth - firstMonth + 1 },
+                (_, i) => firstMonth + i
+            );
+            setSelectedMonths(monthsInRange);
+
+            // Update form dates based on range
+            form.setValue("startDate", new Date(currentYear, firstMonth - 1, 1));
+            form.setValue("endDate", new Date(currentYear, lastMonth - 1, 1));
+        } else {
+            // When unchecking, remove this month and all months after it
+            const newSelectedMonths = selectedMonths.filter(m => m < monthValue);
+            setSelectedMonths(newSelectedMonths);
+
+            if (newSelectedMonths.length > 0) {
+                // Update form dates based on remaining months
+                const firstMonth = Math.min(...newSelectedMonths);
+                const lastMonth = Math.max(...newSelectedMonths);
+                form.setValue("startDate", new Date(currentYear, firstMonth - 1, 1));
+                form.setValue("endDate", new Date(currentYear, lastMonth - 1, 1));
+            } else {
+                // If no months selected, set to current date (or any other default date)
+                const defaultDate = new Date(currentYear, 0, 1); // January 1st of current year
+                form.setValue("startDate", defaultDate);
+                form.setValue("endDate", defaultDate);
+            }
+        }
+    };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -310,65 +386,89 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                     )}
                                 />
 
-                                <div className="flex gap-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="startDate"
-                                        render={({ field }) => (
-                                            <FormItem className="flex-1">
-                                                <FormLabel>Start Date</FormLabel>
-                                                <Popover>
-                                                    <PopoverTrigger asChild>
-                                                        <FormControl>
-                                                            <Button variant={"outline"} className='w-full h-14 bg-transparent hover:bg-transparent'>
-                                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                                            </Button>
-                                                        </FormControl>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent className="w-auto p-0" align="start">
-                                                        <Calendar
-                                                            mode="single"
-                                                            selected={field.value}
-                                                            onSelect={field.onChange}
-                                                            initialFocus
-                                                        />
-                                                    </PopoverContent>
-                                                </Popover>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
+                                {packageType === "Monthly" ? (
+                                    <div className="space-y-4">
+                                        <FormLabel>Select Months</FormLabel>
+                                        <div className="grid grid-cols-3 gap-4">
+                                            {months.map((month) => (
+                                                <label
+                                                    key={month.value}
+                                                    className="flex items-center space-x-2 cursor-pointer"
+                                                >
+                                                    <Checkbox
+                                                        checked={selectedMonths.includes(month.value)}
+                                                        onCheckedChange={(checked) =>
+                                                            handleMonthSelect(month.value, checked === true)
+                                                        }
+                                                        className='data-[state=checked]:!bg-main-green'
+                                                    />
+                                                    <span>{month.label}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex gap-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="startDate"
+                                            render={({ field }) => (
+                                                <FormItem className="flex-1">
+                                                    <FormLabel>Start Date</FormLabel>
+                                                    <Popover>
+                                                        <PopoverTrigger asChild>
+                                                            <FormControl>
+                                                                <Button variant={"outline"} className='w-full h-14 bg-transparent hover:bg-transparent'>
+                                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                                                </Button>
+                                                            </FormControl>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-auto p-0" align="start">
+                                                            <Calendar
+                                                                mode="single"
+                                                                selected={field.value}
+                                                                onSelect={field.onChange}
+                                                                initialFocus
+                                                            />
+                                                        </PopoverContent>
+                                                    </Popover>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
 
-                                    <FormField
-                                        control={form.control}
-                                        name="endDate"
-                                        render={({ field }) => (
-                                            <FormItem className="flex-1">
-                                                <FormLabel>End Date</FormLabel>
-                                                <Popover>
-                                                    <PopoverTrigger asChild>
-                                                        <FormControl>
-                                                            <Button variant={"outline"} className='w-full h-14 bg-transparent hover:bg-transparent'>
-                                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                                            </Button>
-                                                        </FormControl>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent className="w-auto p-0" align="start">
-                                                        <Calendar
-                                                            mode="single"
-                                                            selected={field.value}
-                                                            onSelect={field.onChange}
-                                                            initialFocus
-                                                        />
-                                                    </PopoverContent>
-                                                </Popover>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
+                                        <FormField
+                                            control={form.control}
+                                            name="endDate"
+                                            render={({ field }) => (
+                                                <FormItem className="flex-1">
+                                                    <FormLabel>End Date</FormLabel>
+                                                    <Popover>
+                                                        <PopoverTrigger asChild>
+                                                            <FormControl>
+                                                                <Button variant={"outline"} className='w-full h-14 bg-transparent hover:bg-transparent'>
+                                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                                                </Button>
+                                                            </FormControl>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-auto p-0" align="start">
+                                                            <Calendar
+                                                                mode="single"
+                                                                selected={field.value}
+                                                                onSelect={field.onChange}
+                                                                initialFocus
+                                                            />
+                                                        </PopoverContent>
+                                                    </Popover>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                )}
+
 
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center">
