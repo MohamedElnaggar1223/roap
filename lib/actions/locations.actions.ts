@@ -3,50 +3,34 @@ import { db } from '@/db'
 import { branches, branchTranslations, branchFacility, branchSport } from '@/db/schema'
 import { auth } from '@/auth'
 import { and, eq, inArray, not, sql } from 'drizzle-orm'
-import { revalidatePath } from 'next/cache'
+import { revalidateTag, unstable_cache } from 'next/cache'
 import { slugify } from '../utils'
 
-export async function getLocations() {
-    const session = await auth()
-
-    if (!session?.user || session.user.role !== 'academic') {
-        return { error: 'Unauthorized' }
-    }
-
-    const academic = await db.query.academics.findFirst({
-        where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
-        columns: {
-            id: true,
-        }
-    })
-
-    if (!academic) {
-        return { error: 'Academy not found' }
-    }
-
-    const locations = await db
-        .select({
-            id: branches.id,
-            name: sql<string>`t.name`,
-            locale: sql<string>`t.locale`,
-            nameInGoogleMap: branches.nameInGoogleMap,
-            url: branches.url,
-            isDefault: branches.isDefault,
-            rate: branches.rate,
-            sports: sql<string[]>`(
+const getLocationsAction = async (academicId: number) => {
+    return unstable_cache(async (academicId: number) => {
+        const locations = await db
+            .select({
+                id: branches.id,
+                name: sql<string>`t.name`,
+                locale: sql<string>`t.locale`,
+                nameInGoogleMap: branches.nameInGoogleMap,
+                url: branches.url,
+                isDefault: branches.isDefault,
+                rate: branches.rate,
+                sports: sql<string[]>`(
                 SELECT COALESCE(array_agg(sport_id), ARRAY[]::integer[])
                 FROM ${branchSport}
                 WHERE ${branchSport.branchId} = ${branches.id}
             )`,
-            amenities: sql<string[]>`(
+                amenities: sql<string[]>`(
                 SELECT COALESCE(array_agg(facility_id), ARRAY[]::integer[])
                 FROM ${branchFacility}
                 WHERE ${branchFacility.branchId} = ${branches.id}
             )`
-        })
-        .from(branches)
-        .innerJoin(
-            sql`(
+            })
+            .from(branches)
+            .innerJoin(
+                sql`(
                 SELECT bt.branch_id, bt.name, bt.locale
                 FROM ${branchTranslations} bt
                 WHERE bt.locale = 'en'
@@ -65,20 +49,46 @@ export async function getLocations() {
                 ) first_trans ON bt2.branch_id = first_trans.branch_id 
                 AND bt2.locale = first_trans.first_locale
             ) t`,
-            sql`t.branch_id = ${branches.id}`
-        )
-        .where(eq(branches.academicId, academic.id))
+                sql`t.branch_id = ${branches.id}`
+            )
+            .where(eq(branches.academicId, academicId))
 
-    const transformedLocations = locations.map(location => ({
-        ...location,
-        sports: location.sports || [],
-        facilities: location.amenities || [],
-    }))
+        console.log("Ran")
 
-    return {
-        data: transformedLocations,
-        error: null
+        const transformedLocations = locations.map(location => ({
+            ...location,
+            sports: location.sports || [],
+            facilities: location.amenities || [],
+        }))
+
+        return {
+            data: transformedLocations,
+            error: null
+        }
+    }, [`locations-${academicId.toString()}`], { tags: [`locations-${academicId.toString()}`], revalidate: 3600 })(academicId)
+}
+
+export async function getLocations() {
+    const session = await auth()
+
+    if (!session?.user || session.user.role !== 'academic') {
+        return { error: 'Unauthorized', data: null }
     }
+
+    const academic = await db.query.academics.findFirst({
+        where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
+        columns: {
+            id: true,
+        }
+    })
+
+    if (!academic) {
+        return { error: 'Academy not found', data: null }
+    }
+
+    const locations = await getLocationsAction(academic.id)
+
+    return locations
 }
 
 export async function createLocation(data: {
@@ -95,14 +105,15 @@ export async function createLocation(data: {
         return { error: 'Unauthorized', field: 'root' }
     }
 
+    const academy = await db.query.academics.findFirst({
+        where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
+        columns: {
+            id: true,
+        }
+    })
+
     try {
         return await db.transaction(async (tx) => {
-            const academy = await tx.query.academics.findFirst({
-                where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
-                columns: {
-                    id: true,
-                }
-            })
 
             if (!academy) return { error: 'Academy not found' }
 
@@ -183,7 +194,7 @@ export async function createLocation(data: {
         return { error: 'Failed to create location' }
     }
     finally {
-        revalidatePath('/academy/locations')
+        revalidateTag(`locations-${academy?.id}`)
     }
 }
 
@@ -298,12 +309,15 @@ export async function updateLocation(id: number, data: {
                     }))) : Promise.resolve()
         ])
 
-        revalidatePath('/academy/locations')
+        // revalidatePath('/academy/locations')
         return { success: true }
 
     } catch (error) {
         console.error('Error updating location:', error)
         return { error: 'Failed to update location' }
+    }
+    finally {
+        revalidateTag(`locations-${academy?.id}`)
     }
 }
 
@@ -316,6 +330,14 @@ export async function deleteLocations(ids: number[]) {
 
     await Promise.all(ids.map(async id => await db.delete(branches).where(eq(branches.id, id))))
 
-    revalidatePath('/academy/locations')
+    // revalidatePath('/academy/locations')
+    const academy = await db.query.academics.findFirst({
+        where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
+        columns: {
+            id: true,
+        }
+    })
+
+    revalidateTag(`locations-${academy?.id}`)
     return { success: true }
 }
