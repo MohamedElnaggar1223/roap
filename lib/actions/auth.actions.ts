@@ -9,13 +9,8 @@ type SignInInput = {
     password: string
 }
 
-// export async function signOut() {
-//     await nextAuthSignOut({ redirect: true, redirectTo: '/' })
-// }
-
 export async function signIn(data: SignInInput) {
     try {
-        // First check if the user exists and get their role
         const user = await db.query.users.findFirst({
             where: eq(sql`lower(${users.email})`, data.email.toLowerCase()),
             columns: {
@@ -24,13 +19,10 @@ export async function signIn(data: SignInInput) {
             }
         })
 
-        console.log("User:", user, data)
-
         if (!user) {
             return { error: "User not found" }
         }
 
-        // If user is an academic, check their status
         if (user.role === 'academic') {
             const academy = await db.query.academics.findFirst({
                 where: eq(academics.userId, user.id),
@@ -43,7 +35,6 @@ export async function signIn(data: SignInInput) {
                 return { error: "Academy not found" }
             }
 
-            // Check academy status
             if (academy.status === 'pending') {
                 return { error: "pending" }
             }

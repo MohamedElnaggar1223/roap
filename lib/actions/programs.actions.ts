@@ -125,7 +125,6 @@ export async function createProgram(data: {
 
             if (!academy) return { error: 'Academy not found', field: 'root' }
 
-            // Create program
             const [program] = await tx
                 .insert(programs)
                 .values({
@@ -144,9 +143,7 @@ export async function createProgram(data: {
                     id: programs.id,
                 })
 
-            // Insert coaches and packages in parallel
             await Promise.all([
-                // Handle coaches
                 data.coaches.length > 0 ?
                     tx.insert(coachProgram)
                         .values(
@@ -158,7 +155,6 @@ export async function createProgram(data: {
                             }))
                         ) : Promise.resolve(),
 
-                // Handle packages and their schedules
                 data.packagesData.length > 0 ?
                     Promise.all(data.packagesData.map(async (packageData) => {
                         const [newPackage] = await tx
@@ -227,7 +223,6 @@ export async function updateProgram(id: number, data: {
 
     try {
         await db.transaction(async (tx) => {
-            // Update program
             await tx
                 .update(programs)
                 .set({
@@ -244,7 +239,6 @@ export async function updateProgram(id: number, data: {
                 })
                 .where(eq(programs.id, id))
 
-            // Get current coaches and packages
             const [currentCoaches, currentPackages] = await Promise.all([
                 tx
                     .select({ coachId: coachProgram.coachId })
@@ -266,7 +260,6 @@ export async function updateProgram(id: number, data: {
             const packagesToUpdate = data.packagesData.filter(p => p.id && currentPackageIds.includes(p.id))
 
             await Promise.all([
-                // Handle coaches
                 coachesToRemove.length > 0 ?
                     tx.delete(coachProgram)
                         .where(and(
@@ -283,7 +276,6 @@ export async function updateProgram(id: number, data: {
                             updatedAt: sql`now()`,
                         }))) : Promise.resolve(),
 
-                // Handle new packages and their schedules
                 packagesToAdd.length > 0 ?
                     Promise.all(packagesToAdd.map(async (packageData) => {
                         const [newPackage] = await tx
@@ -319,7 +311,6 @@ export async function updateProgram(id: number, data: {
                         }
                     })) : Promise.resolve(),
 
-                // Remove deleted packages (cascades to schedules due to foreign key)
                 packagesToRemove.length > 0 ?
                     tx.delete(packages)
                         .where(and(
@@ -327,11 +318,9 @@ export async function updateProgram(id: number, data: {
                             inArray(packages.id, packagesToRemove)
                         )) : Promise.resolve(),
 
-                // Update existing packages and their schedules
                 packagesToUpdate.length > 0 ?
                     Promise.all(packagesToUpdate.map(async (packageData) => {
                         await tx.transaction(async (innerTx) => {
-                            // Update package
                             await innerTx
                                 .update(packages)
                                 .set({
@@ -345,12 +334,10 @@ export async function updateProgram(id: number, data: {
                                 })
                                 .where(eq(packages.id, packageData.id!))
 
-                            // Delete existing schedules
                             await innerTx
                                 .delete(schedules)
                                 .where(eq(schedules.packageId, packageData.id!))
 
-                            // Insert new schedules
                             if (packageData.schedules.length > 0) {
                                 await innerTx
                                     .insert(schedules)

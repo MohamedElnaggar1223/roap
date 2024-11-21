@@ -21,7 +21,7 @@ export default function AutoGrowingTextarea({ className, field, disabled }: {
     const maxLength = 254;
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const defaultRows = 1;
-    const maxRows = undefined; // You can set a max number of rows
+    const maxRows = undefined;
 
     const characterCount = useMemo(() => {
         return field.value?.length || 0;

@@ -1,4 +1,3 @@
-// lib/validations/programs.ts
 import { z } from "zod"
 
 export const addProgramSchema = z.object({

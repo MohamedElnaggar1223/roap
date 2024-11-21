@@ -86,73 +86,6 @@ export default function Calendar() {
     }
   }
 
-  // const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 })
-  // const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 })
-
-
-  // const weekDates = WEEK_DAYS.map((_, i) => addDays(weekStart, i))
-
-  // const events: Event[] = [
-  //   {
-  //     id: "1",
-  //     title: "SWIMMING U16",
-  //     start: new Date(2024, 4, 23, 8, 0),
-  //     end: new Date(2024, 4, 23, 9, 0),
-  //     participant: "Hanna Ahmed, 16",
-  //     type: "swimming",
-  //   },
-  //   {
-  //     id: "2",
-  //     title: "SWIMMING U16",
-  //     start: new Date(2024, 4, 23, 8, 0),
-  //     end: new Date(2024, 4, 23, 9, 0),
-  //     participant: "John Doe, 16",
-  //     type: "swimming",
-  //   },
-  //   {
-  //     id: "3",
-  //     title: "SWIMMING U16",
-  //     start: new Date(2024, 4, 23, 8, 0),
-  //     end: new Date(2024, 4, 23, 9, 0),
-  //     participant: "Jane Smith, 16",
-  //     type: "swimming",
-  //   },
-  //   {
-  //     id: "4",
-  //     title: "BLOCK",
-  //     start: new Date(2024, 4, 24, 8, 0),
-  //     end: new Date(2024, 4, 24, 9, 0),
-  //     participant: "",
-  //     type: "block",
-  //   },
-  //   {
-  //     id: "5",
-  //     title: "SWIMMING U16",
-  //     start: new Date(2024, 4, 25, 11, 0),
-  //     end: new Date(2024, 4, 25, 12, 0),
-  //     participant: "Hanna Ahmed, 16",
-  //     type: "swimming",
-  //   },
-  //   {
-  //     id: "6",
-  //     title: "SWIMMING U16",
-  //     start: new Date(2024, 4, 26, 8, 0),
-  //     end: new Date(2024, 4, 26, 9, 0),
-  //     participant: "Hanna Ahmed, 16",
-  //     type: "swimming",
-  //   },
-  //   {
-  //     id: "7",
-  //     title: "SWIMMING U16",
-  //     start: new Date(2024, 4, 27, 12, 0),
-  //     end: new Date(2024, 4, 27, 13, 0),
-  //     participant: "Hanna Ahmed, 16",
-  //     type: "swimming",
-  //   },
-  // ]
-
-  console.log(events)
-
   const fetchEvents = useCallback(async () => {
     startTransition(async () => {
       const result = await getCalendarSlots(dateRange.start, dateRange.end)
@@ -166,7 +99,7 @@ export default function Calendar() {
 
   useEffect(() => {
     let filtered = [...events]
-    
+
     if (selectedLocation) {
       filtered = filtered.filter(event => event.branchName === selectedLocation)
     }
@@ -179,7 +112,7 @@ export default function Calendar() {
     if (selectedCoach) {
       filtered = filtered.filter(event => event.coachName === selectedCoach)
     }
-    
+
     setFilteredEvents(filtered)
   }, [events, selectedLocation, selectedSport, selectedPackage, selectedCoach])
 
@@ -195,10 +128,10 @@ export default function Calendar() {
   const getEventsForSlot = (date: Date, hour: number) => {
     return filteredEvents.filter((event) => {
       if (!event.date || !event.startTime) return false
-      
+
       const eventDate = new Date(event.date)
       const [eventHour] = event.startTime.split(':').map(Number)
-      
+
       return isSameDay(eventDate, date) && eventHour === hour
     })
   }
@@ -214,7 +147,6 @@ export default function Calendar() {
       case 'week':
         return WEEK_DAYS.map((_, i) => addDays(dateRange.start, i))
       case 'month':
-        // TODO: Implement month view dates
         return WEEK_DAYS.map((_, i) => addDays(dateRange.start, i))
     }
   }, [calendarView, currentDate, dateRange.start])
@@ -223,14 +155,14 @@ export default function Calendar() {
     <div className="w-full max-w-7xl mx-auto p-2 sm:p-4 bg-[#E0E4D9]">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 bg-[#E0E4D9] p-2 sm:p-4 rounded-lg">
-      <div className="flex flex-wrap items-center gap-2 mb-2 sm:mb-0">
+        <div className="flex flex-wrap items-center gap-2 mb-2 sm:mb-0">
           <span className="text-sm font-medium">Filters:</span>
-          
+
           {/* Location Filter */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className={cn(
                   "text-xs sm:text-sm h-7 sm:h-8",
                   selectedLocation && "bg-blue-100"
@@ -244,8 +176,8 @@ export default function Calendar() {
                 All Locations
               </DropdownMenuItem>
               {locations.map(location => (
-                <DropdownMenuItem 
-                  key={location} 
+                <DropdownMenuItem
+                  key={location}
                   onClick={() => setSelectedLocation(location)}
                 >
                   {location}
@@ -257,8 +189,8 @@ export default function Calendar() {
           {/* Sports Filter */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className={cn(
                   "text-xs sm:text-sm h-7 sm:h-8",
                   selectedSport && "bg-blue-100"
@@ -272,8 +204,8 @@ export default function Calendar() {
                 All Sports
               </DropdownMenuItem>
               {sports.map(sport => (
-                <DropdownMenuItem 
-                  key={sport} 
+                <DropdownMenuItem
+                  key={sport}
                   onClick={() => setSelectedSport(sport)}
                 >
                   {sport}
@@ -285,8 +217,8 @@ export default function Calendar() {
           {/* Packages Filter */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className={cn(
                   "text-xs sm:text-sm h-7 sm:h-8",
                   selectedPackage && "bg-blue-100"
@@ -300,8 +232,8 @@ export default function Calendar() {
                 All Packages
               </DropdownMenuItem>
               {packages.map(pkg => (
-                <DropdownMenuItem 
-                  key={pkg} 
+                <DropdownMenuItem
+                  key={pkg}
                   onClick={() => setSelectedPackage(pkg)}
                 >
                   {pkg}
@@ -313,8 +245,8 @@ export default function Calendar() {
           {/* Coaches Filter */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className={cn(
                   "text-xs sm:text-sm h-7 sm:h-8",
                   selectedCoach && "bg-blue-100"
@@ -328,8 +260,8 @@ export default function Calendar() {
                 All Coaches
               </DropdownMenuItem>
               {coaches.map(coach => (
-                <DropdownMenuItem 
-                  key={coach} 
+                <DropdownMenuItem
+                  key={coach}
                   onClick={() => setSelectedCoach(coach)}
                 >
                   {coach}
@@ -340,39 +272,39 @@ export default function Calendar() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="icon" 
+          <Button
+            variant="outline"
+            size="icon"
             className="h-7 w-7 sm:h-8 sm:w-8"
             onClick={() => navigate('prev')}
           >
             <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
           </Button>
-          
-          <Button 
-            variant="outline" 
+
+          <Button
+            variant="outline"
             className="text-xs sm:text-sm h-7 sm:h-8"
             onClick={() => setCurrentDate(new Date())}
           >
             Today
           </Button>
-          
-          <Button 
-            variant="outline" 
+
+          <Button
+            variant="outline"
             className="text-xs sm:text-sm h-7 sm:h-8"
           >
             {format(currentDate, 'MMMM yyyy')}
           </Button>
-          
-          <Button 
-            variant="outline" 
-            size="icon" 
+
+          <Button
+            variant="outline"
+            size="icon"
             className="h-7 w-7 sm:h-8 sm:w-8"
             onClick={() => navigate('next')}
           >
             <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
           </Button>
-          
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="text-xs sm:text-sm h-7 sm:h-8">
@@ -386,18 +318,18 @@ export default function Calendar() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        
+
       </div>
 
       {calendarView === 'day' ? (
-        <DayView 
-          events={filteredEvents} 
-          date={currentDate} 
+        <DayView
+          events={filteredEvents}
+          date={currentDate}
         />
       ) : calendarView === 'month' ? (
-        <MonthView 
-          events={filteredEvents} 
-          currentDate={currentDate} 
+        <MonthView
+          events={filteredEvents}
+          currentDate={currentDate}
         />
       ) : (
         <div className="bg-white rounded-lg overflow-hidden">
@@ -545,7 +477,6 @@ const DayView = ({ events, date }: { events: Event[], date: Date }) => {
   )
 }
 
-// Month View Component
 const MonthView = ({ events, currentDate }: { events: Event[], currentDate: Date }) => {
   const monthDays = useMemo(() => {
     const start = startOfMonth(currentDate)

@@ -1,9 +1,10 @@
 'use server'
-
+import { formatDateForDB } from './../utils';
 import { db } from '@/db'
-import { coaches } from '@/db/schema'
+import { coaches, coachSport, coachSpokenLanguage, coachPackage } from '@/db/schema'
 import { auth } from '@/auth'
-import { eq } from 'drizzle-orm'
+import { and, eq, inArray, sql } from 'drizzle-orm'
+import { revalidatePath } from 'next/cache'
 
 export async function getAllCoaches(url: string | null) {
     if (!url) return
@@ -13,7 +14,6 @@ export async function getAllCoaches(url: string | null) {
         return null
     }
 
-    // Get the academic's ID from the logged-in user
     const academic = await db.query.academics.findFirst({
         where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
         columns: {
@@ -23,7 +23,6 @@ export async function getAllCoaches(url: string | null) {
 
     if (!academic) return null
 
-    // Get all coaches for this academy
     const academyCoaches = await db
         .select({
             id: coaches.id,
@@ -55,4 +54,259 @@ export async function getCoachById(id: number) {
     }
 
     return { data: coach }
+}
+
+export async function getCoaches() {
+    const session = await auth()
+
+    if (!session?.user || session.user.role !== 'academic') {
+        return { error: 'Unauthorized' }
+    }
+
+    const academic = await db.query.academics.findFirst({
+        where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
+        columns: {
+            id: true,
+        }
+    })
+
+    if (!academic) {
+        return { error: 'Academy not found' }
+    }
+
+    const coachesList = await db
+        .select({
+            id: coaches.id,
+            name: coaches.name,
+            title: coaches.title,
+            image: coaches.image,
+            bio: coaches.bio,
+            gender: coaches.gender,
+            dateOfBirth: coaches.dateOfBirth,
+            privateSessionPercentage: coaches.privateSessionPercentage,
+            sports: sql<number[]>`(
+                SELECT COALESCE(array_agg(sport_id::integer), ARRAY[]::integer[])
+                FROM ${coachSport}
+                WHERE ${coachSport.coachId} = coaches.id
+            )`,
+            languages: sql<number[]>`(
+                SELECT COALESCE(array_agg(spoken_language_id::integer), ARRAY[]::integer[])
+                FROM ${coachSpokenLanguage}
+                WHERE ${coachSpokenLanguage.coachId} = coaches.id
+            )`,
+            packages: sql<number[]>`(
+                SELECT COALESCE(array_agg(package_id::integer), ARRAY[]::integer[])
+                FROM ${coachPackage}
+                WHERE ${coachPackage.coachId} = coaches.id
+            )`
+        })
+        .from(coaches)
+        .where(eq(coaches.academicId, academic.id))
+
+    return {
+        data: coachesList.map(coach => ({
+            ...coach,
+            sports: coach.sports || [],
+            languages: coach.languages || [],
+            packages: coach.packages || []
+        })),
+        error: null
+    }
+}
+
+export async function createCoach(data: {
+    name: string
+    title: string
+    image: string
+    bio: string
+    gender: string
+    dateOfBirth: Date
+    privateSessionPercentage: string
+    sports: number[]
+    languages: number[]
+}) {
+    const session = await auth()
+
+    if (!session?.user || session.user.role !== 'academic') {
+        return { error: 'Unauthorized', field: 'root' }
+    }
+
+    try {
+        return await db.transaction(async (tx) => {
+            const academy = await tx.query.academics.findFirst({
+                where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
+                columns: {
+                    id: true,
+                }
+            })
+
+            if (!academy) return { error: 'Academy not found', field: 'root' }
+
+            const [coach] = await tx
+                .insert(coaches)
+                .values({
+                    name: data.name,
+                    title: data.title,
+                    image: data.image,
+                    bio: data.bio,
+                    gender: data.gender,
+                    dateOfBirth: formatDateForDB(data.dateOfBirth),
+                    privateSessionPercentage: data.privateSessionPercentage,
+                    academicId: academy.id,
+                    createdAt: sql`now()`,
+                    updatedAt: sql`now()`
+                })
+                .returning({
+                    id: coaches.id,
+                })
+
+            await Promise.all([
+                data.sports.length > 0 ?
+                    tx.insert(coachSport)
+                        .values(
+                            data.sports.map(sportId => ({
+                                coachId: coach.id,
+                                sportId,
+                                createdAt: sql`now()`,
+                                updatedAt: sql`now()`,
+                            }))
+                        ) : Promise.resolve(),
+
+                data.languages.length > 0 ?
+                    tx.insert(coachSpokenLanguage)
+                        .values(
+                            data.languages.map(languageId => ({
+                                coachId: coach.id,
+                                spokenLanguageId: languageId,
+                                createdAt: sql`now()`,
+                                updatedAt: sql`now()`,
+                            }))
+                        ) : Promise.resolve()
+            ])
+
+            return { data: coach, error: null }
+        })
+    } catch (error) {
+        console.error('Error creating coach:', error)
+        return { error: 'Failed to create coach' }
+    }
+    finally {
+        revalidatePath('/academy/coaches')
+    }
+}
+
+export async function updateCoach(id: number, data: {
+    name: string
+    title: string
+    image: string
+    bio: string
+    gender: string
+    dateOfBirth: Date
+    privateSessionPercentage: string
+    sports: number[]
+    languages: number[]
+}) {
+    const session = await auth()
+
+    if (!session?.user || session.user.role !== 'academic') {
+        return { error: 'Unauthorized' }
+    }
+
+    const academy = await db.query.academics.findFirst({
+        where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
+        columns: {
+            id: true,
+        }
+    })
+
+    if (!academy) return { error: 'Academy not found' }
+
+    try {
+        await db.update(coaches)
+            .set({
+                name: data.name,
+                title: data.title,
+                image: data.image,
+                bio: data.bio,
+                gender: data.gender,
+                dateOfBirth: formatDateForDB(data.dateOfBirth),
+                privateSessionPercentage: data.privateSessionPercentage,
+                updatedAt: sql`now()`
+            })
+            .where(eq(coaches.id, id))
+
+        const [existingSports, existingLanguages] = await Promise.all([
+            db
+                .select({ sportId: coachSport.sportId })
+                .from(coachSport)
+                .where(eq(coachSport.coachId, id)),
+
+            db
+                .select({ languageId: coachSpokenLanguage.spokenLanguageId })
+                .from(coachSpokenLanguage)
+                .where(eq(coachSpokenLanguage.coachId, id))
+        ])
+
+        const existingSportIds = existingSports.map(s => s.sportId)
+        const existingLanguageIds = existingLanguages.map(l => l.languageId)
+
+        const sportsToAdd = data.sports.filter(id => !existingSportIds.includes(id))
+        const sportsToRemove = existingSportIds.filter(id => !data.sports.includes(id))
+        const languagesToAdd = data.languages.filter(id => !existingLanguageIds.includes(id))
+        const languagesToRemove = existingLanguageIds.filter(id => !data.languages.includes(id))
+
+        await Promise.all([
+            sportsToRemove.length > 0 ?
+                db.delete(coachSport)
+                    .where(and(
+                        eq(coachSport.coachId, id),
+                        inArray(coachSport.sportId, sportsToRemove)
+                    )) : Promise.resolve(),
+
+            sportsToAdd.length > 0 ?
+                db.insert(coachSport)
+                    .values(sportsToAdd.map(sportId => ({
+                        coachId: id,
+                        sportId,
+                        createdAt: sql`now()`,
+                        updatedAt: sql`now()`,
+                    }))) : Promise.resolve(),
+
+            languagesToRemove.length > 0 ?
+                db.delete(coachSpokenLanguage)
+                    .where(and(
+                        eq(coachSpokenLanguage.coachId, id),
+                        inArray(coachSpokenLanguage.spokenLanguageId, languagesToRemove)
+                    )) : Promise.resolve(),
+
+            languagesToAdd.length > 0 ?
+                db.insert(coachSpokenLanguage)
+                    .values(languagesToAdd.map(languageId => ({
+                        coachId: id,
+                        spokenLanguageId: languageId,
+                        createdAt: sql`now()`,
+                        updatedAt: sql`now()`,
+                    }))) : Promise.resolve()
+        ])
+
+        revalidatePath('/academy/coaches')
+        return { success: true }
+
+    } catch (error) {
+        console.error('Error updating coach:', error)
+        return { error: 'Failed to update coach' }
+    }
+}
+
+export async function deleteCoaches(ids: number[]) {
+    const session = await auth()
+
+    if (!session?.user || session.user.role !== 'academic') {
+        return { error: 'Unauthorized' }
+    }
+
+    await Promise.all(ids.map(async id => await db.delete(coaches).where(eq(coaches.id, id))))
+
+    revalidatePath('/academy/coaches')
+    return { success: true }
 }

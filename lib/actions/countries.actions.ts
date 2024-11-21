@@ -61,8 +61,6 @@ export async function getPaginatedCountries(
         .limit(pageSize)
         .offset(offset)
 
-    console.log(data)
-
     const [{ count }] = await db
         .select({ count: sql`count(*)`.mapWith(Number) })
         .from(countries)

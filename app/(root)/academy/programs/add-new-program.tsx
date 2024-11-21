@@ -204,7 +204,6 @@ export default function AddNewProgram({ branches, sports }: Props) {
 
     const handleSelectGender = (gender: string) => {
         if (loading) return
-        console.log(gender)
         setSelectedGenders(prev =>
             prev.includes(gender) ? prev.filter(g => g !== gender) : [...prev, gender]
         )

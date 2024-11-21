@@ -11,24 +11,26 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Checkbox } from '@/components/ui/checkbox'
-import AddNewLocation from './add-new-location'
+import AddNewCoach from './add-new-coach'
 import { useDebouncedCallback } from 'use-debounce'
 import Image from 'next/image'
-import EditLocation from './edit-location'
+import EditCoach from './edit-coach'
 import { useRouter } from 'next/navigation'
-import { deleteLocations } from '@/lib/actions/locations.actions'
+import { deleteCoaches } from '@/lib/actions/coaches.actions'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
-interface Location {
+interface Coach {
     id: number
     name: string
-    nameInGoogleMap: string | null
-    url: string | null
-    isDefault: boolean
-    rate: number | null
-    sports: string[]
-    amenities: string[]
-    locale: string
+    title: string | null
+    image: string | null
+    bio: string | null
+    gender: string | null
+    dateOfBirth: string | null
+    privateSessionPercentage: string | null
+    sports: number[]
+    languages: number[]
+    packages: number[]
 }
 
 interface Sport {
@@ -38,27 +40,27 @@ interface Sport {
     locale: string
 }
 
-interface LocationsDataTableProps {
-    data: Location[]
-    sports: Sport[]
+interface Language {
+    id: number
+    name: string
+    locale: string
 }
 
-export function LocationsDataTable({ data, sports }: LocationsDataTableProps) {
+interface CoachesDataTableProps {
+    data: Coach[]
+    sports: Sport[]
+    languages: Language[]
+}
+
+export function CoachesDataTable({ data, sports, languages }: CoachesDataTableProps) {
     const router = useRouter()
 
-    const [selectedLocations, setSelectedLocations] = useState<number[]>([])
     const [selectedSport, setSelectedSport] = useState<string | null>(null)
-    const [filteredData, setFilteredData] = useState<Location[]>(data)
+    const [filteredData, setFilteredData] = useState<Coach[]>(data)
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedRows, setSelectedRows] = useState<number[]>([])
     const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false)
     const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
-
-    const handleSelectLocation = (id: number) => {
-        setSelectedLocations(prev =>
-            prev.includes(id) ? prev.filter(locId => locId !== id) : [...prev, id]
-        )
-    }
 
     const debouncedSearch = useDebouncedCallback((value: string) => {
         const lowercasedValue = value.toLowerCase()
@@ -66,8 +68,8 @@ export function LocationsDataTable({ data, sports }: LocationsDataTableProps) {
             setFilteredData(data)
         }
         else {
-            const filtered = data.filter(location =>
-                location.name?.toLowerCase().includes(lowercasedValue)
+            const filtered = data.filter(coach =>
+                coach.name?.toLowerCase().includes(lowercasedValue)
             )
             setFilteredData(filtered)
         }
@@ -87,23 +89,35 @@ export function LocationsDataTable({ data, sports }: LocationsDataTableProps) {
 
     const handleSelectAll = () => {
         setSelectedRows(
-            selectedRows.length === filteredData.length ? [] : filteredData.map(location => location.id)
+            selectedRows.length === filteredData.length ? [] : filteredData.map(coach => coach.id)
         )
     }
 
     const handleBulkDelete = async () => {
         setBulkDeleteLoading(true)
-        await deleteLocations(selectedRows)
+        await deleteCoaches(selectedRows)
         router.refresh()
         setBulkDeleteLoading(false)
         setBulkDeleteOpen(false)
+    }
+
+    const calculateAge = (dateOfBirth: Date | null) => {
+        if (!dateOfBirth) return null
+        const today = new Date()
+        const birthDate = new Date(dateOfBirth)
+        let age = today.getFullYear() - birthDate.getFullYear()
+        const m = today.getMonth() - birthDate.getMonth()
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            age--
+        }
+        return age
     }
 
     return (
         <>
             <div className="flex items-center justify-between gap-4 w-full flex-wrap">
                 <div className="flex items-center gap-4 flex-wrap">
-                    <AddNewLocation sports={sports} />
+                    <AddNewCoach sports={sports} languages={languages} />
                     <div className="flex items-center gap-2">
                         <span className="text-sm">Filters:</span>
                         <DropdownMenu>
@@ -137,7 +151,6 @@ export function LocationsDataTable({ data, sports }: LocationsDataTableProps) {
                     {selectedRows.length > 0 && (
                         <Button
                             variant="destructive"
-
                             onClick={() => setBulkDeleteOpen(true)}
                             className="flex items-center gap-2"
                         >
@@ -159,7 +172,7 @@ export function LocationsDataTable({ data, sports }: LocationsDataTableProps) {
             </div>
 
             <div className="w-full max-w-screen-2xl overflow-x-auto">
-                <div className="min-w-full grid grid-cols-[auto,0.75fr,auto,auto,auto,auto,auto,auto] gap-y-2 text-nowrap">
+                <div className="min-w-full grid grid-cols-[auto,auto,0.5fr,auto,auto,auto,auto,auto,auto] gap-y-2 text-nowrap">
                     {/* Header */}
                     <div className="contents">
                         <div className="py-4 px-4 flex items-center justify-center">
@@ -169,50 +182,75 @@ export function LocationsDataTable({ data, sports }: LocationsDataTableProps) {
                                 aria-label="Select all"
                             />
                         </div>
+                        <div className="py-4 px-4">Image</div>
                         <div className="py-4 px-4">Name</div>
-                        <div className="py-4 px-4">Name in Google Map</div>
-                        <div className="py-4 px-4">Amenities</div>
+                        <div className="py-4 px-4">Age</div>
+                        <div className="py-4 px-4">Gender</div>
                         <div className="py-4 px-4">Sports</div>
-                        <div className="py-4 px-4">Rate</div>
-                        <div className="py-4 px-4">Is Default</div>
+                        <div className="py-4 px-4">Languages</div>
+                        <div className="py-4 px-4">Packages</div>
                         <div className="py-4 px-4"></div>
                     </div>
 
                     {/* Rows */}
                     {filteredData
-                        .filter((location) => selectedSport ? location.sports?.includes(selectedSport) : true)
-                        .map((location) => (
-                            <Fragment key={location.id}>
-                                <div className="py-4 px-4 bg-main-white rounded-l-[20px] flex items-center justify-center font-bold font-inter">
+                        .filter((coach) => selectedSport ? coach.sports?.includes(parseInt(selectedSport)) : true)
+                        .map((coach) => (
+                            <Fragment key={coach.id}>
+                                <div className="py-4 px-4 bg-main-white rounded-l-[20px] flex items-center justify-center">
                                     <Checkbox
-                                        checked={selectedRows.includes(location.id)}
-                                        onCheckedChange={() => handleRowSelect(location.id)}
-                                        aria-label={`Select ${location.name}`}
+                                        checked={selectedRows.includes(coach.id)}
+                                        onCheckedChange={() => handleRowSelect(coach.id)}
+                                        aria-label={`Select ${coach.name}`}
                                     />
                                 </div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{location.name}</div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{location.nameInGoogleMap}</div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{location.amenities?.length ?? 0}</div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{location.sports?.length}</div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{location.rate}</div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                    <span className={location.isDefault ? "text-main-green" : "text-red-600"}>
-                                        {location.isDefault ? "Yes" : "No"}
-                                    </span>
+                                <div className="py-4 px-4 bg-main-white flex items-center justify-start">
+                                    <div className="flex items-center justify-center w-[3.75rem] h-[3.75rem] overflow-hidden rounded-full">
+                                        <Image
+                                            src={coach.image ?? '/images/placeholder.svg'}
+                                            alt={coach.name}
+                                            width={60}
+                                            height={60}
+                                            className="rounded-full object-cover"
+                                        />
+                                    </div>
                                 </div>
-                                <div className="py-4 px-4 bg-main-white rounded-r-[20px] flex items-center justify-end font-bold font-inter">
-                                    <EditLocation locationEdited={location} />
+                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                    {coach.name}
+                                </div>
+                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                    {calculateAge(new Date(coach.dateOfBirth!))}
+                                </div>
+                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                    {(coach.gender?.slice(0, 1).toUpperCase() ?? '') + coach.gender?.slice(1)}
+                                </div>
+                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                    {coach.sports?.length ?? 0}
+                                </div>
+                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                    {coach.languages?.length ?? 0}
+                                </div>
+                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                    {coach.packages?.length ?? 0}
+                                </div>
+                                <div className="py-4 px-4 bg-main-white rounded-r-[20px] flex items-center justify-end">
+                                    <EditCoach
+                                        coachEdited={coach}
+                                        sports={sports}
+                                        languages={languages}
+                                    />
                                 </div>
                             </Fragment>
                         ))}
                 </div>
             </div>
+
             <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
                 <DialogContent className='font-geist'>
                     <DialogHeader>
-                        <DialogTitle className='font-medium'>Delete Translations</DialogTitle>
+                        <DialogTitle className='font-medium'>Delete Coaches</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to delete ({selectedRows.length}) countries?
+                            Are you sure you want to delete ({selectedRows.length}) coaches?
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>

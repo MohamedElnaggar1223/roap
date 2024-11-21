@@ -121,8 +121,6 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
         );
     });
 
-    console.log('packageEdited:', packageEdited)
-
     const form = useForm<z.infer<typeof packageSchema>>({
         resolver: zodResolver(packageSchema),
         defaultValues: {
@@ -149,10 +147,8 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
     const packageType = form.watch("type")
 
     const onSubmit = async (values: z.infer<typeof packageSchema>) => {
-        console.log("test")
         try {
             if (packageEdited.id) {
-                console.log("test2")
                 setLoading(true)
                 const packageName = values.type === "Term" ?
                     `Term ${values.termNumber}` :
@@ -202,7 +198,6 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                 router.refresh()
             }
             else if (setCreatedPackages) {
-                console.log("test3")
                 const packageName = values.type === "Term" ?
                     `Term ${values.termNumber}` :
                     values.type === "Monthly" ?
@@ -253,44 +248,36 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
         const currentYear = new Date().getFullYear();
 
         if (isChecked) {
-            // If this is the first month being selected
             if (selectedMonths.length === 0) {
                 setSelectedMonths([monthValue]);
-                // Set form dates for first month
                 form.setValue("startDate", new Date(currentYear, monthValue - 1, 1));
                 form.setValue("endDate", new Date(currentYear, monthValue - 1, 1));
                 return;
             }
 
-            // Get min and max of current selection plus new month
             const allMonths = [...selectedMonths, monthValue];
             const firstMonth = Math.min(...allMonths);
             const lastMonth = Math.max(...allMonths);
 
-            // Create array of all months in range
             const monthsInRange = Array.from(
                 { length: lastMonth - firstMonth + 1 },
                 (_, i) => firstMonth + i
             );
             setSelectedMonths(monthsInRange);
 
-            // Update form dates based on range
             form.setValue("startDate", new Date(currentYear, firstMonth - 1, 1));
             form.setValue("endDate", new Date(currentYear, lastMonth - 1, 1));
         } else {
-            // When unchecking, remove this month and all months after it
             const newSelectedMonths = selectedMonths.filter(m => m < monthValue);
             setSelectedMonths(newSelectedMonths);
 
             if (newSelectedMonths.length > 0) {
-                // Update form dates based on remaining months
                 const firstMonth = Math.min(...newSelectedMonths);
                 const lastMonth = Math.max(...newSelectedMonths);
                 form.setValue("startDate", new Date(currentYear, firstMonth - 1, 1));
                 form.setValue("endDate", new Date(currentYear, lastMonth - 1, 1));
             } else {
-                // If no months selected, set to current date (or any other default date)
-                const defaultDate = new Date(currentYear, 0, 1); // January 1st of current year
+                const defaultDate = new Date(currentYear, 0, 1);
                 form.setValue("startDate", defaultDate);
                 form.setValue("endDate", defaultDate);
             }

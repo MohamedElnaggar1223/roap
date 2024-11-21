@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'roap.co',
       },
+      {
+        protocol: 'https',
+        hostname: 'ppkbrqxaahbpfimifxng.supabase.co'
+      },
     ],
   },
 };

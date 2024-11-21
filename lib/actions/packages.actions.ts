@@ -50,13 +50,10 @@ export async function getProgramPackages(url: string | null, programId: number) 
         .then(results =>
             results.map(pkg => ({
                 ...pkg,
-                // Handle cases where there are no schedules (null from json_agg)
                 schedules: pkg.schedules?.[0]?.id === null ? [] : pkg.schedules,
-                // Determine package type from name
                 type: pkg.name.startsWith('Term') ? 'Term' as const :
                     pkg.name.toLowerCase().includes('monthly') ? 'Monthly' as const :
                         'Full Season' as const,
-                // Extract term number if it's a Term package
                 termNumber: pkg.name.startsWith('Term') ?
                     parseInt(pkg.name.split(' ')[1]) : undefined
             }))
@@ -64,78 +61,6 @@ export async function getProgramPackages(url: string | null, programId: number) 
 
     return { data: packagesWithSchedules }
 }
-
-// export async function createPackage(data: {
-//     name: string
-//     price: number
-//     startDate: Date
-//     endDate: Date
-//     sessionPerWeek: number
-//     sessionDuration: number | null
-//     programId: number
-//     memo?: string | null
-// }) {
-//     const session = await auth()
-
-//     if (!session?.user || session.user.role !== 'academic') {
-//         return { error: 'Unauthorized' }
-//     }
-
-//     try {
-//         const [newPackage] = await db
-//             .insert(packages)
-//             .values({
-//                 ...data,
-//                 startDate: formatDateForDB(data.startDate),
-//                 endDate: formatDateForDB(data.endDate),
-//                 createdAt: sql`now()`,
-//                 updatedAt: sql`now()`,
-//             })
-//             .returning({
-//                 id: packages.id
-//             })
-
-//         revalidatePath('/academy/programs')
-//         return { data: newPackage }
-//     } catch (error) {
-//         console.error('Error creating package:', error)
-//         return { error: 'Failed to create package' }
-//     }
-// }
-
-// export async function updatePackage(id: number, data: {
-//     name: string
-//     price: number
-//     startDate: Date
-//     endDate: Date
-//     sessionPerWeek: number
-//     sessionDuration: number | null
-//     memo?: string | null
-// }) {
-//     const session = await auth()
-
-//     if (!session?.user || session.user.role !== 'academic') {
-//         return { error: 'Unauthorized' }
-//     }
-
-//     try {
-//         await db
-//             .update(packages)
-//             .set({
-//                 ...data,
-//                 startDate: formatDateForDB(data.startDate),
-//                 endDate: formatDateForDB(data.endDate),
-//                 updatedAt: sql`now()`
-//             })
-//             .where(eq(packages.id, id))
-
-//         revalidatePath('/academy/programs')
-//         return { success: true }
-//     } catch (error) {
-//         console.error('Error updating package:', error)
-//         return { error: 'Failed to update package' }
-//     }
-// }
 
 export async function createPackage(data: {
     name: string
@@ -220,11 +145,8 @@ export async function updatePackage(id: number, data: {
         return { error: 'Unauthorized' }
     }
 
-    console.log("updatePackage sch: ", data.schedules)
-
     try {
         await db.transaction(async (tx) => {
-            // Update package details
             await tx
                 .update(packages)
                 .set({
@@ -238,7 +160,6 @@ export async function updatePackage(id: number, data: {
                 })
                 .where(eq(packages.id, id))
 
-            // Get current schedules
             const currentSchedules = await tx
                 .select({ id: schedules.id })
                 .from(schedules)

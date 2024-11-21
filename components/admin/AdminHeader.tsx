@@ -10,26 +10,20 @@ export default function AdminHeader({ children }: Readonly<{ children: React.Rea
 	const pathname = usePathname();
 
 	const generateBreadcrumbs = () => {
-		// Remove the /admin prefix and split the remaining path
 		const paths = pathname?.replace('/admin', '').split('/').filter(Boolean);
 
-		// If there are no paths, return an empty array
 		if (!paths?.length) {
 			return [];
 		}
 
 		return paths
-			// Filter out numeric paths (IDs)
 			.filter(path => !/^\d+$/.test(path))
 			.map((path, index, filteredPaths) => {
-				// Capitalize the path segment and replace hyphens with spaces
 				const label = path.charAt(0).toUpperCase() +
 					path.slice(1).replace(/-/g, ' ');
 
-				// Determine if this is an edit page or similar non-linking page
 				const isNonLinkingPage = path === 'edit' || path === 'create' || path === 'view';
 
-				// Calculate href - use '#' for non-linking pages, otherwise build the proper path
 				const href = isNonLinkingPage
 					? '#'
 					: `/admin/${paths.slice(0, paths.indexOf(path) + 1).join('/')}`;

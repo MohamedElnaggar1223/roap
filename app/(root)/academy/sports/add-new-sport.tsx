@@ -27,8 +27,6 @@ export default function AddNewSport({ sports }: Props) {
 
     const { data } = useSWR(addNewSportOpen ? 'sports' : null, getAllSports)
 
-    console.log(data)
-
     const [selectedSports, setSelectedSports] = useState<number[]>([])
     const [loading, setLoading] = useState(false)
 
@@ -46,8 +44,6 @@ export default function AddNewSport({ sports }: Props) {
         setAddNewSportOpen(false)
         router.refresh()
     }
-
-    console.log(data)
 
     return (
         <>

@@ -137,11 +137,8 @@ export default function EditProgram({ branches, sports, programEdited }: Props) 
 
     useEffect(() => {
         if (isLoading || isValidating) return
-        console.log("Inside Effect Packages: ", packagesData)
         setCreatedPackages(packagesData?.data?.map(packageData => ({ ...packageData, startDate: new Date(packageData.startDate), endDate: new Date(packageData.endDate) })) ?? [])
     }, [isLoading, isValidating, packagesData])
-
-    console.log("Created Packages: ", createdPackages)
 
     const form = useForm<z.infer<typeof addProgramSchema>>({
         resolver: zodResolver(addProgramSchema),
@@ -217,13 +214,10 @@ export default function EditProgram({ branches, sports, programEdited }: Props) 
 
     const handleSelectGender = (gender: string) => {
         if (loading) return
-        console.log(gender)
         setSelectedGenders(prev =>
             prev.includes(gender) ? prev.filter(g => g !== gender) : [...prev, gender]
         )
     }
-
-    console.log("editedPackage: ", editedPackage)
 
     return (
         <>

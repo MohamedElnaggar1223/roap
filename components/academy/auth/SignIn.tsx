@@ -72,8 +72,6 @@ export default function SignIn() {
                     redirect: false,
                 })
 
-                console.log(resultNextAuth)
-
                 if (resultNextAuth?.error) {
                     toast({
                         title: "Error",

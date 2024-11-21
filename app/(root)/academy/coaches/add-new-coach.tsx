@@ -1,16 +1,11 @@
 'use client'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { getAllSports } from '@/lib/actions/academics.actions';
-import { getAllFacilities } from '@/lib/actions/facilities.actions';
-import { createLocation } from '@/lib/actions/locations.actions';
-import { cn } from '@/lib/utils';
+import { createCoach } from '@/lib/actions/coaches.actions';
 import { Loader2, Plus, X } from 'lucide-react';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import useSWR from 'swr'
-import { addLocationSchema } from '@/lib/validations/locations';
+import { useEffect, useMemo, useState } from 'react';
+import { addCoachSchema } from '@/lib/validations/coaches';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,11 +17,20 @@ import {
     FormLabel,
     FormMessage,
 } from '@/components/ui/form';
-import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import { Textarea } from '@/components/ui/textarea';
+import { getImageUrl, uploadImageToSupabase } from '@/lib/supabase-images';
+import Image from 'next/image';
 
 type Props = {
     sports: {
@@ -35,48 +39,73 @@ type Props = {
         name: string;
         locale: string;
     }[];
+    languages: {
+        id: number;
+        name: string;
+        locale: string;
+    }[];
 }
 
-export default function AddNewLocation({ sports }: Props) {
+type FileState = {
+    preview: string;
+    file: File | null;
+}
+
+export default function AddNewCoach({ sports, languages }: Props) {
     const router = useRouter()
-
-
-    const [addNewSportOpen, setAddNewSportOpen] = useState(false)
-
-    const { data: sportsData } = useSWR(addNewSportOpen ? 'sports' : null, getAllSports)
-    const { data: amenitiesData } = useSWR(addNewSportOpen ? 'amenities' : null, getAllFacilities)
-
+    const [addNewCoachOpen, setAddNewCoachOpen] = useState(false)
     const [selectedSports, setSelectedSports] = useState<number[]>([])
-    const [selectedAmenities, setSelectedAmenities] = useState<number[]>([])
+    const [selectedLanguages, setSelectedLanguages] = useState<number[]>([])
+    const [selectedImage, setSelectedImage] = useState<FileState>({
+        preview: '',
+        file: null
+    });
     const [loading, setLoading] = useState(false)
     const [sportsOpen, setSportsOpen] = useState(false)
-    const [amenitiesOpen, setAmenitiesOpen] = useState(false)
+    const [languagesOpen, setLanguagesOpen] = useState(false)
 
-    const form = useForm<z.infer<typeof addLocationSchema>>({
-        resolver: zodResolver(addLocationSchema),
+    const form = useForm<z.infer<typeof addCoachSchema>>({
+        resolver: zodResolver(addCoachSchema),
         defaultValues: {
             name: '',
-            nameInGoogleMap: '',
-            url: '',
-            isDefault: false,
+            title: '',
+            bio: '',
+            gender: '',
+            image: '',
+            privateSessionPercentage: '',
+            dateOfBirth: new Date(),
         }
     })
 
-    const onSubmit = async (values: z.infer<typeof addLocationSchema>) => {
+    const onSubmit = async (values: z.infer<typeof addCoachSchema>) => {
         try {
             setLoading(true)
-            const result = await createLocation({
-                facilities: selectedAmenities,
-                name: values.name,
-                nameInGoogleMap: values.nameInGoogleMap,
+
+            let imagePath = values.image;
+
+            if (selectedImage.file) {
+                try {
+                    imagePath = await uploadImageToSupabase(selectedImage.file);
+                } catch (error) {
+                    setLoading(false);
+                    form.setError('image', {
+                        type: 'custom',
+                        message: 'Error uploading image. Please try again.'
+                    });
+                    return;
+                }
+            }
+
+            const result = await createCoach({
+                ...values,
+                image: imagePath || '',
                 sports: selectedSports,
-                url: values.url,
-                isDefault: values.isDefault,
+                languages: selectedLanguages,
             })
 
             if (result.error) {
                 if (result?.field) {
-                    form.setError(result.field as "name" | "nameInGoogleMap" | "url", {
+                    form.setError(result.field as any, {
                         type: 'custom',
                         message: result.error
                     })
@@ -89,10 +118,14 @@ export default function AddNewLocation({ sports }: Props) {
                 return
             }
 
-            setAddNewSportOpen(false)
+            if (selectedImage.preview) {
+                URL.revokeObjectURL(selectedImage.preview);
+            }
+
+            setAddNewCoachOpen(false)
             router.refresh()
         } catch (error) {
-            console.error('Error creating location:', error)
+            console.error('Error creating coach:', error)
             form.setError('root', {
                 type: 'custom',
                 message: 'An unexpected error occurred'
@@ -102,6 +135,25 @@ export default function AddNewLocation({ sports }: Props) {
         }
     }
 
+    useEffect(() => {
+        return () => {
+            if (selectedImage.preview) {
+                URL.revokeObjectURL(selectedImage.preview)
+            }
+        }
+    }, [selectedImage.preview]);
+
+    const imageURL = useMemo(() => {
+        const getImage = async () => {
+            if (selectedImage.file) {
+                const url = await getImageUrl(selectedImage.file.name);
+
+                return url;
+            }
+        }
+        getImage();
+    }, [form.getValues('image')])
+
     const handleSelectSport = (id: number) => {
         if (loading) return
         setSelectedSports(prev =>
@@ -109,25 +161,44 @@ export default function AddNewLocation({ sports }: Props) {
         )
     }
 
-    const handleSelectAmenities = (id: number) => {
+    const handleSelectLanguage = (id: number) => {
         if (loading) return
-        setSelectedAmenities(prev =>
-            prev.includes(id) ? prev.filter(amenityId => amenityId !== id) : [...prev, id]
+        setSelectedLanguages(prev =>
+            prev.includes(id) ? prev.filter(langId => langId !== id) : [...prev, id]
         )
+    }
+
+    const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            if (!file.type.startsWith('image/')) {
+                form.setError('image', {
+                    type: 'custom',
+                    message: 'Only image files are allowed'
+                });
+                return;
+            }
+
+            const preview = URL.createObjectURL(file);
+            setSelectedImage({
+                preview,
+                file
+            });
+        }
     }
 
     return (
         <>
-            <button onClick={() => setAddNewSportOpen(true)} className='flex text-nowrap items-center justify-center gap-2 rounded-3xl px-4 py-2 bg-main-green text-sm text-white'>
+            <button onClick={() => setAddNewCoachOpen(true)} className='flex text-nowrap items-center justify-center gap-2 rounded-3xl px-4 py-2 bg-main-green text-sm text-white'>
                 <Plus size={16} className='stroke-main-yellow' />
-                New Location
+                New Coach
             </button>
-            <Dialog open={addNewSportOpen} onOpenChange={setAddNewSportOpen}>
+            <Dialog open={addNewCoachOpen} onOpenChange={setAddNewCoachOpen}>
                 <DialogContent className='bg-main-white min-w-[560px]'>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full'>
                             <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>
-                                <DialogTitle className='font-normal text-base'>New Location</DialogTitle>
+                                <DialogTitle className='font-normal text-base'>New Coach</DialogTitle>
                                 <div className='flex items-center gap-2'>
                                     <button disabled={loading} type='submit' className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5'>
                                         {loading && <Loader2 className='h-5 w-5 animate-spin' />}
@@ -135,15 +206,14 @@ export default function AddNewLocation({ sports }: Props) {
                                     </button>
                                 </div>
                             </DialogHeader>
-                            <ScrollArea className="w-full h-[380px]">
+                            <ScrollArea className="w-full h-[480px]">
                                 <div className="flex flex-col gap-6 w-full px-2">
-
                                     <FormField
                                         control={form.control}
                                         name='name'
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Location Name</FormLabel>
+                                                <FormLabel>Name</FormLabel>
                                                 <FormControl>
                                                     <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                 </FormControl>
@@ -153,10 +223,10 @@ export default function AddNewLocation({ sports }: Props) {
                                     />
                                     <FormField
                                         control={form.control}
-                                        name='nameInGoogleMap'
+                                        name='title'
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Name in google map</FormLabel>
+                                                <FormLabel>Title</FormLabel>
                                                 <FormControl>
                                                     <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                 </FormControl>
@@ -166,12 +236,44 @@ export default function AddNewLocation({ sports }: Props) {
                                     />
                                     <FormField
                                         control={form.control}
-                                        name='url'
+                                        name='image'
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Link Google Maps</FormLabel>
+                                                <FormLabel>Profile Image</FormLabel>
                                                 <FormControl>
-                                                    <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
+                                                    <div className="flex flex-col gap-4">
+                                                        {/* Show either the existing image or the new preview */}
+                                                        {(field.value || selectedImage.preview) && (
+                                                            <div className="relative w-24 h-24">
+                                                                <Image
+                                                                    src={selectedImage.preview || imageURL || ''}
+                                                                    alt="Preview"
+                                                                    fill
+                                                                    className="rounded-full object-cover"
+                                                                />
+                                                                {/* Add remove button */}
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        if (selectedImage.preview) {
+                                                                            URL.revokeObjectURL(selectedImage.preview);
+                                                                        }
+                                                                        setSelectedImage({ preview: '', file: null });
+                                                                        field.onChange('');
+                                                                    }}
+                                                                    className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1"
+                                                                >
+                                                                    <X className="h-4 w-4 text-white" />
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                        <Input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            onChange={(e) => handleImageChange(e)}
+                                                            className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
+                                                        />
+                                                    </div>
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -179,18 +281,67 @@ export default function AddNewLocation({ sports }: Props) {
                                     />
                                     <FormField
                                         control={form.control}
-                                        name='isDefault'
+                                        name='gender'
                                         render={({ field }) => (
-                                            <FormItem className='flex gap-2 items-center justify-start text-center'>
+                                            <FormItem>
+                                                <FormLabel>Gender</FormLabel>
+                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <FormControl>
+                                                        <SelectTrigger className='px-2 h-12 rounded-[10px] border border-gray-500 font-inter'>
+                                                            <SelectValue placeholder="Select gender" />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        <SelectItem value="male">Male</SelectItem>
+                                                        <SelectItem value="female">Female</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name='dateOfBirth'
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Date of Birth</FormLabel>
                                                 <FormControl>
-                                                    <Switch
-                                                        checked={field.value}
-                                                        onCheckedChange={field.onChange}
-                                                        className='data-[state=checked]:bg-main-green '
+                                                    <Input
+                                                        type="date"
+                                                        {...field}
+                                                        value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
+                                                        onChange={(e) => field.onChange(new Date(e.target.value))}
+                                                        className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
                                                     />
                                                 </FormControl>
                                                 <FormMessage />
-                                                <FormLabel className='!mt-0 font-bold text-sm font-inter'>Main Branch</FormLabel>
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name='privateSessionPercentage'
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Private Session Percentage</FormLabel>
+                                                <FormControl>
+                                                    <Input {...field} type="number" min="0" max="100" className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name='bio'
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Bio</FormLabel>
+                                                <FormControl>
+                                                    <Textarea {...field} className='min-h-[100px] rounded-[10px] border border-gray-500 font-inter' />
+                                                </FormControl>
+                                                <FormMessage />
                                             </FormItem>
                                         )}
                                     />
@@ -204,13 +355,13 @@ export default function AddNewLocation({ sports }: Props) {
                                                         variant="default"
                                                         className="flex items-center gap-1 hover:bg-[#E0E4D9] pr-0.5 bg-[#E0E4D9] rounded-3xl text-main-green font-semibold font-inter text-sm"
                                                     >
-                                                        <span className="text-xs">{sportsData?.find(s => s.id === sport)?.name}</span>
+                                                        <span className="text-xs">{sports?.find(s => s.id === sport)?.name}</span>
                                                         <button
                                                             onClick={() => handleSelectSport(sport)}
                                                             className="ml-1 rounded-full p-0.5 hover:bg-secondary-foreground/20"
                                                         >
                                                             <X className="size-3" fill='#1f441f' />
-                                                            <span className="sr-only">Remove {sportsData?.find(s => s.id === sport)?.name}</span>
+                                                            <span className="sr-only">Remove {sports?.find(s => s.id === sport)?.name}</span>
                                                         </button>
                                                     </Badge>
                                                 ))}
@@ -237,7 +388,7 @@ export default function AddNewLocation({ sports }: Props) {
                                                         }}
                                                     >
                                                         <div className="p-2">
-                                                            {sportsData?.map(sport => (
+                                                            {sports?.map(sport => (
                                                                 <p
                                                                     key={sport.id}
                                                                     onClick={() => handleSelectSport(sport.id)}
@@ -254,33 +405,33 @@ export default function AddNewLocation({ sports }: Props) {
                                         </div>
                                     </div>
                                     <div className="flex flex-col gap-4 w-full">
-                                        <p className='text-xs'>Amenities</p>
+                                        <p className='text-xs'>Languages</p>
                                         <div className="flex w-full flex-col gap-4 border border-gray-500 p-3 rounded-lg">
                                             <div className="flex flex-wrap gap-2">
-                                                {selectedAmenities.map((amenitie) => (
+                                                {selectedLanguages.map((lang) => (
                                                     <Badge
-                                                        key={amenitie}
+                                                        key={lang}
                                                         variant="default"
                                                         className="flex items-center gap-1 hover:bg-[#E0E4D9] pr-0.5 bg-[#E0E4D9] rounded-3xl text-main-green font-semibold font-inter text-sm"
                                                     >
-                                                        <span className="text-xs">{amenitiesData?.find(s => s.id === amenitie)?.name}</span>
+                                                        <span className="text-xs">{languages?.find(l => l.id === lang)?.name}</span>
                                                         <button
-                                                            onClick={() => handleSelectAmenities(amenitie)}
+                                                            onClick={() => handleSelectLanguage(lang)}
                                                             className="ml-1 rounded-full p-0.5 hover:bg-secondary-foreground/20"
                                                         >
                                                             <X className="size-3" fill='#1f441f' />
-                                                            <span className="sr-only">Remove {amenitiesData?.find(s => s.id === amenitie)?.name}</span>
+                                                            <span className="sr-only">Remove {languages?.find(l => l.id === lang)?.name}</span>
                                                         </button>
                                                     </Badge>
                                                 ))}
                                             </div>
-                                            <Popover open={amenitiesOpen} onOpenChange={setAmenitiesOpen}>
+                                            <Popover open={languagesOpen} onOpenChange={setLanguagesOpen}>
                                                 <PopoverTrigger asChild>
                                                     <Button
                                                         variant="default"
                                                         className="gap-2 hover:bg-transparent text-left flex items-center bg-transparent text-black border border-gray-500 justify-start"
                                                     >
-                                                        Select amenities
+                                                        Select languages
                                                     </Button>
                                                 </PopoverTrigger>
                                                 <PopoverContent className="w-56 p-0 overflow-hidden" align="start">
@@ -296,14 +447,14 @@ export default function AddNewLocation({ sports }: Props) {
                                                         }}
                                                     >
                                                         <div className="p-2">
-                                                            {amenitiesData?.map(amenitie => (
+                                                            {languages?.map(language => (
                                                                 <p
-                                                                    key={amenitie.id}
-                                                                    onClick={() => handleSelectAmenities(amenitie.id)}
+                                                                    key={language.id}
+                                                                    onClick={() => handleSelectLanguage(language.id)}
                                                                     className="p-2 flex items-center justify-start gap-2 text-left cursor-pointer hover:bg-[#fafafa] rounded-lg"
                                                                 >
-                                                                    {selectedAmenities.includes(amenitie.id) && <X className="size-3" fill='#1f441f' />}
-                                                                    {amenitie.name}
+                                                                    {selectedLanguages.includes(language.id) && <X className="size-3" fill='#1f441f' />}
+                                                                    {language.name}
                                                                 </p>
                                                             ))}
                                                         </div>

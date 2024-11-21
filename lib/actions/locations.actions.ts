@@ -69,7 +69,6 @@ export async function getLocations() {
         )
         .where(eq(branches.academicId, academic.id))
 
-    // Transform null arrays to empty arrays
     const transformedLocations = locations.map(location => ({
         ...location,
         sports: location.sports || [],
@@ -212,7 +211,6 @@ export async function updateLocation(id: number, data: {
     if (!academy) return { error: 'Academy not found' }
 
     try {
-        // Basic info updates
         await Promise.all([
             data.isDefault ? db
                 .update(branches)

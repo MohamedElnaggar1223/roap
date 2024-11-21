@@ -6,8 +6,6 @@ export default async function LocationsPage() {
     const { data: locations, error } = await getLocations()
     const sports = await getAllSports('sports')
 
-    console.log(error)
-
     if (error) return null
 
     return (
