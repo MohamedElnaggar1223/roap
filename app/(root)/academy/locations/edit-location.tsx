@@ -110,7 +110,7 @@ export default function EditLocation({ locationEdited }: Props) {
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full'>
                             <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>
-                                <DialogTitle className='font-normal text-base'>New Location</DialogTitle>
+                                <DialogTitle className='font-normal text-base'>Edit Location</DialogTitle>
                                 <div className='flex items-center gap-2'>
                                     <button disabled={loading} type='submit' className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5'>
                                         {loading && <Loader2 className='h-5 w-5 animate-spin' />}

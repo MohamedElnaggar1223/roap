@@ -4,6 +4,7 @@ import { relations } from "drizzle-orm/relations";
 
 export const status = pgEnum("status", ['pending', 'accepted', 'rejected'])
 export const userRoles = pgEnum("user_roles", ['admin', 'user', 'academic'])
+export const discountType = pgEnum("discount_type", ['fixed', 'percentage'])
 
 
 export const users = pgTable("users", {
@@ -838,6 +839,34 @@ export const payments = pgTable("payments", {
     }
 });
 
+export const promoCodes = pgTable("promo_codes", {
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "promo_codes_id_seq", startWith: 1000 }),
+    code: varchar({ length: 50 }).notNull(),
+    discountType: discountType("discount_type").notNull(),
+    discountValue: doublePrecision().notNull(),
+    startDate: timestamp("start_date", { mode: 'string' }).notNull(),
+    endDate: timestamp("end_date", { mode: 'string' }).notNull(),
+    academicId: bigint("academic_id", { mode: "number" }).notNull(),
+    createdAt: timestamp("created_at", { mode: 'string' }),
+    updatedAt: timestamp("updated_at", { mode: 'string' }),
+}, (table) => {
+    return {
+        codeAcademicUnique: unique("promo_codes_code_academic_unique").on(table.code, table.academicId),
+        promoCodesAcademicIdForeign: foreignKey({
+            columns: [table.academicId],
+            foreignColumns: [academics.id],
+            name: "promo_codes_academic_id_foreign"
+        }).onDelete("cascade"),
+    }
+})
+
+export const promoCodesRelations = relations(promoCodes, ({ one, many }) => ({
+    academic: one(academics, {
+        fields: [promoCodes.academicId],
+        references: [academics.id],
+    }),
+}))
+
 export const profilesRelations = relations(profiles, ({ one, many }) => ({
     user: one(users, {
         fields: [profiles.userId],
@@ -961,6 +990,7 @@ export const academicsRelations = relations(academics, ({ one, many }) => ({
     academicAthletics: many(academicAthletic),
     coaches: many(coaches),
     wishlists: many(wishlist),
+    promoCodes: many(promoCodes),
 }));
 
 export const academicTranslationsRelations = relations(academicTranslations, ({ one }) => ({

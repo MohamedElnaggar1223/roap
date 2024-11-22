@@ -12,11 +12,11 @@ export async function uploadImageToSupabase(file: File) {
 
         const fileExt = file.name.split('.').pop()
         const fileName = `${Date.now()}-${nanoid(6)}.${fileExt}`
-        const filePath = `images/${fileName}`
+        const filePath = `${fileName}`
 
         const { data, error } = await supabase.storage
             .from('images')
-            .upload(filePath, file, {
+            .upload(fileName, file, {
                 cacheControl: '3600',
                 contentType: file.type
             })

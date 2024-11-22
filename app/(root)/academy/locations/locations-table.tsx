@@ -210,9 +210,9 @@ export function LocationsDataTable({ data, sports }: LocationsDataTableProps) {
             <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
                 <DialogContent className='font-geist'>
                     <DialogHeader>
-                        <DialogTitle className='font-medium'>Delete Translations</DialogTitle>
+                        <DialogTitle className='font-medium'>Delete branches</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to delete ({selectedRows.length}) countries?
+                            Are you sure you want to delete ({selectedRows.length}) branches?
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>

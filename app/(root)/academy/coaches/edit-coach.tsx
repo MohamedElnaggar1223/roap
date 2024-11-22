@@ -4,7 +4,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { updateCoach } from '@/lib/actions/coaches.actions';
 import { Loader2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { addCoachSchema } from '@/lib/validations/coaches';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -68,11 +68,14 @@ type FileState = {
 
 export default function EditCoach({ coachEdited, sports, languages }: Props) {
     const router = useRouter()
+
+    const inputRef = useRef<HTMLInputElement>(null)
+
     const [editOpen, setEditOpen] = useState(false)
     const [selectedSports, setSelectedSports] = useState<number[]>(coachEdited.sports ?? [])
     const [selectedLanguages, setSelectedLanguages] = useState<number[]>(coachEdited.languages ?? [])
     const [selectedImage, setSelectedImage] = useState<FileState>({
-        preview: '',
+        preview: coachEdited.image || '',
         file: null
     });
     const [loading, setLoading] = useState(false)
@@ -88,7 +91,7 @@ export default function EditCoach({ coachEdited, sports, languages }: Props) {
             gender: coachEdited.gender ?? '',
             image: coachEdited.image ?? '',
             dateOfBirth: coachEdited.dateOfBirth ? new Date(coachEdited.dateOfBirth) : new Date(),
-            privateSessionPercentage: coachEdited.privateSessionPercentage ?? '',
+            privateSessionPercentage: coachEdited.privateSessionPercentage?.replaceAll('%', '') ?? '',
         }
     })
 
@@ -189,7 +192,7 @@ export default function EditCoach({ coachEdited, sports, languages }: Props) {
                 />
             </Button>
             <Dialog open={editOpen} onOpenChange={setEditOpen}>
-                <DialogContent className='bg-main-white min-w-[560px]'>
+                <DialogContent className='bg-main-white min-w-[720px]'>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full'>
                             <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>
@@ -202,49 +205,23 @@ export default function EditCoach({ coachEdited, sports, languages }: Props) {
                                 </div>
                             </DialogHeader>
                             <ScrollArea className="w-full h-[480px]">
-                                <div className="flex flex-col gap-6 w-full px-2">
-                                    <FormField
-                                        control={form.control}
-                                        name='name'
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Name</FormLabel>
-                                                <FormControl>
-                                                    <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name='title'
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Title</FormLabel>
-                                                <FormControl>
-                                                    <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
+                                <div className="flex flex-col gap-6 w-full px-2 pt-4">
+
                                     <FormField
                                         control={form.control}
                                         name='image'
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Profile Image</FormLabel>
                                                 <FormControl>
-                                                    <div className="flex flex-col gap-4">
+                                                    <div className="flex flex-col gap-4 relative w-44">
                                                         {/* Show either the existing image or the new preview */}
-                                                        {(field.value || selectedImage.preview) && (
-                                                            <div className="relative w-24 h-24">
+                                                        {(field.value || selectedImage.preview) ? (
+                                                            <div className="relative w-44 h-44">
                                                                 <Image
-                                                                    src={selectedImage.preview || imageURL || ''}
+                                                                    src={selectedImage.preview || imageURL || '/images/placeholder.svg'}
                                                                     alt="Preview"
                                                                     fill
-                                                                    className="rounded-full object-cover"
+                                                                    className="rounded-[31px] object-cover"
                                                                 />
                                                                 {/* Add remove button */}
                                                                 <button
@@ -256,17 +233,27 @@ export default function EditCoach({ coachEdited, sports, languages }: Props) {
                                                                         setSelectedImage({ preview: '', file: null });
                                                                         field.onChange('');
                                                                     }}
-                                                                    className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1"
+                                                                    className="absolute -top-2 -right-2 bg-red-500 rounded-[31px] p-1"
                                                                 >
                                                                     <X className="h-4 w-4 text-white" />
                                                                 </button>
                                                             </div>
+                                                        ) : (
+                                                            <Image
+                                                                src='/images/placeholder.svg'
+                                                                alt='Placeholder'
+                                                                width={176}
+                                                                height={176}
+                                                                className='rounded-[31px]'
+                                                            />
                                                         )}
                                                         <Input
                                                             type="file"
                                                             accept="image/*"
                                                             onChange={(e) => handleImageChange(e)}
-                                                            className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
+                                                            hidden
+                                                            ref={inputRef}
+                                                            className='absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer'
                                                         />
                                                     </div>
                                                 </FormControl>
@@ -274,46 +261,79 @@ export default function EditCoach({ coachEdited, sports, languages }: Props) {
                                             </FormItem>
                                         )}
                                     />
-                                    <FormField
-                                        control={form.control}
-                                        name='gender'
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Gender</FormLabel>
-                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+
+                                    <div className='flex w-full gap-2 items-start justify-center'>
+                                        <FormField
+                                            control={form.control}
+                                            name='title'
+                                            render={({ field }) => (
+                                                <FormItem className='flex-1'>
+                                                    <FormLabel>Title</FormLabel>
                                                     <FormControl>
-                                                        <SelectTrigger className='px-2 h-12 rounded-[10px] border border-gray-500 font-inter'>
-                                                            <SelectValue placeholder="Select gender" />
-                                                        </SelectTrigger>
+                                                        <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                     </FormControl>
-                                                    <SelectContent>
-                                                        <SelectItem value="male">Male</SelectItem>
-                                                        <SelectItem value="female">Female</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name='dateOfBirth'
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Date of Birth</FormLabel>
-                                                <FormControl>
-                                                    <Input
-                                                        type="date"
-                                                        {...field}
-                                                        value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
-                                                        onChange={(e) => field.onChange(new Date(e.target.value))}
-                                                        className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
-                                                    />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name='name'
+                                            render={({ field }) => (
+                                                <FormItem className='flex-1'>
+                                                    <FormLabel>Name</FormLabel>
+                                                    <FormControl>
+                                                        <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+
+                                    <div className='flex w-full gap-2 items-start justify-center'>
+                                        <FormField
+                                            control={form.control}
+                                            name='gender'
+                                            render={({ field }) => (
+                                                <FormItem className='flex-1'>
+                                                    <FormLabel>Gender</FormLabel>
+                                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                        <FormControl>
+                                                            <SelectTrigger className='px-2 h-12 rounded-[10px] border border-gray-500 font-inter'>
+                                                                <SelectValue placeholder="Select gender" />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            <SelectItem value="male">Male</SelectItem>
+                                                            <SelectItem value="female">Female</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name='dateOfBirth'
+                                            render={({ field }) => (
+                                                <FormItem className='flex-1'>
+                                                    <FormLabel>Date of Birth</FormLabel>
+                                                    <FormControl>
+                                                        <Input
+                                                            type="date"
+                                                            {...field}
+                                                            value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
+                                                            onChange={(e) => field.onChange(new Date(e.target.value))}
+                                                            className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+
                                     <FormField
                                         control={form.control}
                                         name='privateSessionPercentage'

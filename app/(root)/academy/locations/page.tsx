@@ -1,7 +1,6 @@
 import { getLocations } from '@/lib/actions/locations.actions'
 import { LocationsDataTable } from './locations-table'
 import { getAllSports } from '@/lib/actions/academics.actions'
-import { revalidateTag } from 'next/cache'
 
 export default async function LocationsPage() {
     const { data: locations, error } = await getLocations()

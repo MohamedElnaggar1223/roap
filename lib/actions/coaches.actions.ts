@@ -4,7 +4,7 @@ import { db } from '@/db'
 import { coaches, coachSport, coachSpokenLanguage, coachPackage } from '@/db/schema'
 import { auth } from '@/auth'
 import { and, eq, inArray, sql } from 'drizzle-orm'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
 
 export async function getAllCoaches(url: string | null) {
     if (!url) return
@@ -56,11 +56,54 @@ export async function getCoachById(id: number) {
     return { data: coach }
 }
 
+const getCoachesAction = async (academicId: number) => {
+    return unstable_cache(async (academicId: number) => {
+        const coachesList = await db
+            .select({
+                id: coaches.id,
+                name: coaches.name,
+                title: coaches.title,
+                image: coaches.image,
+                bio: coaches.bio,
+                gender: coaches.gender,
+                dateOfBirth: coaches.dateOfBirth,
+                privateSessionPercentage: coaches.privateSessionPercentage,
+                sports: sql<number[]>`(
+                SELECT COALESCE(array_agg(sport_id::integer), ARRAY[]::integer[])
+                FROM ${coachSport}
+                WHERE ${coachSport.coachId} = coaches.id
+            )`,
+                languages: sql<number[]>`(
+                SELECT COALESCE(array_agg(spoken_language_id::integer), ARRAY[]::integer[])
+                FROM ${coachSpokenLanguage}
+                WHERE ${coachSpokenLanguage.coachId} = coaches.id
+            )`,
+                packages: sql<number[]>`(
+                SELECT COALESCE(array_agg(package_id::integer), ARRAY[]::integer[])
+                FROM ${coachPackage}
+                WHERE ${coachPackage.coachId} = coaches.id
+            )`
+            })
+            .from(coaches)
+            .where(eq(coaches.academicId, academicId))
+
+        return {
+            data: coachesList.map(coach => ({
+                ...coach,
+                sports: coach.sports || [],
+                languages: coach.languages || [],
+                packages: coach.packages || []
+            })),
+            error: null
+        }
+    }, [`coaches-${academicId.toString()}`], { tags: [`coaches-${academicId.toString()}`], revalidate: 3600 })(academicId)
+}
+
 export async function getCoaches() {
     const session = await auth()
 
     if (!session?.user || session.user.role !== 'academic') {
-        return { error: 'Unauthorized' }
+        return { error: 'Unauthorized', data: null }
     }
 
     const academic = await db.query.academics.findFirst({
@@ -71,47 +114,12 @@ export async function getCoaches() {
     })
 
     if (!academic) {
-        return { error: 'Academy not found' }
+        return { error: 'Academy not found', data: null }
     }
 
-    const coachesList = await db
-        .select({
-            id: coaches.id,
-            name: coaches.name,
-            title: coaches.title,
-            image: coaches.image,
-            bio: coaches.bio,
-            gender: coaches.gender,
-            dateOfBirth: coaches.dateOfBirth,
-            privateSessionPercentage: coaches.privateSessionPercentage,
-            sports: sql<number[]>`(
-                SELECT COALESCE(array_agg(sport_id::integer), ARRAY[]::integer[])
-                FROM ${coachSport}
-                WHERE ${coachSport.coachId} = coaches.id
-            )`,
-            languages: sql<number[]>`(
-                SELECT COALESCE(array_agg(spoken_language_id::integer), ARRAY[]::integer[])
-                FROM ${coachSpokenLanguage}
-                WHERE ${coachSpokenLanguage.coachId} = coaches.id
-            )`,
-            packages: sql<number[]>`(
-                SELECT COALESCE(array_agg(package_id::integer), ARRAY[]::integer[])
-                FROM ${coachPackage}
-                WHERE ${coachPackage.coachId} = coaches.id
-            )`
-        })
-        .from(coaches)
-        .where(eq(coaches.academicId, academic.id))
+    const coaches = await getCoachesAction(academic.id)
 
-    return {
-        data: coachesList.map(coach => ({
-            ...coach,
-            sports: coach.sports || [],
-            languages: coach.languages || [],
-            packages: coach.packages || []
-        })),
-        error: null
-    }
+    return coaches
 }
 
 export async function createCoach(data: {
@@ -131,14 +139,15 @@ export async function createCoach(data: {
         return { error: 'Unauthorized', field: 'root' }
     }
 
+    const academy = await db.query.academics.findFirst({
+        where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
+        columns: {
+            id: true,
+        }
+    })
+
     try {
         return await db.transaction(async (tx) => {
-            const academy = await tx.query.academics.findFirst({
-                where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
-                columns: {
-                    id: true,
-                }
-            })
 
             if (!academy) return { error: 'Academy not found', field: 'root' }
 
@@ -151,7 +160,7 @@ export async function createCoach(data: {
                     bio: data.bio,
                     gender: data.gender,
                     dateOfBirth: formatDateForDB(data.dateOfBirth),
-                    privateSessionPercentage: data.privateSessionPercentage,
+                    privateSessionPercentage: data.privateSessionPercentage + '%',
                     academicId: academy.id,
                     createdAt: sql`now()`,
                     updatedAt: sql`now()`
@@ -188,10 +197,11 @@ export async function createCoach(data: {
         })
     } catch (error) {
         console.error('Error creating coach:', error)
-        return { error: 'Failed to create coach' }
+        return { error: 'Failed to create coach', field: 'root' }
     }
     finally {
-        revalidatePath('/academy/coaches')
+        // revalidatePath('/academy/coaches')
+        revalidateTag(`coaches-${academy?.id}`)
     }
 }
 
@@ -209,7 +219,7 @@ export async function updateCoach(id: number, data: {
     const session = await auth()
 
     if (!session?.user || session.user.role !== 'academic') {
-        return { error: 'Unauthorized' }
+        return { error: 'Unauthorized', field: 'root' }
     }
 
     const academy = await db.query.academics.findFirst({
@@ -219,7 +229,7 @@ export async function updateCoach(id: number, data: {
         }
     })
 
-    if (!academy) return { error: 'Academy not found' }
+    if (!academy) return { error: 'Academy not found', field: 'root' }
 
     try {
         await db.update(coaches)
@@ -230,7 +240,7 @@ export async function updateCoach(id: number, data: {
                 bio: data.bio,
                 gender: data.gender,
                 dateOfBirth: formatDateForDB(data.dateOfBirth),
-                privateSessionPercentage: data.privateSessionPercentage,
+                privateSessionPercentage: data.privateSessionPercentage + '%',
                 updatedAt: sql`now()`
             })
             .where(eq(coaches.id, id))
@@ -289,12 +299,15 @@ export async function updateCoach(id: number, data: {
                     }))) : Promise.resolve()
         ])
 
-        revalidatePath('/academy/coaches')
+        // revalidatePath('/academy/coaches')
         return { success: true }
 
     } catch (error) {
         console.error('Error updating coach:', error)
-        return { error: 'Failed to update coach' }
+        return { error: 'Failed to update coach', field: 'root' }
+    }
+    finally {
+        revalidateTag(`coaches-${academy?.id}`)
     }
 }
 
@@ -305,8 +318,18 @@ export async function deleteCoaches(ids: number[]) {
         return { error: 'Unauthorized' }
     }
 
+    const academy = await db.query.academics.findFirst({
+        where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
+        columns: {
+            id: true,
+        }
+    })
+
+    if (!academy) return { error: 'Academy not found' }
+
     await Promise.all(ids.map(async id => await db.delete(coaches).where(eq(coaches.id, id))))
 
-    revalidatePath('/academy/coaches')
+    // revalidatePath('/academy/coaches')
+    revalidateTag(`coaches-${academy?.id}`)
     return { success: true }
 }
