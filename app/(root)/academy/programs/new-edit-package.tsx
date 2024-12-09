@@ -40,6 +40,9 @@ const packageSchema = z.object({
         required_error: "End date is required",
     }),
     memo: z.string(),
+    entryFees: z.string().default("0"),
+    entryFeesExplanation: z.string().optional(),
+    entryFeesAppliedUntil: z.string().optional(),
     schedules: z.array(z.object({
         day: z.string().min(1, "Day is required"),
         from: z.string().min(1, "Start time is required"),
@@ -47,7 +50,18 @@ const packageSchema = z.object({
         memo: z.string(),
         id: z.number().optional()
     }))
-})
+}).refine((data) => {
+    if (parseFloat(data.entryFees) > 0 && !data.entryFeesExplanation) {
+        return false;
+    }
+    if (data.type === "Monthly" && parseFloat(data.entryFees) > 0 && !data.entryFeesAppliedUntil) {
+        return false;
+    }
+    return true;
+}, {
+    message: "Required fields missing for entry fees configuration",
+    path: ["entryFeesExplanation"]
+});
 
 interface Package {
     type: "Term" | "Monthly" | "Full Season"
@@ -59,6 +73,9 @@ interface Package {
     schedules: Schedule[]
     memo: string | null
     id?: number
+    entryFees: number
+    entryFeesExplanation?: string
+    entryFeesAppliedUntil?: string
 }
 
 interface Schedule {
@@ -136,6 +153,9 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                 packageEdited.schedules as Schedule[] :
                 [{ day: '', from: '', to: '', memo: '' }] as Schedule[],
             memo: packageEdited.memo ?? '',
+            entryFees: (packageEdited.entryFees ?? 0).toString(),
+            entryFeesExplanation: packageEdited.entryFeesExplanation,
+            entryFeesAppliedUntil: packageEdited.entryFeesAppliedUntil,
         }
     })
 
@@ -145,6 +165,8 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
     })
 
     const packageType = form.watch("type")
+    const entryFees = parseFloat(form.watch("entryFees") || "0")
+    const showEntryFeesFields = entryFees > 0
 
     const onSubmit = async (values: z.infer<typeof packageSchema>) => {
         try {
@@ -168,7 +190,11 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                         to: schedule.to,
                         memo: schedule.memo
                     })),
-                    memo: values.memo
+                    memo: values.memo,
+                    entryFees: parseFloat(values.entryFees),
+                    entryFeesExplanation: showEntryFeesFields ? values.entryFeesExplanation : undefined,
+                    entryFeesAppliedUntil: values.type === "Monthly" && showEntryFeesFields ?
+                        values.entryFeesAppliedUntil : undefined
                 })
 
                 if (result.error) {
@@ -298,7 +324,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                 </button>
                             </div>
                         </DialogHeader>
-                        <ScrollArea className="w-full h-[380px]">
+                        <div className="w-full max-h-[380px] overflow-y-auto">
                             <div className="flex flex-col gap-6 w-full px-2">
                                 <FormField
                                     control={form.control}
@@ -456,6 +482,81 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                     </div>
                                 )}
 
+                                <FormField
+                                    control={form.control}
+                                    name="entryFees"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Entry Fees</FormLabel>
+                                            <FormControl>
+                                                <div className="flex items-center">
+                                                    <span className="px-2 py-3.5 text-sm bg-transparent border border-r-0 border-gray-500 rounded-l-[10px]">AED</span>
+                                                    <Input
+                                                        {...field}
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.01"
+                                                        className='px-2 py-6 rounded-l-none rounded-r-[10px] border border-gray-500 font-inter'
+                                                    />
+                                                </div>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                {showEntryFeesFields && (
+                                    <FormField
+                                        control={form.control}
+                                        name="entryFeesExplanation"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Entry Fees Explanation</FormLabel>
+                                                <FormControl>
+                                                    <Textarea
+                                                        {...field}
+                                                        className="min-h-[60px] rounded-[10px] border border-gray-500 font-inter"
+                                                        placeholder="Explain the entry fees..."
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                )}
+
+                                {showEntryFeesFields && packageType === "Monthly" && (
+                                    <FormField
+                                        control={form.control}
+                                        name="entryFeesAppliedUntil"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Entry Fees Applied Until</FormLabel>
+                                                <Select
+                                                    onValueChange={field.onChange}
+                                                    value={field.value}
+                                                >
+                                                    <FormControl>
+                                                        <SelectTrigger className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'>
+                                                            <SelectValue placeholder="Select month" />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        {selectedMonths.map((monthNum) => {
+                                                            const month = months.find(m => m.value === monthNum);
+                                                            return month ? (
+                                                                <SelectItem key={month.value} value={month.label}>
+                                                                    {month.label}
+                                                                </SelectItem>
+                                                            ) : null;
+                                                        })}
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                )}
 
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center">
@@ -587,7 +688,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                     )}
                                 />
                             </div>
-                        </ScrollArea>
+                        </div>
                     </form>
                 </Form>
             </DialogContent>

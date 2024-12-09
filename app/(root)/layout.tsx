@@ -14,6 +14,7 @@ export const metadata: Metadata = {
 }
 
 import { Inter } from 'next/font/google'
+import { checkAcademyStatus } from "@/lib/actions/check-academy-status";
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
@@ -22,9 +23,17 @@ export default async function RootLayout({
 }: Readonly<{
 	children: React.ReactNode;
 }>) {
-	const session = await auth()
+	const status = await checkAcademyStatus()
 
-	if (!session?.user) return redirect("/sign-in")
+	console.log(status)
+
+	if (status.shouldRedirect) {
+		redirect(status.redirectTo!)
+	}
+
+	if (!status.isOnboarded) {
+		redirect('/on-boarding')
+	}
 
 	return (
 		<html lang="en">

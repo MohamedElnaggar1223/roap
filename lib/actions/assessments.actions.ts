@@ -1,0 +1,261 @@
+'use server'
+
+import { db } from '@/db'
+import { programs, branches, branchTranslations, sports, sportTranslations, coachProgram, packages, schedules } from '@/db/schema'
+import { auth } from '@/auth'
+import { and, eq, sql, asc, inArray } from 'drizzle-orm'
+import { revalidatePath } from 'next/cache'
+import { formatDateForDB } from '../utils'
+
+interface Schedule {
+    day: string
+    from: string
+    to: string
+    memo: string | undefined
+}
+
+interface Package {
+    type: "Term" | "Monthly" | "Full Season"
+    termNumber?: number
+    name: string
+    price: number
+    startDate: Date
+    endDate: Date
+    schedules: Schedule[]
+    memo: string | null
+    id?: number
+}
+
+export async function getAssessments() {
+    const session = await auth()
+
+    if (!session?.user || session.user.role !== 'academic') {
+        return { error: 'Unauthorized' }
+    }
+
+    const academy = await db.query.academics.findFirst({
+        where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
+        columns: {
+            id: true,
+        }
+    })
+
+    if (!academy) {
+        return { error: 'Academy not found' }
+    }
+
+    const assessmentData = await db
+        .select({
+            id: programs.id,
+            description: programs.description,
+            type: programs.type,
+            numberOfSeats: programs.numberOfSeats,
+            branchId: programs.branchId,
+            sportId: programs.sportId,
+            gender: programs.gender,
+            startDateOfBirth: programs.startDateOfBirth,
+            endDateOfBirth: programs.endDateOfBirth,
+            branchName: branchTranslations.name,
+            sportName: sportTranslations.name,
+            coaches: sql<string[]>`(
+                SELECT COALESCE(array_agg(coach_id), ARRAY[]::integer[])
+                FROM ${coachProgram}
+                WHERE ${coachProgram.programId} = ${programs.id}
+            )`,
+            packages: sql<string[]>`(
+                SELECT COALESCE(array_agg(id), ARRAY[]::integer[])
+                FROM ${packages}
+                WHERE ${packages.programId} = ${programs.id}
+            )`
+        })
+        .from(programs)
+        .innerJoin(branches, eq(programs.branchId, branches.id))
+        .innerJoin(branchTranslations, and(
+            eq(branches.id, branchTranslations.branchId),
+            eq(branchTranslations.locale, 'en')
+        ))
+        .innerJoin(sports, eq(programs.sportId, sports.id))
+        .innerJoin(sportTranslations, and(
+            eq(sports.id, sportTranslations.sportId),
+            eq(sportTranslations.locale, 'en')
+        ))
+        .where(and(
+            eq(programs.academicId, academy.id),
+            eq(programs.name, 'Assessment')
+        ))
+        .orderBy(asc(programs.createdAt))
+
+    const transformedAssessments = assessmentData.map(assessment => ({
+        ...assessment,
+        coaches: assessment.coaches || [],
+        packages: assessment.packages || [],
+    }))
+
+    return {
+        data: transformedAssessments,
+        error: null
+    }
+}
+
+export async function updateAssessment(id: number, data: {
+    description: string
+    branchId: number
+    sportId: number
+    gender: string
+    startDateOfBirth: Date
+    endDateOfBirth: Date
+    numberOfSeats: number
+    coaches: number[]
+    packagesData: Package[]
+}) {
+    const session = await auth()
+
+    if (!session?.user || session.user.role !== 'academic') {
+        return { error: 'Unauthorized', field: 'root' }
+    }
+
+    try {
+        await db.transaction(async (tx) => {
+            // Update the assessment program
+            await tx
+                .update(programs)
+                .set({
+                    description: data.description,
+                    branchId: data.branchId,
+                    sportId: data.sportId,
+                    gender: data.gender,
+                    startDateOfBirth: formatDateForDB(data.startDateOfBirth),
+                    endDateOfBirth: formatDateForDB(data.endDateOfBirth),
+                    numberOfSeats: data.numberOfSeats,
+                    type: 'TEAM',
+                    updatedAt: sql`now()`
+                })
+                .where(eq(programs.id, id))
+
+            const [currentCoaches, currentPackages] = await Promise.all([
+                tx
+                    .select({ coachId: coachProgram.coachId })
+                    .from(coachProgram)
+                    .where(eq(coachProgram.programId, id)),
+                tx
+                    .select({ packageId: packages.id })
+                    .from(packages)
+                    .where(eq(packages.programId, id))
+            ])
+
+            const currentCoachIds = currentCoaches.map(c => c.coachId)
+            const coachesToAdd = data.coaches.filter(id => !currentCoachIds.includes(id))
+            const coachesToRemove = currentCoachIds.filter(id => !data.coaches.includes(id))
+
+            const currentPackageIds = currentPackages.map(p => p.packageId)
+            const packagesToAdd = data.packagesData.filter(p => !p.id || !currentPackageIds.includes(p?.id))
+            const packagesToRemove = currentPackageIds.filter(p => !data.packagesData.map(pd => pd.id).filter(pid => pid).includes(p))
+            const packagesToUpdate = data.packagesData.filter(p => p.id && currentPackageIds.includes(p.id))
+
+            await Promise.all([
+                coachesToRemove.length > 0 ?
+                    tx.delete(coachProgram)
+                        .where(and(
+                            eq(coachProgram.programId, id),
+                            inArray(coachProgram.coachId, coachesToRemove)
+                        )) : Promise.resolve(),
+
+                coachesToAdd.length > 0 ?
+                    tx.insert(coachProgram)
+                        .values(coachesToAdd.map(coachId => ({
+                            programId: id,
+                            coachId,
+                            createdAt: sql`now()`,
+                            updatedAt: sql`now()`,
+                        }))) : Promise.resolve(),
+
+                packagesToAdd.length > 0 ?
+                    Promise.all(packagesToAdd.map(async (packageData) => {
+                        const [newPackage] = await tx
+                            .insert(packages)
+                            .values({
+                                programId: id,
+                                name: packageData.name,
+                                price: packageData.price,
+                                startDate: formatDateForDB(packageData.startDate),
+                                endDate: formatDateForDB(packageData.endDate),
+                                sessionPerWeek: packageData.schedules.length,
+                                memo: packageData.memo,
+                                createdAt: sql`now()`,
+                                updatedAt: sql`now()`,
+                            })
+                            .returning({
+                                id: packages.id
+                            })
+
+                        if (packageData.schedules.length > 0) {
+                            await tx.insert(schedules)
+                                .values(
+                                    packageData.schedules.map(schedule => ({
+                                        packageId: newPackage.id,
+                                        day: schedule.day,
+                                        from: schedule.from,
+                                        to: schedule.to,
+                                        memo: schedule.memo,
+                                        createdAt: sql`now()`,
+                                        updatedAt: sql`now()`,
+                                    }))
+                                )
+                        }
+                    })) : Promise.resolve(),
+
+                packagesToRemove.length > 0 ?
+                    tx.delete(packages)
+                        .where(and(
+                            eq(packages.programId, id),
+                            inArray(packages.id, packagesToRemove)
+                        )) : Promise.resolve(),
+
+                packagesToUpdate.length > 0 ?
+                    Promise.all(packagesToUpdate.map(async (packageData) => {
+                        await tx.transaction(async (innerTx) => {
+                            await innerTx
+                                .update(packages)
+                                .set({
+                                    name: packageData.name,
+                                    price: packageData.price,
+                                    startDate: formatDateForDB(packageData.startDate),
+                                    endDate: formatDateForDB(packageData.endDate),
+                                    sessionPerWeek: packageData.schedules.length,
+                                    memo: packageData.memo,
+                                    updatedAt: sql`now()`,
+                                })
+                                .where(eq(packages.id, packageData.id!))
+
+                            await innerTx
+                                .delete(schedules)
+                                .where(eq(schedules.packageId, packageData.id!))
+
+                            if (packageData.schedules.length > 0) {
+                                await innerTx
+                                    .insert(schedules)
+                                    .values(
+                                        packageData.schedules.map(schedule => ({
+                                            packageId: packageData.id!,
+                                            day: schedule.day,
+                                            from: schedule.from,
+                                            to: schedule.to,
+                                            memo: schedule.memo,
+                                            createdAt: sql`now()`,
+                                            updatedAt: sql`now()`,
+                                        }))
+                                    )
+                            }
+                        })
+                    })) : Promise.resolve(),
+            ])
+        })
+
+        revalidatePath('/academy/programs')
+        return { success: true }
+
+    } catch (error) {
+        console.error('Error updating assessment:', error)
+        return { error: 'Failed to update assessment' }
+    }
+}

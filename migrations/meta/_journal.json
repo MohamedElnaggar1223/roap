@@ -8,6 +8,48 @@
       "when": 1732233380282,
       "tag": "0001_curly_squadron_supreme",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1732791749523,
+      "tag": "0002_bright_thunderbird",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1733388958278,
+      "tag": "0003_modern_iceman",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1733389113764,
+      "tag": "0004_greedy_norrin_radd",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1733659001028,
+      "tag": "0005_parched_mercury",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1733660831206,
+      "tag": "0006_abnormal_darkhawk",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1733669367976,
+      "tag": "0007_condemned_penance",
+      "breakpoints": true
     }
   ]
 }

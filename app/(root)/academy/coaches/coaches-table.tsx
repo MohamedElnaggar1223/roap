@@ -122,7 +122,7 @@ export function CoachesDataTable({ data, sports, languages }: CoachesDataTablePr
                         <span className="text-sm">Filters:</span>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="outline" className="gap-2 rounded-xl border border-[#868685]">
+                                <Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
                                     <Image
                                         src='/images/sports.svg'
                                         width={16}

@@ -86,6 +86,13 @@ export function ProgramsDataTable({ data, branches, sports }: ProgramsDataTableP
         )
     }
 
+    const calculateAge = (birthDate: string) => {
+        const today = new Date()
+        const birth = new Date(birthDate)
+        let age = today.getFullYear() - birth.getFullYear()
+        return age
+    }
+
     const debouncedSearch = useDebouncedCallback((value: string) => {
         const lowercasedValue = value.toLowerCase()
         if (!lowercasedValue) {
@@ -125,7 +132,7 @@ export function ProgramsDataTable({ data, branches, sports }: ProgramsDataTableP
                         <span className="text-sm">Filters:</span>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="outline" className="gap-2 rounded-xl border border-[#868685]">
+                                <Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
                                     <Image
                                         src='/images/sports.svg'
                                         width={16}
@@ -160,7 +167,7 @@ export function ProgramsDataTable({ data, branches, sports }: ProgramsDataTableP
                         </DropdownMenu>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="outline" className="gap-2 rounded-xl border border-[#868685]">
+                                <Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
                                     <Image
                                         src='/images/sports.svg'
                                         width={16}
@@ -185,7 +192,7 @@ export function ProgramsDataTable({ data, branches, sports }: ProgramsDataTableP
                         </DropdownMenu>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="outline" className="gap-2 rounded-xl border border-[#868685]">
+                                <Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
                                     <Image
                                         src='/images/sports.svg'
                                         width={16}
@@ -210,7 +217,7 @@ export function ProgramsDataTable({ data, branches, sports }: ProgramsDataTableP
                         </DropdownMenu>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="outline" className="gap-2 rounded-xl border border-[#868685]">
+                                <Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
                                     <Image
                                         src='/images/sports.svg'
                                         width={16}
@@ -308,7 +315,7 @@ export function ProgramsDataTable({ data, branches, sports }: ProgramsDataTableP
                                     {program.gender}
                                 </div>
                                 <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                    {new Date(program.startDateOfBirth!).toLocaleDateString()}
+                                    {calculateAge(program.startDateOfBirth!)}
                                 </div>
                                 <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
                                     {program.coaches?.length ?? 0}

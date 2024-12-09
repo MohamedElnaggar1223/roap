@@ -204,7 +204,7 @@ export default function EditCoach({ coachEdited, sports, languages }: Props) {
                                     </button>
                                 </div>
                             </DialogHeader>
-                            <ScrollArea className="w-full h-[480px]">
+                            <div className="w-full max-h-[480px] overflow-y-auto">
                                 <div className="flex flex-col gap-6 w-full px-2 pt-4">
 
                                     <FormField
@@ -479,7 +479,7 @@ export default function EditCoach({ coachEdited, sports, languages }: Props) {
                                         </div>
                                     </div>
                                 </div>
-                            </ScrollArea>
+                            </div>
                         </form>
                     </Form>
                 </DialogContent>

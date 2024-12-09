@@ -120,7 +120,7 @@ export default function EditNewPromoCode({ promoCodeEdited }: Props) {
                                     </button>
                                 </div>
                             </DialogHeader>
-                            <ScrollArea className="w-full h-[380px]">
+                            <div className="w-full max-h-[380px] overflow-y-auto">
                                 <div className="flex flex-col gap-6 w-full px-2">
 
                                     <FormField
@@ -224,7 +224,7 @@ export default function EditNewPromoCode({ promoCodeEdited }: Props) {
                                         />
                                     </div>
                                 </div>
-                            </ScrollArea>
+                            </div>
                         </form>
                     </Form>
                 </DialogContent>

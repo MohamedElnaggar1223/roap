@@ -1,0 +1,1 @@
+ALTER TABLE "academics" ADD COLUMN "onboarded" boolean DEFAULT false NOT NULL;

@@ -190,8 +190,6 @@ export default function AddNewCoach({ sports, languages }: Props) {
         }
     }
 
-    console.log(selectedImage.preview)
-
     return (
         <>
             <button onClick={() => setAddNewCoachOpen(true)} className='flex text-nowrap items-center justify-center gap-2 rounded-3xl px-4 py-2 bg-main-green text-sm text-white'>
@@ -211,7 +209,7 @@ export default function AddNewCoach({ sports, languages }: Props) {
                                     </button>
                                 </div>
                             </DialogHeader>
-                            <ScrollArea className="w-full h-[480px]">
+                            <div className="w-full max-h-[480px] overflow-y-auto">
                                 <div className="flex flex-col gap-6 w-full px-2 pt-4">
 
                                     <FormField
@@ -490,7 +488,7 @@ export default function AddNewCoach({ sports, languages }: Props) {
                                         </div>
                                     </div>
                                 </div>
-                            </ScrollArea>
+                            </div>
                         </form>
                     </Form>
                 </DialogContent>

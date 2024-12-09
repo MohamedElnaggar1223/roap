@@ -1,6 +1,6 @@
 'use server'
 import { db } from '@/db'
-import { branches, branchTranslations, branchFacility, branchSport } from '@/db/schema'
+import { branches, branchTranslations, branchFacility, branchSport, programs } from '@/db/schema'
 import { auth } from '@/auth'
 import { and, eq, inArray, not, sql } from 'drizzle-orm'
 import { revalidateTag, unstable_cache } from 'next/cache'
@@ -91,6 +91,20 @@ export async function getLocations() {
     return locations
 }
 
+async function manageAssessmentPrograms(tx: any, branchId: number, academicId: number, sportIds: number[]) {
+    await tx.insert(programs).values(
+        sportIds.map(sportId => ({
+            name: 'Assessment',
+            type: 'TEAM',
+            academicId: academicId,
+            branchId: branchId,
+            sportId: sportId,
+            createdAt: sql`now()`,
+            updatedAt: sql`now()`
+        }))
+    )
+}
+
 export async function createLocation(data: {
     name: string
     nameInGoogleMap: string
@@ -178,8 +192,11 @@ export async function createLocation(data: {
                                 createdAt: sql`now()`,
                                 updatedAt: sql`now()`,
                             }))
-                        ) : Promise.resolve()
+                        ) : Promise.resolve(),
+                data.sports.length > 0 ?
+                    manageAssessmentPrograms(tx, branch.id, academy.id, data.sports) : Promise.resolve()
             ])
+
 
             return { data: branch }
         })
@@ -195,6 +212,7 @@ export async function createLocation(data: {
     }
     finally {
         revalidateTag(`locations-${academy?.id}`)
+        revalidateTag(`programs-${academy?.id}`)
     }
 }
 
@@ -306,7 +324,16 @@ export async function updateLocation(id: number, data: {
                         facilityId,
                         createdAt: sql`now()`,
                         updatedAt: sql`now()`,
-                    }))) : Promise.resolve()
+                    }))) : Promise.resolve(),
+            sportsToRemove.length > 0 ?
+                db.delete(programs)
+                    .where(and(
+                        eq(programs.branchId, id),
+                        inArray(programs.sportId, sportsToRemove),
+                        eq(programs.type, 'assessment')
+                    )) : Promise.resolve(),
+            sportsToAdd.length > 0 ?
+                manageAssessmentPrograms(db, id, academy.id, sportsToAdd) : Promise.resolve()
         ])
 
         // revalidatePath('/academy/locations')
@@ -318,6 +345,7 @@ export async function updateLocation(id: number, data: {
     }
     finally {
         revalidateTag(`locations-${academy?.id}`)
+        revalidateTag(`programs-${academy?.id}`)
     }
 }
 

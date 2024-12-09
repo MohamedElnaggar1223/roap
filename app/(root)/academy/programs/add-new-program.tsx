@@ -44,12 +44,8 @@ const addProgramSchema = z.object({
     description: z.string().min(1, "Description is required"),
     branchId: z.string().min(1, "Branch is required"),
     sportId: z.string().min(1, "Sport is required"),
-    startDateOfBirth: z.date({
-        required_error: "Start age is required",
-    }),
-    endDateOfBirth: z.date({
-        required_error: "End age is required",
-    }),
+    startDateOfBirth: z.number().min(1, "Start age is required").max(100),
+    endDateOfBirth: z.number().min(1, "End age is required").max(100),
     numberOfSeats: z.string().min(1, "Number of slots is required"),
     type: z.enum(["TEAM", "PRIVATE"]),
 })
@@ -130,6 +126,12 @@ export default function AddNewProgram({ branches, sports }: Props) {
     const [editPackageOpen, setEditPackageOpen] = useState(false);
     const [editedPackage, setEditedPackage] = useState<{ editedPackage: Package, index?: number } | null>(null);
 
+    const dateToAge = (date: Date) => {
+        const today = new Date()
+        const age = today.getFullYear() - date.getFullYear()
+        return age
+    }
+
     const form = useForm<z.infer<typeof addProgramSchema>>({
         resolver: zodResolver(addProgramSchema),
         defaultValues: {
@@ -153,14 +155,20 @@ export default function AddNewProgram({ branches, sports }: Props) {
                 message: 'Please select at least one gender'
             })
 
+            const startDate = new Date()
+            startDate.setFullYear(startDate.getFullYear() - values.startDateOfBirth)
+
+            const endDate = new Date()
+            endDate.setFullYear(endDate.getFullYear() - values.endDateOfBirth)
+
             const result = await createProgram({
                 name: values.name,
                 description: values.description,
                 branchId: parseInt(values.branchId),
                 sportId: parseInt(values.sportId),
                 gender: selectedGenders.join(','),
-                startDateOfBirth: values.startDateOfBirth,
-                endDateOfBirth: values.endDateOfBirth,
+                startDateOfBirth: startDate,
+                endDateOfBirth: endDate,
                 numberOfSeats: parseInt(values.numberOfSeats),
                 type: values.type,
                 coaches: selectedCoaches,
@@ -228,7 +236,7 @@ export default function AddNewProgram({ branches, sports }: Props) {
                                     </button>
                                 </div>
                             </DialogHeader>
-                            <ScrollArea className="w-full h-[380px]">
+                            <div className="w-full max-h-[380px] overflow-y-auto">
                                 <div className="flex flex-col gap-6 w-full px-2">
                                     <div className="flex w-full gap-4 items-start justify-between">
 
@@ -370,27 +378,16 @@ export default function AddNewProgram({ branches, sports }: Props) {
                                             render={({ field }) => (
                                                 <FormItem className="flex flex-col flex-1">
                                                     <FormLabel>Start Age</FormLabel>
-                                                    <Popover>
-                                                        <PopoverTrigger asChild>
-                                                            <FormControl>
-                                                                <Button
-                                                                    variant={"outline"}
-                                                                    className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter w-full bg-transparent'
-                                                                >
-                                                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                                                </Button>
-                                                            </FormControl>
-                                                        </PopoverTrigger>
-                                                        <PopoverContent className="w-auto p-0" align="start">
-                                                            <Calendar
-                                                                mode="single"
-                                                                selected={field.value}
-                                                                onSelect={field.onChange}
-                                                                initialFocus
-                                                            />
-                                                        </PopoverContent>
-                                                    </Popover>
+                                                    <FormControl>
+                                                        <Input
+                                                            type="number"
+                                                            {...field}
+                                                            onChange={e => field.onChange(Number(e.target.value))}
+                                                            min={1}
+                                                            max={100}
+                                                            className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
+                                                        />
+                                                    </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
                                             )}
@@ -402,27 +399,16 @@ export default function AddNewProgram({ branches, sports }: Props) {
                                             render={({ field }) => (
                                                 <FormItem className="flex flex-col flex-1">
                                                     <FormLabel>End Age</FormLabel>
-                                                    <Popover>
-                                                        <PopoverTrigger asChild>
-                                                            <FormControl>
-                                                                <Button
-                                                                    variant={"outline"}
-                                                                    className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter w-full bg-transparent'
-                                                                >
-                                                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                                                </Button>
-                                                            </FormControl>
-                                                        </PopoverTrigger>
-                                                        <PopoverContent className="w-auto p-0" align="start">
-                                                            <Calendar
-                                                                mode="single"
-                                                                selected={field.value}
-                                                                onSelect={field.onChange}
-                                                                initialFocus
-                                                            />
-                                                        </PopoverContent>
-                                                    </Popover>
+                                                    <FormControl>
+                                                        <Input
+                                                            type="number"
+                                                            {...field}
+                                                            min={1}
+                                                            max={100}
+                                                            onChange={e => field.onChange(Number(e.target.value))}
+                                                            className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
+                                                        />
+                                                    </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
                                             )}
@@ -622,7 +608,7 @@ export default function AddNewProgram({ branches, sports }: Props) {
                                         </div>
                                     </div>
                                 </div>
-                            </ScrollArea>
+                            </div>
                         </form>
                     </Form>
                 </DialogContent>

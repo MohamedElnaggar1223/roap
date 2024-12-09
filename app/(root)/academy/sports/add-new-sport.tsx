@@ -62,7 +62,7 @@ export default function AddNewSport({ sports }: Props) {
                             </button>
                         </div>
                     </DialogHeader>
-                    <ScrollArea className="w-full h-[380px]">
+                    <div className="w-full max-h-[380px] overflow-y-auto">
                         <div className='grid grid-cols-2 sm:grid-cols-4 gap-6'>
                             {data?.filter(sport => !sports.map(sport => sport.id).includes(sport.id)).map(sport => (
                                 <div
@@ -83,7 +83,7 @@ export default function AddNewSport({ sports }: Props) {
                                 </div>
                             ))}
                         </div>
-                    </ScrollArea>
+                    </div>
                 </DialogContent>
             </Dialog>
         </>

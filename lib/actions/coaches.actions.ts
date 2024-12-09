@@ -156,7 +156,7 @@ export async function createCoach(data: {
                 .values({
                     name: data.name,
                     title: data.title,
-                    image: data.image,
+                    image: 'images/' + data.image,
                     bio: data.bio,
                     gender: data.gender,
                     dateOfBirth: formatDateForDB(data.dateOfBirth),
@@ -231,12 +231,14 @@ export async function updateCoach(id: number, data: {
 
     if (!academy) return { error: 'Academy not found', field: 'root' }
 
+    console.log(data.image)
+
     try {
         await db.update(coaches)
             .set({
                 name: data.name,
                 title: data.title,
-                image: data.image,
+                image: data.image.includes('images/') ? data.image.startsWith('images/') ? data.image : 'images/' + data.image?.split('images/')[1] : 'images/' + data.image,
                 bio: data.bio,
                 gender: data.gender,
                 dateOfBirth: formatDateForDB(data.dateOfBirth),

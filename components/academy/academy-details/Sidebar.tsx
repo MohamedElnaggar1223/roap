@@ -19,11 +19,11 @@ export function AcadenyDetailsSidebar() {
                                 <span>Academy Details</span>
                             </div>
                         </Link>
-                        <Link href='/academy/sports' className='h-9 rounded-[12px] overflow-hidden w-full'>
+                        {/* <Link href='/academy/sports' className='h-9 rounded-[12px] overflow-hidden w-full'>
                             <div className={cn('text-sm h-9 flex items-center justify-start px-2 rounded-[12px] w-full', pathname?.includes('/academy/sports') && 'bg-[#F1F2E9]')}>
                                 <span>Sports</span>
                             </div>
-                        </Link>
+                        </Link> */}
                         <Link href='/academy/locations' className='h-9 rounded-[12px] overflow-hidden w-full'>
                             <div className={cn('text-sm h-9 flex items-center justify-start px-2 rounded-[12px] w-full', pathname?.includes('/academy/locations') && 'bg-[#F1F2E9]')}>
                                 <span>Locations</span>

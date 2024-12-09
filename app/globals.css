@@ -6,6 +6,43 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+.listDisplay ul li {
+  list-style: disc !important;
+  margin-left: 1rem !important;
+  padding-top: 0.25rem !important;
+  padding-bottom: 0.25rem !important;
+}
+
+.listDisplay ol li {
+  list-style: decimal !important;
+  margin-left: 1rem !important;
+  padding-top: 0.25rem !important;
+  padding-bottom: 0.25rem !important;
+}
+
+.listDisplay h1 {
+  font-size: 1.5rem !important;
+  font-weight: bold !important;
+  margin-top: 1rem !important;
+  margin-bottom: 1rem !important;
+}
+
+.listDisplay h2 {
+  font-size: 1.25rem !important;
+  font-weight: 600 !important;
+  margin-top: 1rem !important;
+  margin-bottom: 1rem !important;
+}
+
+.listDisplay ul {
+  margin-top: 1rem !important;
+  margin-bottom: 1rem !important;
+}
+
+.listDisplay {
+  line-height: 1.75 !important;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

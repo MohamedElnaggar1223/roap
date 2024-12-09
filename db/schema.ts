@@ -5,6 +5,7 @@ import { relations } from "drizzle-orm/relations";
 export const status = pgEnum("status", ['pending', 'accepted', 'rejected'])
 export const userRoles = pgEnum("user_roles", ['admin', 'user', 'academic'])
 export const discountType = pgEnum("discount_type", ['fixed', 'percentage'])
+export const athleticType = pgEnum("athletic_type", ['primary', 'fellow'])
 
 
 export const users = pgTable("users", {
@@ -301,6 +302,7 @@ export const academics = pgTable("academics", {
     policy: text(),
     extra: varchar({ length: 255 }).default(sql`NULL`),
     status: status().default('pending'),
+    onboarded: boolean("onboarded").default(false).notNull(),
 }, (table) => {
     return {
         slugUnique: uniqueIndex("academics_slug_unique").using("btree", table.slug.asc().nullsLast().op("text_ops")),
@@ -501,6 +503,11 @@ export const academicAthletic = pgTable("academic_athletic", {
     // You can use { mode: "bigint" } if numbers are exceeding js number limitations
     profileId: bigint("profile_id", { mode: "number" }),
     certificate: varchar({ length: 255 }).default(sql`NULL`),
+    type: athleticType().default('primary'),
+    firstGuardianName: varchar("first_guardian_name", { length: 255 }).default(sql`NULL`),
+    firstGuardianRelationship: varchar("first_guardian_relationship", { length: 255 }).default(sql`NULL`),
+    secondGuardianName: varchar("second_guardian_name", { length: 255 }).default(sql`NULL`),
+    secondGuardianRelationship: varchar("second_guardian_relationship", { length: 255 }).default(sql`NULL`),
     createdAt: timestamp("created_at", { mode: 'string' }),
     updatedAt: timestamp("updated_at", { mode: 'string' }),
 }, (table) => {
@@ -556,6 +563,9 @@ export const packages = pgTable("packages", {
     createdAt: timestamp("created_at", { mode: 'string' }),
     updatedAt: timestamp("updated_at", { mode: 'string' }),
     memo: text(),
+    entryFees: doublePrecision("entry_fees").default(0).notNull(),
+    entryFeesExplanation: text("entry_fees_explanation"),
+    entryFeesAppliedUntil: varchar("entry_fees_applied_until", { length: 255 }),
 }, (table) => {
     return {
         packagesProgramIdForeign: foreignKey({
@@ -860,6 +870,29 @@ export const promoCodes = pgTable("promo_codes", {
     }
 })
 
+
+export const media = pgTable("media", {
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "media_id_seq", startWith: 1000 }),
+    referableType: varchar("referable_type", { length: 255 }).notNull(),
+    referableId: bigint("referable_id", { mode: "number" }).notNull(),
+    url: varchar({ length: 255 }).notNull(),
+    type: varchar({ length: 255 }).default('0').notNull(),
+    createdAt: timestamp("created_at", { mode: 'string' }),
+    updatedAt: timestamp("updated_at", { mode: 'string' }),
+}, (table) => {
+    return {
+        referableTypeReferableIdIdx: index("media_referable_type_referable_id_index").on(table.referableType, table.referableId),
+    }
+});
+
+export const mediaRelations = relations(media, ({ one }) => ({
+    academic: one(academics, {
+        fields: [media.referableId],
+        references: [academics.id],
+        relationName: "academic_media"
+    }),
+}));
+
 export const promoCodesRelations = relations(promoCodes, ({ one, many }) => ({
     academic: one(academics, {
         fields: [promoCodes.academicId],
@@ -991,6 +1024,9 @@ export const academicsRelations = relations(academics, ({ one, many }) => ({
     coaches: many(coaches),
     wishlists: many(wishlist),
     promoCodes: many(promoCodes),
+    media: many(media, {
+        relationName: "academic_media"
+    }),
 }));
 
 export const academicTranslationsRelations = relations(academicTranslations, ({ one }) => ({

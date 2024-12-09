@@ -3,7 +3,7 @@
 import { db } from '@/db'
 import { programs, branches, branchTranslations, sports, sportTranslations, coachProgram, packages, schedules } from '@/db/schema'
 import { auth } from '@/auth'
-import { and, eq, sql, inArray, asc } from 'drizzle-orm'
+import { and, eq, sql, inArray, asc, not } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { formatDateForDB } from '../utils'
 
@@ -61,7 +61,10 @@ export async function getPrograms() {
             eq(sports.id, sportTranslations.sportId),
             eq(sportTranslations.locale, 'en')
         ))
-        .where(eq(programs.academicId, academy.id))
+        .where(and(
+            eq(programs.academicId, academy.id),
+            not(eq(programs.name, 'Assessment'))
+        ))
         .orderBy(asc(programs.createdAt))
 
     const transformedPrograms = programsData.map(program => ({
@@ -92,6 +95,9 @@ interface Package {
     endDate: Date
     schedules: Schedule[]
     memo: string | null
+    entryFees: number
+    entryFeesExplanation?: string
+    entryFeesAppliedUntil?: string
     id?: number
 }
 
@@ -167,6 +173,9 @@ export async function createProgram(data: {
                                 endDate: formatDateForDB(packageData.endDate),
                                 memo: packageData.memo,
                                 sessionPerWeek: packageData.schedules.length,
+                                entryFees: packageData.entryFees ?? 0,
+                                entryFeesExplanation: packageData.entryFeesExplanation,
+                                entryFeesAppliedUntil: packageData.entryFeesAppliedUntil || null,
                                 createdAt: sql`now()`,
                                 updatedAt: sql`now()`,
                             })
@@ -288,6 +297,9 @@ export async function updateProgram(id: number, data: {
                                 endDate: formatDateForDB(packageData.endDate),
                                 sessionPerWeek: packageData.schedules.length,
                                 memo: packageData.memo,
+                                entryFees: packageData.entryFees ?? 0,
+                                entryFeesExplanation: packageData.entryFeesExplanation,
+                                entryFeesAppliedUntil: packageData.entryFeesAppliedUntil || null,
                                 createdAt: sql`now()`,
                                 updatedAt: sql`now()`,
                             })
@@ -330,6 +342,9 @@ export async function updateProgram(id: number, data: {
                                     endDate: formatDateForDB(packageData.endDate),
                                     sessionPerWeek: packageData.schedules.length,
                                     memo: packageData.memo,
+                                    entryFees: packageData.entryFees ?? 0,
+                                    entryFeesExplanation: packageData.entryFeesExplanation,
+                                    entryFeesAppliedUntil: packageData.entryFeesAppliedUntil || null,
                                     updatedAt: sql`now()`,
                                 })
                                 .where(eq(packages.id, packageData.id!))

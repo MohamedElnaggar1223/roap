@@ -31,6 +31,9 @@ export async function getProgramPackages(url: string | null, programId: number) 
             startDate: packages.startDate,
             endDate: packages.endDate,
             memo: packages.memo,
+            entryFees: packages.entryFees,
+            entryFeesExplanation: packages.entryFeesExplanation,
+            entryFeesAppliedUntil: packages.entryFeesAppliedUntil,
             schedules: sql<Schedule[]>`json_agg(
                 json_build_object(
                     'id', ${schedules.id},
@@ -69,6 +72,9 @@ export async function createPackage(data: {
     endDate: Date
     programId: number
     memo?: string | null
+    entryFees: number
+    entryFeesExplanation?: string
+    entryFeesAppliedUntil?: string
     schedules: {
         day: string
         from: string
@@ -82,6 +88,10 @@ export async function createPackage(data: {
         return { error: 'Unauthorized' }
     }
 
+    console.log('Entry fees:', data.entryFees)
+    console.log('Entry fees explanation:', data.entryFeesExplanation)
+    console.log('Entry fees applied until:', data.entryFeesAppliedUntil)
+
     try {
         return await db.transaction(async (tx) => {
             const [newPackage] = await tx
@@ -93,6 +103,9 @@ export async function createPackage(data: {
                     endDate: formatDateForDB(data.endDate),
                     programId: data.programId,
                     memo: data.memo,
+                    entryFees: data.entryFees,
+                    entryFeesExplanation: data.entryFeesExplanation,
+                    entryFeesAppliedUntil: data.entryFeesAppliedUntil || null,
                     createdAt: sql`now()`,
                     updatedAt: sql`now()`,
                     sessionPerWeek: data.schedules.length
@@ -131,6 +144,9 @@ export async function updatePackage(id: number, data: {
     startDate: Date
     endDate: Date
     memo?: string | null
+    entryFees: number
+    entryFeesExplanation?: string
+    entryFeesAppliedUntil?: string
     schedules: {
         id?: number
         day: string
@@ -155,6 +171,9 @@ export async function updatePackage(id: number, data: {
                     startDate: formatDateForDB(data.startDate),
                     endDate: formatDateForDB(data.endDate),
                     memo: data.memo,
+                    entryFees: data.entryFees,
+                    entryFeesExplanation: data.entryFeesExplanation,
+                    entryFeesAppliedUntil: data.entryFeesAppliedUntil || null,
                     updatedAt: sql`now()`,
                     sessionPerWeek: data.schedules.length ?? 0
                 })
