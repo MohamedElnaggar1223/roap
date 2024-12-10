@@ -13,6 +13,7 @@ import { Inter } from 'next/font/google'
 import { checkAcademyStatus } from "@/lib/actions/check-academy-status";
 import { cn } from "@/lib/utils";
 import { OnboardingSaveProvider } from "@/providers/onboarding-save-provider";
+import { Toaster } from "@/components/ui/toaster";
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
@@ -41,6 +42,7 @@ export default async function OnboardingLayout({
                             <div className="">
                                 {children}
                             </div>
+                            <Toaster />
                         </main>
                     </OnboardingSaveProvider>
                 </OnboardingProvider>

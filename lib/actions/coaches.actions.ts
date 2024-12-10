@@ -156,7 +156,7 @@ export async function createCoach(data: {
                 .values({
                     name: data.name,
                     title: data.title,
-                    image: 'images/' + data.image,
+                    image: data.image ? 'images/' + data.image : null,
                     bio: data.bio,
                     gender: data.gender,
                     dateOfBirth: formatDateForDB(data.dateOfBirth),
@@ -238,7 +238,7 @@ export async function updateCoach(id: number, data: {
             .set({
                 name: data.name,
                 title: data.title,
-                image: data.image.includes('images/') ? data.image.startsWith('images/') ? data.image : 'images/' + data.image?.split('images/')[1] : 'images/' + data.image,
+                image: data.image ? data.image.includes('images/') ? data.image.startsWith('images/') ? data.image : 'images/' + data.image?.split('images/')[1] : 'images/' + data.image : null,
                 bio: data.bio,
                 gender: data.gender,
                 dateOfBirth: formatDateForDB(data.dateOfBirth),

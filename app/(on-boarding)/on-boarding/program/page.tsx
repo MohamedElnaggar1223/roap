@@ -1,11 +1,12 @@
+// app/(on-boarding)/on-boarding/program/page.tsx
 import { getAcademyDetails, getAllSports } from "@/lib/actions/academics.actions"
 import { getImageUrl } from "@/lib/supabase-images"
-import OnboardingAcademyDetailsForm from "./academy-details-form"
-import { getLocations } from "@/lib/actions/locations.actions"
 import { getCoaches } from "@/lib/actions/coaches.actions"
+import { getLocations } from "@/lib/actions/locations.actions"
 import { getPrograms } from "@/lib/actions/programs.actions"
+import OnboardingProgramForm from "./program-form"
 
-export default async function AcademyDetailsStep() {
+export default async function ProgramStep() {
     const [
         { data: academyDetails, error: academyDetailsError },
         { data: coaches, error: coachesError },
@@ -30,29 +31,28 @@ export default async function AcademyDetailsStep() {
         })!)
     ])
 
-    const initialRequirements = {
-        name: !!academyDetails?.name,
-        description: !!academyDetails?.description,
-        sports: !!(academyDetails?.sports?.length && academyDetails.sports.length > 0),
-        logo: !!academyDetails?.logo
-    }
+    const coachesWithImages = await Promise.all(coaches?.map(async (coach) => {
+        const image = await getImageUrl(coach.image!)
+        return {
+            ...coach,
+            image
+        }
+    }) ?? [])
 
     const finalAcademyDetails = {
         ...academyDetails,
+        coaches: coachesWithImages,
         locations,
         programs,
-        coaches,
-        sports: academyDetails?.sports.filter(s => !isNaN(s)) ?? [],
         logo,
-        gallery: gallery as unknown as string[]
+        gallery: gallery as unknown as string[],
     }
 
     return (
         <section className='flex flex-col gap-4 bg-[#F1F2E9] rounded-b-[20px] p-8'>
-            <OnboardingAcademyDetailsForm
+            <OnboardingProgramForm
                 academyDetails={finalAcademyDetails!}
                 sports={sports!}
-                initialRequirements={initialRequirements}
             />
         </section>
     )

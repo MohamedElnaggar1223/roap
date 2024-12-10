@@ -1,23 +1,22 @@
+// app/(on-boarding)/on-boarding/gallery/page.tsx
 import { getAcademyDetails, getAllSports } from "@/lib/actions/academics.actions"
 import { getImageUrl } from "@/lib/supabase-images"
-import OnboardingAcademyDetailsForm from "./academy-details-form"
-import { getLocations } from "@/lib/actions/locations.actions"
+import OnboardingGalleryForm from "./gallery-form"
 import { getCoaches } from "@/lib/actions/coaches.actions"
+import { getLocations } from "@/lib/actions/locations.actions"
 import { getPrograms } from "@/lib/actions/programs.actions"
 
-export default async function AcademyDetailsStep() {
+export default async function GalleryStep() {
     const [
         { data: academyDetails, error: academyDetailsError },
         { data: coaches, error: coachesError },
         { data: locations, error: locationsError },
         { data: programs, error: programsError },
-        sports
     ] = await Promise.all([
         getAcademyDetails(),
         getCoaches(),
         getLocations(),
         getPrograms(),
-        getAllSports('sports')
     ])
 
     if (academyDetailsError) return null
@@ -30,30 +29,18 @@ export default async function AcademyDetailsStep() {
         })!)
     ])
 
-    const initialRequirements = {
-        name: !!academyDetails?.name,
-        description: !!academyDetails?.description,
-        sports: !!(academyDetails?.sports?.length && academyDetails.sports.length > 0),
-        logo: !!academyDetails?.logo
-    }
-
     const finalAcademyDetails = {
         ...academyDetails,
+        coaches,
         locations,
         programs,
-        coaches,
-        sports: academyDetails?.sports.filter(s => !isNaN(s)) ?? [],
         logo,
-        gallery: gallery as unknown as string[]
+        gallery: gallery as unknown as string[],
     }
 
     return (
         <section className='flex flex-col gap-4 bg-[#F1F2E9] rounded-b-[20px] p-8'>
-            <OnboardingAcademyDetailsForm
-                academyDetails={finalAcademyDetails!}
-                sports={sports!}
-                initialRequirements={initialRequirements}
-            />
+            <OnboardingGalleryForm academyDetails={finalAcademyDetails!} />
         </section>
     )
 }
