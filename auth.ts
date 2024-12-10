@@ -61,6 +61,8 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
                     throw new Error('Wrong password');
                 }
 
+                console.log(user)
+
                 return {
                     id: user.id.toString(),
                     email: user.email!,

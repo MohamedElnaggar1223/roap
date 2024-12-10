@@ -15,7 +15,9 @@ export async function checkAcademyStatus() {
         }
     }
 
-    if (!session?.user || session.user.role !== 'academic') {
+    console.log(session)
+
+    if (!session?.user) {
         return {
             shouldRedirect: true,
             redirectTo: '/sign-in'

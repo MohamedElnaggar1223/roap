@@ -1,6 +1,6 @@
 'use server'
 
-import { SQL, and, asc, eq, gte, inArray, lte, sql } from 'drizzle-orm'
+import { SQL, and, asc, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm'
 import { db } from '@/db'
 import { academics, academicSport, academicTranslations, bookings, bookingSessions, branches, branchTranslations, coaches, media, packages, profiles, programs, sports, sportTranslations, users } from '@/db/schema'
 // import { auth } from '../auth'
@@ -100,7 +100,7 @@ export const getAcademyDetails = async () => {
 export async function getPaginatedAcademics(
 	page: number = 1,
 	pageSize: number = 10,
-	orderBy: SQL = asc(academics.id)
+	orderBy: SQL = desc(academics.createdAt)
 ) {
 	const isAdminRes = await isAdmin()
 	if (!isAdminRes) return {
