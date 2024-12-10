@@ -85,7 +85,7 @@ interface Package {
     id?: number
     entryFees: number
     entryFeesExplanation?: string
-    entryFeesAppliedUntil?: string
+    entryFeesAppliedUntil?: string[]
 }
 
 interface Schedule {
