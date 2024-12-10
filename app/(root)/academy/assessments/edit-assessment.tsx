@@ -83,6 +83,9 @@ interface Package {
     schedules: Schedule[]
     memo: string | null
     id?: number
+    entryFees: number
+    entryFeesExplanation?: string
+    entryFeesAppliedUntil?: string
 }
 
 interface Schedule {
@@ -135,7 +138,7 @@ export default function EditAssessment({ branches, sports, assessment }: Props) 
 
     useEffect(() => {
         if (isLoading || isValidating) return
-        setCreatedPackages(packagesData?.data?.map(packageData => ({ ...packageData, startDate: new Date(packageData.startDate), endDate: new Date(packageData.endDate) })) ?? [])
+        setCreatedPackages(packagesData?.data?.map(packageData => ({ ...packageData, startDate: new Date(packageData.startDate), endDate: new Date(packageData.endDate), entryFeesExplanation: packageData.entryFeesExplanation ?? undefined, entryFeesAppliedUntil: packageData.entryFeesAppliedUntil ? packageData.entryFeesAppliedUntil : undefined })) ?? [])
     }, [isLoading, isValidating, packagesData])
 
     const form = useForm<z.infer<typeof editAssessmentSchema>>({
