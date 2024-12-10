@@ -42,7 +42,7 @@ const packageSchema = z.object({
     memo: z.string(),
     entryFees: z.string().default("0"),
     entryFeesExplanation: z.string().optional(),
-    entryFeesAppliedUntil: z.string().optional(),
+    entryFeesAppliedUntil: z.array(z.string()).default([]).optional(),
     schedules: z.array(z.object({
         day: z.string().min(1, "Day is required"),
         from: z.string().min(1, "Start time is required"),
@@ -75,7 +75,7 @@ interface Package {
     id?: number
     entryFees: number
     entryFeesExplanation?: string
-    entryFeesAppliedUntil?: string
+    entryFeesAppliedUntil?: string[];
 }
 
 interface Schedule {
@@ -531,27 +531,30 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                         name="entryFeesAppliedUntil"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Entry Fees Applied Until</FormLabel>
-                                                <Select
-                                                    onValueChange={field.onChange}
-                                                    value={field.value}
-                                                >
-                                                    <FormControl>
-                                                        <SelectTrigger className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'>
-                                                            <SelectValue placeholder="Select month" />
-                                                        </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                        {selectedMonths.map((monthNum) => {
-                                                            const month = months.find(m => m.value === monthNum);
-                                                            return month ? (
-                                                                <SelectItem key={month.value} value={month.label}>
-                                                                    {month.label}
-                                                                </SelectItem>
-                                                            ) : null;
-                                                        })}
-                                                    </SelectContent>
-                                                </Select>
+                                                <FormLabel>Entry Fees Applied For</FormLabel>
+                                                <div className="grid grid-cols-3 gap-4 border rounded-[10px] p-4">
+                                                    {selectedMonths.map((monthNum) => {
+                                                        const month = months.find(m => m.value === monthNum);
+                                                        return month ? (
+                                                            <label
+                                                                key={month.value}
+                                                                className="flex items-center space-x-2 cursor-pointer"
+                                                            >
+                                                                <Checkbox
+                                                                    checked={field?.value?.includes(month.label)}
+                                                                    onCheckedChange={(checked) => {
+                                                                        const updatedMonths = checked
+                                                                            ? [...(field.value ?? []), month.label]
+                                                                            : field?.value?.filter((m: string) => m !== month.label);
+                                                                        field.onChange(updatedMonths);
+                                                                    }}
+                                                                    className='data-[state=checked]:!bg-main-green'
+                                                                />
+                                                                <span>{month.label}</span>
+                                                            </label>
+                                                        ) : null;
+                                                    })}
+                                                </div>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
