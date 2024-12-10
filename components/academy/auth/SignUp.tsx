@@ -48,66 +48,66 @@ export default function Component() {
     async function onSubmit(values: z.infer<typeof academySignUpSchema>) {
         setLoading(true)
         try {
-        const { error } = await createAcademy(values)
+            const { error } = await createAcademy(values)
 
-        if(error) {
+            if (error) {
+                toast({
+                    variant: "destructive",
+                    title: "Error",
+                    description: error,
+                })
+                return
+            }
+
             toast({
-                variant: "destructive",
-                title: "Error",
-                description: error,
+                title: "Success",
+                description: "Application submitted successfully! We'll review it shortly.",
             })
-            return
+
+            setTimeout(() => {
+                router.push("/")
+            }, 3000)
+
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                toast({
+                    variant: "destructive",
+                    title: "Error",
+                    description: error.errors[0].message,
+                })
+            } else {
+                toast({
+                    variant: "destructive",
+                    title: "Error",
+                    description: "Something went wrong",
+                })
+            }
+        } finally {
+            setLoading(false)
         }
-
-        toast({
-            title: "Success",
-            description: "Application submitted successfully! We'll review it shortly.",
-        })
-
-        setTimeout(() => {
-            router.push("/")
-        }, 3000)
-
-    } catch (error) {
-        if (error instanceof z.ZodError) {
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: error.errors[0].message,
-          })
-        } else {
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Something went wrong",
-          })
-        }
-      } finally {
-        setLoading(false)
-      }
     }
 
     return (
-        <section className='w-full bg-[#C4DA59] min-h-screen'>
+        <section className='w-full bg-[#C4DA59] min-h-screen flex items-center justify-center'>
             <div className="container mx-auto max-w-[570px] p-4">
                 <div className="mb-6 text-center">
                     <Image
-                    src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/roapLogo-RNbE1WZRwUHMUQWhwu9rnDbdxtbC9F.svg"
-                    alt="ROAP Logo"
-                    width={66}
-                    height={42}
-                    className="mx-auto mb-4"
+                        src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/roapLogo-RNbE1WZRwUHMUQWhwu9rnDbdxtbC9F.svg"
+                        alt="ROAP Logo"
+                        width={66}
+                        height={42}
+                        className="mx-auto mb-4"
                     />
                 </div>
                 <Card className='bg-[#F1F2E9] rounded-3xl'>
                     <CardHeader className="space-y-1">
-                    <h2 className="text-2xl font-bold text-center">Create an Account</h2>
-                    <p className="text-muted-foreground text-center">Enter your information below to register</p>
+                        <h2 className="text-2xl font-bold text-center">Create an Account</h2>
+                        <p className="text-muted-foreground text-center">Enter your information below to register</p>
                     </CardHeader>
                     <CardContent>
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
-                                <FormField 
+                                <FormField
                                     control={form.control}
                                     name="fullName"
                                     render={({ field }) => (
@@ -125,7 +125,7 @@ export default function Component() {
                                         </FormItem>
                                     )}
                                 />
-                                <FormField 
+                                <FormField
                                     control={form.control}
                                     name="email"
                                     render={({ field }) => (
@@ -144,7 +144,7 @@ export default function Component() {
                                         </FormItem>
                                     )}
                                 />
-                                <FormField 
+                                <FormField
                                     control={form.control}
                                     name="password"
                                     render={({ field }) => (
@@ -175,7 +175,7 @@ export default function Component() {
                                         </FormItem>
                                     )}
                                 />
-                                <FormField 
+                                <FormField
                                     control={form.control}
                                     name="academyName"
                                     render={({ field }) => (
@@ -193,11 +193,11 @@ export default function Component() {
                                         </FormItem>
                                     )}
                                 />
-                                <FormField 
+                                <FormField
                                     control={form.control}
                                     name="academyDescription"
                                     render={({ field }) => (
-                                        <FormItem>
+                                        <FormItem className='hidden absolute'>
                                             <FormLabel>Academy Description</FormLabel>
                                             <FormControl>
                                                 <Textarea
@@ -212,11 +212,11 @@ export default function Component() {
                                         </FormItem>
                                     )}
                                 />
-                                <FormField 
+                                <FormField
                                     control={form.control}
                                     name="entryFees"
                                     render={({ field }) => (
-                                        <FormItem>
+                                        <FormItem className='hidden absolute'>
                                             <FormLabel>Entry Fees</FormLabel>
                                             <FormControl>
                                                 <Input

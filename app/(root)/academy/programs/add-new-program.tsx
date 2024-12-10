@@ -80,7 +80,7 @@ interface Package {
     memo: string | null
     entryFees: number
     entryFeesExplanation?: string
-    entryFeesAppliedUntil?: string
+    entryFeesAppliedUntil?: string[]
     id?: number
 }
 

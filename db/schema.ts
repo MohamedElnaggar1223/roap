@@ -565,7 +565,7 @@ export const packages = pgTable("packages", {
     memo: text(),
     entryFees: doublePrecision("entry_fees").default(0).notNull(),
     entryFeesExplanation: text("entry_fees_explanation"),
-    entryFeesAppliedUntil: varchar("entry_fees_applied_until", { length: 255 }),
+    entryFeesAppliedUntil: text("entry_fees_applied_until").array(),
 }, (table) => {
     return {
         packagesProgramIdForeign: foreignKey({

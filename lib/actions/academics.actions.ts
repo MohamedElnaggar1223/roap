@@ -257,7 +257,7 @@ export async function createAcademy(data: z.infer<typeof academySignUpSchema>) {
 			.insert(academics)
 			.values({
 				slug,
-				entryFees: parseFloat(data.entryFees),
+				entryFees: parseFloat(data.entryFees ?? '0'),
 				userId: newUser.id,
 				status: 'pending',
 				onboarded: false,

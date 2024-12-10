@@ -109,12 +109,12 @@ const EventDetailsDialog = ({
                 className="bg-white p-3 rounded-lg border border-[#CDD1C7]"
               >
                 <div className="font-medium text-[#1F441F]">{event.studentName}</div>
-                <div className="text-sm text-[#454745]">
+                {/* <div className="text-sm text-[#454745]">
                   Birthday: {new Date(event.studentBirthday!).toLocaleDateString()}
                 </div>
                 <div className="text-sm text-[#454745]">
                   Status: {event.status}
-                </div>
+                </div> */}
               </div>
             ))}
           </div>

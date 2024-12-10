@@ -10,12 +10,8 @@ export const academySignUpSchema = z.object({
     academyName: z.string().min(2, {
         message: "Please enter a valid academy name",
     }),
-    academyDescription: z.string().min(2, {
-        message: "Please enter a valid academy description",
-    }),
-    entryFees: z.string().min(2, {
-        message: "Please enter a valid entry fees",
-    }),
+    academyDescription: z.string().optional(),
+    entryFees: z.string().optional(),
     password: z.string().min(6, {
         message: "Password must be at least 6 characters",
     }),

@@ -74,7 +74,7 @@ export async function createPackage(data: {
     memo?: string | null
     entryFees: number
     entryFeesExplanation?: string
-    entryFeesAppliedUntil?: string
+    entryFeesAppliedUntil?: string[];
     schedules: {
         day: string
         from: string
@@ -146,7 +146,7 @@ export async function updatePackage(id: number, data: {
     memo?: string | null
     entryFees: number
     entryFeesExplanation?: string
-    entryFeesAppliedUntil?: string
+    entryFeesAppliedUntil?: string[];
     schedules: {
         id?: number
         day: string
