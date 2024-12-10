@@ -78,6 +78,9 @@ interface Package {
     endDate: Date
     schedules: Schedule[]
     memo: string | null
+    entryFees: number
+    entryFeesExplanation?: string
+    entryFeesAppliedUntil?: string
     id?: number
 }
 

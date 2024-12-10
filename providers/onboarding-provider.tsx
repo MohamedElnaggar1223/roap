@@ -45,10 +45,12 @@ interface StepRequirements {
         description: boolean
         branchId: boolean
         sportId: boolean
-        gender: boolean
-        coaches: boolean
+        startDateOfBirth: boolean
+        endDateOfBirth: boolean
         type: boolean
         packages: boolean
+        numberOfSeats: boolean
+        gender: boolean
     }
 }
 
@@ -143,10 +145,12 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             description: false,
             branchId: false,
             sportId: false,
-            gender: false,
-            coaches: false,
+            startDateOfBirth: false,
+            endDateOfBirth: false,
             type: false,
-            packages: false
+            packages: false,
+            numberOfSeats: false,
+            gender: false,
         }
     })
 

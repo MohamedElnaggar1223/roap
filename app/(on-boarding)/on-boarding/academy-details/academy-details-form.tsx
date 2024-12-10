@@ -43,6 +43,46 @@ interface Props {
         name?: string | undefined;
         description?: string | undefined;
         locale?: string | undefined;
+        coaches: {
+            sports: number[];
+            languages: number[];
+            packages: number[];
+            id: number;
+            name: string;
+            title: string | null;
+            image: string | null;
+            bio: string | null;
+            gender: string | null;
+            dateOfBirth: string | null;
+            privateSessionPercentage: string | null;
+        }[] | null
+        programs: {
+            coaches: string[];
+            packages: string[];
+            id: number;
+            name: string | null;
+            description: string | null;
+            type: string | null;
+            numberOfSeats: number | null;
+            branchId: number | null;
+            sportId: number | null;
+            sportName: string | null;
+            startDateOfBirth: string | null;
+            endDateOfBirth: string | null;
+            branchName: string | null;
+        }[] | undefined
+        locations: {
+            sports: string[];
+            facilities: string[];
+            id: number;
+            name: string;
+            locale: string;
+            nameInGoogleMap: string | null;
+            url: string | null;
+            isDefault: boolean;
+            rate: number | null;
+            amenities: string[];
+        }[] | null
     }
     sports: {
         id: number;
@@ -100,8 +140,29 @@ export default function OnboardingAcademyDetailsForm({ academyDetails, sports, i
 
     form.watch(handleRequirementsCheck)
 
+    console.log("Gallery", academyDetails.gallery)
+
     useEffect(() => {
         updateRequirements('academy-details', initialRequirements)
+        updateRequirements('gallery', { hasGallery: (academyDetails.gallery ?? [])?.length > 0 })
+        updateRequirements('policy', { hasPolicy: !!academyDetails.policy })
+        updateRequirements('coach', {
+            name: (academyDetails?.coaches ?? []).length > 0 && !!academyDetails?.coaches![0].name,
+            title: (academyDetails?.coaches ?? []).length > 0 && !!academyDetails?.coaches![0].title,
+            bio: (academyDetails?.coaches ?? []).length > 0 && !!academyDetails?.coaches![0].bio,
+            gender: (academyDetails?.coaches ?? []).length > 0 && !!academyDetails?.coaches![0].gender,
+            sports: (academyDetails?.coaches ?? []).length > 0 && academyDetails?.coaches![0].sports.length > 0,
+            languages: (academyDetails?.coaches ?? []).length > 0 && academyDetails?.coaches![0].languages.length > 0,
+        })
+        updateRequirements('location', {
+            name: (academyDetails.locations ?? [])?.length > 0 && !!academyDetails.locations![0].name,
+            branchId: (academyDetails.locations ?? [])?.length > 0 && !!academyDetails.locations![0].id,
+            nameInGoogleMap: (academyDetails.locations ?? [])?.length > 0 && !!academyDetails.locations![0].nameInGoogleMap,
+            url: (academyDetails.locations ?? [])?.length > 0 && !!academyDetails.locations![0].url,
+            sports: (academyDetails.locations ?? [])?.length > 0 && (academyDetails.locations![0].sports.length > 0),
+            facilities: (academyDetails.locations ?? [])?.length > 0 && (academyDetails.locations![0].facilities.length > 0),
+        })
+        updateRequirements('program', { packages: ((academyDetails.programs ?? []).length > 0 && academyDetails?.programs![0]?.packages.length > 0) })
     }, [])
 
     useEffect(() => {

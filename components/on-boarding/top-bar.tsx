@@ -9,8 +9,14 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
+import { useRouter } from "next/navigation"
+import { academyOnBoarded } from "@/lib/actions/onboarding.actions"
+import { useState } from "react"
 
 export default function TopBar() {
+    const router = useRouter()
+    const [loading, setLoading] = useState(false)
+
     const {
         currentStep,
         steps,
@@ -25,6 +31,7 @@ export default function TopBar() {
     const { toast } = useToast()
 
     const handleSave = async () => {
+        console.log("aadawdaw")
         const result = await save()
         if (result.success) {
             toast({
@@ -38,6 +45,14 @@ export default function TopBar() {
                 variant: "destructive",
             })
         }
+    }
+
+    const handleSaveAndContinue = async () => {
+        setLoading(true)
+        await handleSave()
+        await academyOnBoarded()
+        router.refresh()
+        setLoading(false)
     }
 
     return (
@@ -85,12 +100,22 @@ export default function TopBar() {
                 </button>
                 <button
                     onClick={handleSave}
-                    disabled={isSaving}
+                    disabled={(isSaving || loading)}
                     className="flex items-center justify-center gap-2 rounded-3xl px-4 py-2 bg-main-green text-sm text-main-yellow disabled:opacity-50"
                 >
-                    {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {(isSaving || loading) && <Loader2 className="h-4 w-4 animate-spin" />}
                     Save
                 </button>
+                {completedSteps === 6 && (
+                    <button
+                        onClick={handleSaveAndContinue}
+                        disabled={(isSaving || loading)}
+                        className="flex items-center justify-center gap-2 rounded-3xl px-4 py-2 bg-main-green text-sm text-main-yellow disabled:opacity-50"
+                    >
+                        {(isSaving || loading) && <Loader2 className="h-4 w-4 animate-spin" />}
+                        Save and Continue
+                    </button>
+                )}
                 <button
                     onClick={goToNextStep}
                     className="flex items-center justify-center w-8 h-8 rounded-full bg-main-green text-main-yellow"

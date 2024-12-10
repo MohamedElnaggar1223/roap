@@ -25,7 +25,7 @@ export default async function AcademyDetailsPage() {
     }
 
     return (
-        <section className='flex flex-col gap-4 bg-[#F1F2E9] rounded-t-[20px] pt-8 px-5 mx-4'>
+        <section className='flex flex-col gap-4 bg-[#F1F2E9] rounded-t-[20px] pt-8 px-5 mx-4 flex-1'>
             <AcademyDetails academyDetails={finalAcademyDetails!} sports={sports!} />
         </section>
     )
