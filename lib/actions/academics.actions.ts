@@ -2,7 +2,7 @@
 
 import { SQL, and, asc, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm'
 import { db } from '@/db'
-import { academics, academicSport, academicTranslations, bookings, bookingSessions, branches, branchTranslations, coaches, media, packages, profiles, programs, sports, sportTranslations, users } from '@/db/schema'
+import { academics, academicSport, academicTranslations, blockBranches, blockCoaches, blockPackages, blocks, blockSports, bookings, bookingSessions, branches, branchTranslations, coaches, media, packages, profiles, programs, sports, sportTranslations, users } from '@/db/schema'
 // import { auth } from '../auth'
 import bcrypt from "bcryptjs";
 import { isAdmin } from '../admin'
@@ -285,11 +285,7 @@ export async function createAcademy(data: z.infer<typeof academySignUpSchema>) {
 	}
 }
 
-export const getCalendarSlots = async (
-	startDate: Date,
-	endDate: Date,
-) => {
-
+export const getCalendarSlots = async (startDate: Date, endDate: Date) => {
 	if (!startDate || !endDate) return { error: 'Start and end dates are required', data: [] }
 	if (isNaN(startDate.getTime())) return { error: 'Start date cannot be 0', data: [] }
 	if (isNaN(endDate.getTime())) return { error: 'End date cannot be 0', data: [] }
@@ -299,7 +295,8 @@ export const getCalendarSlots = async (
 	const formattedStartDate = startDate.toISOString().split('T')[0]
 	const formattedEndDate = endDate.toISOString().split('T')[0]
 
-	const data = await db
+	// Fetch regular bookings
+	const bookingsData = await db
 		.select({
 			id: bookingSessions.id,
 			date: bookingSessions.date,
@@ -315,6 +312,7 @@ export const getCalendarSlots = async (
 			coachName: coaches.name,
 			packageId: packages.id,
 			coachId: coaches.id,
+			color: programs.color,
 		})
 		.from(bookingSessions)
 		.innerJoin(bookings, eq(bookingSessions.bookingId, bookings.id))
@@ -333,8 +331,52 @@ export const getCalendarSlots = async (
 			)
 		);
 
+	// Fetch blocks
+	const blocksData = await db
+		.select({
+			id: blocks.id,
+			date: blocks.date,
+			startTime: blocks.startTime,
+			endTime: blocks.endTime,
+			branchName: branchTranslations.name,
+			sportName: sportTranslations.name,
+			packageName: packages.name,
+			coachName: coaches.name,
+			packageId: packages.id,
+			coachId: coaches.id,
+		})
+		.from(blocks)
+		.leftJoin(blockBranches, eq(blocks.id, blockBranches.blockId))
+		.leftJoin(branches, eq(blockBranches.branchId, branches.id))
+		.leftJoin(branchTranslations, eq(branches.id, branchTranslations.branchId))
+		.leftJoin(blockSports, eq(blocks.id, blockSports.blockId))
+		.leftJoin(sports, eq(blockSports.sportId, sports.id))
+		.leftJoin(sportTranslations, eq(sports.id, sportTranslations.sportId))
+		.leftJoin(blockPackages, eq(blocks.id, blockPackages.blockId))
+		.leftJoin(packages, eq(blockPackages.packageId, packages.id))
+		.leftJoin(blockCoaches, eq(blocks.id, blockCoaches.blockId))
+		.leftJoin(coaches, eq(blockCoaches.coachId, coaches.id))
+		.where(
+			and(
+				sql`DATE(${blocks.date}) >= DATE(${formattedStartDate})`,
+				sql`DATE(${blocks.date}) <= DATE(${formattedEndDate})`
+			)
+		);
+
+	// Transform blocks data to match booking format
+	const transformedBlocks = blocksData.map(block => ({
+		...block,
+		status: 'blocked',
+		programName: 'block',
+		studentName: null,
+		studentBirthday: null,
+		color: '#F5F5F5', // Light gray background for blocked times
+	}));
+
+	console.log("Blocks", transformedBlocks)
+
 	return {
-		data,
+		data: [...bookingsData, ...transformedBlocks],
 		error: null,
 	}
 }
@@ -615,5 +657,33 @@ export async function updateAcademyDetails(data: UpdateAcademyDetailsInput) {
 			error: 'Something went wrong while updating academy details',
 			field: 'root'
 		}
+	}
+}
+
+export const getAcademySports = async () => {
+	const session = await auth()
+
+	if (!session?.user || session.user.role !== 'academic') return { error: 'You are not authorized to perform this action' }
+
+	const academy = await db.query.academics.findFirst({
+		where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
+		columns: {
+			id: true,
+		}
+	})
+
+	if (!academy) return { error: 'Academy not found' }
+
+	const data = await db
+		.select({
+			id: sports.id,
+		})
+		.from(academicSport)
+		.innerJoin(sports, eq(academicSport.sportId, sports.id))
+		.where(eq(academicSport.academicId, academy.id));
+
+	return {
+		data,
+		error: null,
 	}
 }

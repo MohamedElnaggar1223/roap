@@ -65,6 +65,7 @@
     "react-day-picker": "^8.10.1",
     "react-dom": "19.0.0-rc-66855b96-20241106",
     "react-hook-form": "^7.53.2",
+    "recharts": "^2.15.0",
     "supabase": "^1.223.10",
     "swr": "^2.2.5",
     "tailwind-merge": "^2.5.4",

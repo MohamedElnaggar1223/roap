@@ -34,7 +34,9 @@ export default async function AcademyDetailsStep() {
         name: !!academyDetails?.name,
         description: !!academyDetails?.description,
         sports: !!(academyDetails?.sports?.length && academyDetails.sports.length > 0),
-        logo: !!academyDetails?.logo
+        logo: !!academyDetails?.logo,
+        hasGallery: !!(academyDetails?.gallery?.length && academyDetails.gallery.length > 0),
+        hasPolicy: !!academyDetails?.policy
     }
 
     const finalAcademyDetails = {

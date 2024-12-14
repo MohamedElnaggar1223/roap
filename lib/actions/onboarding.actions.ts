@@ -5,16 +5,30 @@ import { branches, branchTranslations, branchFacility, branchSport, coaches, coa
 import { auth } from '@/auth'
 import { and, eq, inArray, sql } from 'drizzle-orm'
 import { revalidatePath, revalidateTag } from 'next/cache'
-import { formatDateForDB } from '../utils'
+import { formatDateForDB, slugify } from '../utils'
 
 interface OnboardingLocationData {
     name: string
-    nameInGoogleMap: string
+    nameInGoogleMap?: string
     url: string
     sports: number[]
     facilities: number[]
     latitude?: string
     longitude?: string
+}
+
+async function manageAssessmentPrograms(tx: any, branchId: number, academicId: number, sportIds: number[]) {
+    await tx.insert(programs).values(
+        sportIds.map(sportId => ({
+            name: 'Assessment',
+            type: 'TEAM',
+            academicId: academicId,
+            branchId: branchId,
+            sportId: sportId,
+            createdAt: sql`now()`,
+            updatedAt: sql`now()`
+        }))
+    )
 }
 
 export const createOnboardingLocation = async (data: OnboardingLocationData) => {
@@ -36,12 +50,23 @@ export const createOnboardingLocation = async (data: OnboardingLocationData) => 
     try {
         return await db.transaction(async (tx) => {
             // Create branch (always default for onboarding)
+            const slug = slugify(data.name)
+            const existingBranch = await tx.query.branches.findFirst({
+                where: (branches, { eq }) => eq(branches.slug, slug)
+            })
+
+            if (existingBranch) {
+                return {
+                    error: 'A location with this name already exists',
+                    field: 'name'
+                }
+            }
             const [branch] = await tx
                 .insert(branches)
                 .values({
                     academicId: academic.id,
                     slug: data.name.toLowerCase().replace(/\s+/g, '-'),
-                    nameInGoogleMap: data.nameInGoogleMap,
+                    nameInGoogleMap: data.nameInGoogleMap ?? '',
                     url: data.url,
                     isDefault: true,
                     createdAt: sql`now()`,
@@ -76,6 +101,7 @@ export const createOnboardingLocation = async (data: OnboardingLocationData) => 
                             updatedAt: sql`now()`,
                         }))
                     )
+                await manageAssessmentPrograms(tx, branch.id, academic.id, data.sports)
             }
 
             // Add facilities
@@ -124,7 +150,7 @@ export const updateOnboardingLocation = async (id: number, data: OnboardingLocat
             await tx
                 .update(branches)
                 .set({
-                    nameInGoogleMap: data.nameInGoogleMap,
+                    nameInGoogleMap: data.nameInGoogleMap ?? '',
                     url: data.url,
                     updatedAt: sql`now()`,
                     latitude: data.latitude,
@@ -383,6 +409,7 @@ export async function createOnboardingProgram(data: {
     type: string
     coaches: number[]
     packagesData: Package[]
+    color: string
 }) {
     const session = await auth()
 
@@ -414,6 +441,7 @@ export async function createOnboardingProgram(data: {
                     numberOfSeats: data.numberOfSeats,
                     type: data.type,
                     academicId: academy.id,
+                    color: data.color
                 })
                 .returning({
                     id: programs.id,
@@ -493,6 +521,7 @@ export async function updateOnboardingProgram(id: number, data: {
     type: string
     coaches: number[]
     packagesData: Package[]
+    color: string
 }) {
     const session = await auth()
 
@@ -514,7 +543,8 @@ export async function updateOnboardingProgram(id: number, data: {
                     endDateOfBirth: formatDateForDB(data.endDateOfBirth),
                     numberOfSeats: data.numberOfSeats,
                     type: data.type,
-                    updatedAt: sql`now()`
+                    updatedAt: sql`now()`,
+                    color: data.color
                 })
                 .where(eq(programs.id, id))
 

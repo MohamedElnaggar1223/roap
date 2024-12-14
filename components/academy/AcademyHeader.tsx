@@ -5,8 +5,9 @@ import { Separator } from "../ui/separator";
 import { SidebarInset, SidebarTrigger } from "../ui/sidebar";
 import React from "react";
 import { ChevronRight, Home } from "lucide-react";
+import NotificationsComponent from "./Notifications";
 
-export default function AcademyHeader({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function AcademyHeader({ academyId, children }: Readonly<{ academyId: number, children: React.ReactNode }>) {
 	const pathname = usePathname();
 
 	const generateBreadcrumbs = () => {
@@ -44,7 +45,7 @@ export default function AcademyHeader({ children }: Readonly<{ children: React.R
 
 	return (
 		<SidebarInset>
-			<header className="flex h-16 shrink-0 bg-[#E0E4D9] border-b-[#CDD1C7] border-b z-[10] sticky top-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+			<header className="flex h-16 shrink-0 bg-[#E0E4D9] pr-4 border-b-[#CDD1C7] justify-between border-b z-[10] sticky top-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
 				<div className="flex items-center gap-2 px-4">
 					<SidebarTrigger className="-ml-1" />
 					<Separator orientation="vertical" className="mr-2 h-4" />
@@ -76,6 +77,7 @@ export default function AcademyHeader({ children }: Readonly<{ children: React.R
 						</Breadcrumb>
 					)}
 				</div>
+				<NotificationsComponent academicId={academyId} />
 			</header>
 			{children}
 		</SidebarInset>

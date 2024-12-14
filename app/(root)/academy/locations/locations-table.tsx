@@ -41,9 +41,10 @@ interface Sport {
 interface LocationsDataTableProps {
     data: Location[]
     sports: Sport[]
+    academySports?: { id: number }[]
 }
 
-export function LocationsDataTable({ data, sports }: LocationsDataTableProps) {
+export function LocationsDataTable({ data, sports, academySports }: LocationsDataTableProps) {
     const router = useRouter()
 
     const [selectedLocations, setSelectedLocations] = useState<number[]>([])
@@ -103,7 +104,7 @@ export function LocationsDataTable({ data, sports }: LocationsDataTableProps) {
         <>
             <div className="flex items-center justify-between gap-4 w-full flex-wrap">
                 <div className="flex items-center gap-4 flex-wrap">
-                    <AddNewLocation sports={sports} />
+                    <AddNewLocation sports={sports} academySports={academySports} />
                     <div className="flex items-center gap-2">
                         <span className="text-sm">Filters:</span>
                         <DropdownMenu>
@@ -201,7 +202,7 @@ export function LocationsDataTable({ data, sports }: LocationsDataTableProps) {
                                     </span>
                                 </div>
                                 <div className="py-4 px-4 bg-main-white rounded-r-[20px] flex items-center justify-end font-bold font-inter">
-                                    <EditLocation locationEdited={location} />
+                                    <EditLocation locationEdited={location} academySports={academySports} />
                                 </div>
                             </Fragment>
                         ))}

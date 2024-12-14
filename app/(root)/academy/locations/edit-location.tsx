@@ -39,9 +39,10 @@ type Location = {
 
 type Props = {
     locationEdited: Location
+    academySports?: { id: number }[]
 }
 
-export default function EditLocation({ locationEdited }: Props) {
+export default function EditLocation({ locationEdited, academySports }: Props) {
     const router = useRouter()
 
     const [editOpen, setEditOpen] = useState(false)
@@ -66,15 +67,34 @@ export default function EditLocation({ locationEdited }: Props) {
         }
     })
 
+    const extractCoordinates = (url: string) => {
+        const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/
+        const match = url.match(regex)
+
+        if (match) {
+            return {
+                latitude: match[1],
+                longitude: match[2]
+            }
+        }
+
+        return null
+    }
+
     const onSubmit = async (values: z.infer<typeof addLocationSchema>) => {
         setLoading(true)
+
+        const coordinates = extractCoordinates(values.url)
+
         await updateLocation(locationEdited.id, {
             facilities: selectedAmenities,
             name: values.name,
-            nameInGoogleMap: values.nameInGoogleMap,
+            nameInGoogleMap: values.nameInGoogleMap ?? '',
             sports: selectedSports,
             url: values.url,
             isDefault: values.isDefault,
+            latitude: coordinates?.latitude,
+            longitude: coordinates?.longitude
         })
         setLoading(false)
         setEditOpen(false)
@@ -138,7 +158,7 @@ export default function EditLocation({ locationEdited }: Props) {
                                         control={form.control}
                                         name='nameInGoogleMap'
                                         render={({ field }) => (
-                                            <FormItem>
+                                            <FormItem className='hidden absolute'>
                                                 <FormLabel>Name in google map</FormLabel>
                                                 <FormControl>
                                                     <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
@@ -220,14 +240,14 @@ export default function EditLocation({ locationEdited }: Props) {
                                                         }}
                                                     >
                                                         <div className="p-2">
-                                                            {sportsData?.map(sport => (
+                                                            {academySports?.map(sport => (
                                                                 <p
                                                                     key={sport.id}
                                                                     onClick={() => handleSelectSport(sport.id)}
                                                                     className="p-2 flex items-center justify-start gap-2 text-left cursor-pointer hover:bg-[#fafafa] rounded-lg"
                                                                 >
                                                                     {selectedSports.includes(sport.id) && <X className="size-3" fill='#1f441f' />}
-                                                                    {sport.name}
+                                                                    {sportsData?.find(s => s.id === sport.id)?.name}
                                                                 </p>
                                                             ))}
                                                         </div>

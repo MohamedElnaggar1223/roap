@@ -24,7 +24,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Button } from '@/components/ui/button';
 import { getAllCoaches } from '@/lib/actions/coaches.actions';
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon } from "lucide-react"
+import { CalendarIcon } from 'lucide-react'
 import { format } from "date-fns"
 import {
     Select,
@@ -44,10 +44,13 @@ const addProgramSchema = z.object({
     description: z.string().min(1, "Description is required"),
     branchId: z.string().min(1, "Branch is required"),
     sportId: z.string().min(1, "Sport is required"),
-    startDateOfBirth: z.number().min(1, "Start age is required").max(100),
-    endDateOfBirth: z.number().min(1, "End age is required").max(100),
+    startAge: z.number().min(0, "Start age must be 0 or greater").max(100, "Start age must be 100 or less").multipleOf(0.5, "Start age must be in increments of 0.5"),
+    startAgeUnit: z.enum(["months", "years"]),
+    endAge: z.number().min(0.5, "End age must be 0.5 or greater").max(100, "End age must be 100 or less").multipleOf(0.5, "End age must be in increments of 0.5").optional(),
+    endAgeUnit: z.enum(["months", "years", "unlimited"]),
     numberOfSeats: z.string().min(1, "Number of slots is required"),
     type: z.enum(["TEAM", "PRIVATE"]),
+    color: z.string().min(1, "Color is required"),
 })
 
 interface Branch {
@@ -111,9 +114,74 @@ interface Program {
 type Props = {
     branches: Branch[]
     sports: Sport[]
+    academySports?: { id: number }[]
 }
 
-export default function AddNewProgram({ branches, sports }: Props) {
+const ColorSelector = ({ form, disabled = false }: { form: any; disabled?: boolean }) => {
+    return (
+        <FormField
+            control={form.control}
+            name="color"
+            render={({ field }) => (
+                <FormItem className='flex-1'>
+                    <FormLabel>Color</FormLabel>
+                    <div className="flex items-center gap-2">
+                        <Select
+                            disabled={disabled}
+                            onValueChange={field.onChange}
+                            defaultValue={field.value || calendarColors[0].value}
+                        >
+                            <FormControl>
+                                <SelectTrigger className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter flex-1'>
+                                    <SelectValue placeholder="Select a color" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {calendarColors.map((color) => (
+                                    <SelectItem
+                                        key={color.value}
+                                        value={color.value}
+                                        className="flex items-center gap-2"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <div
+                                                className="w-4 h-4 rounded-full"
+                                                style={{ backgroundColor: color.value }}
+                                            />
+                                            {color.name}
+                                        </div>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        {field.value && (
+                            <div
+                                className="w-10 h-10 rounded-full border border-gray-300"
+                                style={{ backgroundColor: field.value }}
+                            />
+                        )}
+                    </div>
+                </FormItem>
+            )}
+        />
+    );
+};
+
+const calendarColors = [
+    { name: 'Olive Green', value: '#DCE5AE', textColor: '#000000' },
+    { name: 'Lavender', value: '#E6E6FA', textColor: '#000000' },
+    { name: 'Sky Blue', value: '#87CEEB', textColor: '#000000' },
+    { name: 'Mint Green', value: '#98FF98', textColor: '#000000' },
+    { name: 'Light Coral', value: '#F08080', textColor: '#000000' },
+    { name: 'Peach', value: '#FFDAB9', textColor: '#000000' },
+    { name: 'Light Yellow', value: '#FFFFE0', textColor: '#000000' },
+    { name: 'Thistle', value: '#D8BFD8', textColor: '#000000' },
+    { name: 'Powder Blue', value: '#B0E0E6', textColor: '#000000' },
+    { name: 'Pale Green', value: '#98FB98', textColor: '#000000' },
+    { name: 'Light Pink', value: '#FFB6C1', textColor: '#000000' }
+];
+
+export default function AddNewProgram({ branches, sports, academySports }: Props) {
     const router = useRouter()
 
     const [addNewProgramOpen, setAddNewProgramOpen] = useState(false)
@@ -144,8 +212,11 @@ export default function AddNewProgram({ branches, sports }: Props) {
             sportId: '',
             numberOfSeats: '',
             type: 'TEAM',
-            endDateOfBirth: undefined,
-            startDateOfBirth: undefined,
+            startAge: 0,
+            startAgeUnit: 'years',
+            endAge: undefined,
+            endAgeUnit: 'unlimited',
+            color: calendarColors[0].value,
         }
     })
 
@@ -158,11 +229,66 @@ export default function AddNewProgram({ branches, sports }: Props) {
                 message: 'Please select at least one gender'
             })
 
-            const startDate = new Date()
-            startDate.setFullYear(startDate.getFullYear() - values.startDateOfBirth)
+            const getAgeInYears = (age: number, unit: string) => {
+                return unit === 'months' ? age / 12 : age;
+            };
 
-            const endDate = new Date()
-            endDate.setFullYear(endDate.getFullYear() - values.endDateOfBirth)
+            const calculateDateFromYears = (age: number, unit: string) => {
+                const ageInYears = getAgeInYears(age, unit);
+                const date = new Date();
+                const years = Math.floor(ageInYears);
+                const months = (ageInYears - years) * 12;
+
+                date.setFullYear(date.getFullYear() - years);
+                date.setMonth(date.getMonth() - months);
+                return date;
+            };
+
+            const getAgeInMonths = (age: number, unit: string): number => {
+                return unit === 'months' ? age : age * 12;
+            };
+
+            const calculateDateFromMonths = (age: number, unit: string): Date => {
+                const ageInMonths = getAgeInMonths(age, unit);
+                const date = new Date();
+                const totalMonths = date.getMonth() - Math.floor(ageInMonths);
+                const years = Math.floor(totalMonths / 12);
+                const months = totalMonths % 12;
+
+                date.setFullYear(date.getFullYear() - years);
+                date.setMonth(months);
+
+                // Adjust for fractional months
+                const fractionalMonth = ageInMonths % 1;
+                if (fractionalMonth > 0) {
+                    const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+                    const daysToSubtract = Math.round(daysInMonth * fractionalMonth);
+                    date.setDate(date.getDate() - daysToSubtract);
+                }
+
+                return date;
+            };
+
+            const startDate = values.startAgeUnit === 'months' ?
+                calculateDateFromMonths(values.startAge!, values.startAgeUnit) :
+                calculateDateFromYears(values.startAge!, values.startAgeUnit);
+
+            let endDate: Date;
+            if (values.endAgeUnit === 'unlimited') {
+                // Set a very large date for "unlimited" (e.g., 100 years from now)
+                endDate = new Date();
+                endDate.setFullYear(endDate.getFullYear() + 100);
+            } else {
+                if (values.endAge === null) {
+                    return form.setError('endAge', {
+                        type: 'custom',
+                        message: 'End age is required for limited duration'
+                    });
+                }
+                else endDate = values.endAgeUnit === 'months' ?
+                    calculateDateFromMonths(values.endAge!, values.endAgeUnit) :
+                    calculateDateFromYears(values.endAge!, values.endAgeUnit);
+            }
 
             const result = await createProgram({
                 name: values.name,
@@ -176,6 +302,7 @@ export default function AddNewProgram({ branches, sports }: Props) {
                 type: values.type,
                 coaches: selectedCoaches,
                 packagesData: createdPackages,
+                color: values.color
             })
 
             if (result.error) {
@@ -375,107 +502,161 @@ export default function AddNewProgram({ branches, sports }: Props) {
                                     </div>
 
                                     <div className="flex w-full gap-4 items-start justify-between">
-                                        <FormField
-                                            control={form.control}
-                                            name='startDateOfBirth'
-                                            render={({ field }) => (
-                                                <FormItem className="flex flex-col flex-1">
-                                                    <FormLabel>Start Age</FormLabel>
-                                                    <FormControl>
-                                                        <Input
-                                                            type="number"
-                                                            {...field}
-                                                            onChange={e => field.onChange(Number(e.target.value))}
-                                                            min={1}
-                                                            max={100}
-                                                            className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
-                                                        />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
+                                        <div className="flex flex-1 gap-2">
+                                            <FormField
+                                                control={form.control}
+                                                name='startAge'
+                                                render={({ field }) => (
+                                                    <FormItem className="flex flex-col flex-1">
+                                                        <FormLabel>Start Age</FormLabel>
+                                                        <FormControl>
+                                                            <Input
+                                                                type="number"
+                                                                {...field}
+                                                                onChange={e => field.onChange(Number(e.target.value))}
+                                                                step={0.5}
+                                                                min={0}
+                                                                max={100}
+                                                                className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
+                                                            />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name="startAgeUnit"
+                                                render={({ field }) => (
+                                                    <FormItem className="flex flex-col flex-1">
+                                                        <FormLabel>Unit</FormLabel>
+                                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                            <FormControl>
+                                                                <SelectTrigger className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'>
+                                                                    <SelectValue placeholder="Select unit" />
+                                                                </SelectTrigger>
+                                                            </FormControl>
+                                                            <SelectContent>
+                                                                <SelectItem value="months">Months</SelectItem>
+                                                                <SelectItem value="years">Years</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
 
-                                        <FormField
-                                            control={form.control}
-                                            name='endDateOfBirth'
-                                            render={({ field }) => (
-                                                <FormItem className="flex flex-col flex-1">
-                                                    <FormLabel>End Age</FormLabel>
-                                                    <FormControl>
-                                                        <Input
-                                                            type="number"
-                                                            {...field}
-                                                            min={1}
-                                                            max={100}
-                                                            onChange={e => field.onChange(Number(e.target.value))}
-                                                            className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
-                                                        />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
+                                        <div className="flex flex-1 gap-2">
+                                            <FormField
+                                                control={form.control}
+                                                name='endAge'
+                                                render={({ field }) => (
+                                                    <FormItem className="flex flex-col flex-1">
+                                                        <FormLabel>End Age</FormLabel>
+                                                        <FormControl>
+                                                            <Input
+                                                                type="number"
+                                                                {...field}
+                                                                onChange={e => field.onChange(Number(e.target.value))}
+                                                                step={0.5}
+                                                                min={0.5}
+                                                                max={100}
+                                                                disabled={form.watch('endAgeUnit') === 'unlimited'}
+                                                                className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
+                                                            />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name="endAgeUnit"
+                                                render={({ field }) => (
+                                                    <FormItem className="flex flex-col flex-1">
+                                                        <FormLabel>Unit</FormLabel>
+                                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                            <FormControl>
+                                                                <SelectTrigger className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'>
+                                                                    <SelectValue placeholder="Select unit" />
+                                                                </SelectTrigger>
+                                                            </FormControl>
+                                                            <SelectContent>
+                                                                <SelectItem value="months">Months</SelectItem>
+                                                                <SelectItem value="years">Years</SelectItem>
+                                                                <SelectItem value="unlimited">Unlimited</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
                                     </div>
 
-                                    <div className="flex flex-col gap-4 w-full">
-                                        <p className='text-xs'>Coaches</p>
-                                        <div className="flex w-full flex-col gap-4 border border-gray-500 p-3 rounded-lg">
-                                            <div className="flex flex-wrap gap-2">
-                                                {selectedCoaches.map((coach) => (
-                                                    <Badge
-                                                        key={coach}
-                                                        variant="default"
-                                                        className="flex items-center gap-1 hover:bg-[#E0E4D9] pr-0.5 bg-[#E0E4D9] rounded-3xl text-main-green font-semibold font-inter text-sm"
-                                                    >
-                                                        <span className="text-xs">{coachesData?.find(c => c.id === coach)?.name}</span>
-                                                        <button
-                                                            onClick={() => handleSelectCoach(coach)}
-                                                            className="ml-1 rounded-full p-0.5 hover:bg-secondary-foreground/20"
+                                    <div className="flex w-full gap-4 items-start justify-between">
+                                        <div className="flex flex-col gap-4 flex-1">
+                                            <p className='text-xs'>Coaches</p>
+                                            <div className="flex w-full flex-col gap-4 border border-gray-500 p-3 rounded-lg">
+                                                <div className="flex flex-wrap gap-2">
+                                                    {selectedCoaches.map((coach) => (
+                                                        <Badge
+                                                            key={coach}
+                                                            variant="default"
+                                                            className="flex items-center gap-1 hover:bg-[#E0E4D9] pr-0.5 bg-[#E0E4D9] rounded-3xl text-main-green font-semibold font-inter text-sm"
                                                         >
-                                                            <X className="size-3" fill='#1f441f' />
-                                                            <span className="sr-only">Remove {coachesData?.find(c => c.id === coach)?.name}</span>
-                                                        </button>
-                                                    </Badge>
-                                                ))}
-                                            </div>
-                                            <Popover open={coachesOpen} onOpenChange={setCoachesOpen}>
-                                                <PopoverTrigger asChild>
-                                                    <Button
-                                                        variant="default"
-                                                        className="gap-2 hover:bg-transparent text-left flex items-center bg-transparent text-black border border-gray-500 justify-start"
-                                                    >
-                                                        Select coaches
-                                                    </Button>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-56 p-0 overflow-hidden" align="start">
-                                                    <div
-                                                        className="max-h-64 overflow-y-scroll overscroll-contain"
-                                                        style={{
-                                                            scrollbarWidth: 'thin',
-                                                            WebkitOverflowScrolling: 'touch',
-                                                            willChange: 'scroll-position'
-                                                        }}
-                                                        onWheel={(e) => {
-                                                            e.stopPropagation();
-                                                        }}
-                                                    >
-                                                        <div className="p-2">
-                                                            {coachesData?.map(coach => (
-                                                                <p
-                                                                    key={coach.id}
-                                                                    onClick={() => handleSelectCoach(coach.id)}
-                                                                    className="p-2 flex items-center justify-start gap-2 text-left cursor-pointer hover:bg-[#fafafa] rounded-lg"
-                                                                >
-                                                                    {selectedCoaches.includes(coach.id) && <X className="size-3" fill='#1f441f' />}
-                                                                    {coach.name}
-                                                                </p>
-                                                            ))}
+                                                            <span className="text-xs">{coachesData?.find(c => c.id === coach)?.name}</span>
+                                                            <button
+                                                                onClick={() => handleSelectCoach(coach)}
+                                                                className="ml-1 rounded-full p-0.5 hover:bg-secondary-foreground/20"
+                                                            >
+                                                                <X className="size-3" fill='#1f441f' />
+                                                                <span className="sr-only">Remove {coachesData?.find(c => c.id === coach)?.name}</span>
+                                                            </button>
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                                <Popover open={coachesOpen} onOpenChange={setCoachesOpen}>
+                                                    <PopoverTrigger asChild>
+                                                        <Button
+                                                            variant="default"
+                                                            className="gap-2 hover:bg-transparent text-left flex items-center bg-transparent text-black border border-gray-500 justify-start"
+                                                        >
+                                                            Select coaches
+                                                        </Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-56 p-0 overflow-hidden" align="start">
+                                                        <div
+                                                            className="max-h-64 overflow-y-scroll overscroll-contain"
+                                                            style={{
+                                                                scrollbarWidth: 'thin',
+                                                                WebkitOverflowScrolling: 'touch',
+                                                                willChange: 'scroll-position'
+                                                            }}
+                                                            onWheel={(e) => {
+                                                                e.stopPropagation();
+                                                            }}
+                                                        >
+                                                            <div className="p-2">
+                                                                {coachesData?.map(coach => (
+                                                                    <p
+                                                                        key={coach.id}
+                                                                        onClick={() => handleSelectCoach(coach.id)}
+                                                                        className="p-2 flex items-center justify-start gap-2 text-left cursor-pointer hover:bg-[#fafafa] rounded-lg"
+                                                                    >
+                                                                        {selectedCoaches.includes(coach.id) && <X className="size-3" fill='#1f441f' />}
+                                                                        {coach.name}
+                                                                    </p>
+                                                                ))}
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                </PopoverContent>
-                                            </Popover>
+                                                    </PopoverContent>
+                                                </Popover>
+                                            </div>
                                         </div>
+
+                                        <ColorSelector form={form} disabled={loading} />
                                     </div>
 
                                     <div className="flex w-full gap-4 items-start justify-between">
@@ -493,9 +674,9 @@ export default function AddNewProgram({ branches, sports }: Props) {
                                                             </SelectTrigger>
                                                         </FormControl>
                                                         <SelectContent>
-                                                            {sports.map((sport) => (
+                                                            {academySports?.map((sport) => (
                                                                 <SelectItem key={sport.id} value={sport.id.toString()}>
-                                                                    {sport.name}
+                                                                    {sports?.find(s => s.id === sport.id)?.name}
                                                                 </SelectItem>
                                                             ))}
                                                         </SelectContent>
@@ -621,3 +802,4 @@ export default function AddNewProgram({ branches, sports }: Props) {
         </>
     )
 }
+

@@ -13,4 +13,8 @@ export const addAthleteSchema = z.object({
     firstGuardianRelationship: z.string().optional(),
     secondGuardianName: z.string().optional(),
     secondGuardianRelationship: z.string().optional(),
+    nationality: z.string(),
+    country: z.string(),
+    city: z.string(),
+    streetAddress: z.string(),
 })

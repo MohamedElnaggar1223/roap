@@ -50,9 +50,10 @@ interface CoachesDataTableProps {
     data: Coach[]
     sports: Sport[]
     languages: Language[]
+    academySports?: { id: number }[]
 }
 
-export function CoachesDataTable({ data, sports, languages }: CoachesDataTableProps) {
+export function CoachesDataTable({ data, sports, languages, academySports }: CoachesDataTableProps) {
     const router = useRouter()
 
     const [selectedSport, setSelectedSport] = useState<string | null>(null)
@@ -117,7 +118,7 @@ export function CoachesDataTable({ data, sports, languages }: CoachesDataTablePr
         <>
             <div className="flex items-center justify-between gap-4 w-full flex-wrap">
                 <div className="flex items-center gap-4 flex-wrap">
-                    <AddNewCoach sports={sports} languages={languages} />
+                    <AddNewCoach sports={sports} languages={languages} academySports={academySports} />
                     <div className="flex items-center gap-2">
                         <span className="text-sm">Filters:</span>
                         <DropdownMenu>
@@ -238,6 +239,7 @@ export function CoachesDataTable({ data, sports, languages }: CoachesDataTablePr
                                         coachEdited={coach}
                                         sports={sports}
                                         languages={languages}
+                                        academySports={academySports}
                                     />
                                 </div>
                             </Fragment>

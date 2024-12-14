@@ -43,6 +43,7 @@ export async function checkAcademyStatus() {
     return {
         shouldRedirect: false,
         isOnboarded: academy.onboarded,
-        status: academy.status
+        status: academy.status,
+        academyId: academy.id
     }
 }

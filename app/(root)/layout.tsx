@@ -43,7 +43,7 @@ export default async function RootLayout({
 				<SidebarProvider className='font-inter bg-[#E0E4D9]'>
 					<AcademySidebar />
 					<main className='flex flex-col flex-1 font-inter bg-[#E0E4D9]'>
-						<AcademyHeader>
+						<AcademyHeader academyId={status.academyId!}>
 							<section className='p-4 bg-[#E0E4D9] h-full'>
 								{children}
 								<Toaster />

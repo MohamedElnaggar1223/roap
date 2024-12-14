@@ -1,11 +1,132 @@
 'use server'
 
 import { db } from '@/db'
-import { programs, branches, branchTranslations, sports, sportTranslations, coachProgram, packages, schedules } from '@/db/schema'
+import { programs, branches, branchTranslations, sports, sportTranslations, coachProgram, packages, schedules, coaches } from '@/db/schema'
 import { auth } from '@/auth'
 import { and, eq, sql, inArray, asc, not } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { formatDateForDB } from '../utils'
+import { CoachDetails, PackageDetails } from '../validations/bookings'
+
+export const getProgramsData = async () => {
+    const session = await auth()
+
+    if (!session?.user || session.user.role !== 'academic') {
+        return { error: 'Unauthorized' }
+    }
+
+    const academy = await db.query.academics.findFirst({
+        where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
+        columns: {
+            id: true,
+        }
+    })
+
+    if (!academy) {
+        return { error: 'Academy not found' }
+    }
+
+    // const programsData = await db
+    //     .select({
+    //         id: programs.id,
+    //         name: programs.name,
+    //         branch: branchTranslations.name,
+    //         sport: sportTranslations.name,
+    //         packages: sql<PackageDetails[]>`(
+    //             SELECT id, name, price, entry_fees as entryFees, session_per_week as sessionPerWeek, session_duration as sessionDuration
+    //             FROM ${packages}
+    //             WHERE ${packages.programId} = ${programs.id}
+    //         )`,
+    //         coaches: sql<CoachDetails[]>`(
+    //             SELECT id, name, image
+    //             FROM ${coaches}
+    //             WHERE ${coaches.academicId} = ${academy.id}
+    //         )`
+    //     })
+    //     .from(programs)
+    //     .innerJoin(branches, eq(programs.branchId, branches.id))
+    //     .innerJoin(branchTranslations, and(
+    //         eq(branches.id, branchTranslations.branchId),
+    //         eq(branchTranslations.locale, 'en')
+    //     ))
+    //     .innerJoin(sports, eq(programs.sportId, sports.id))
+    //     .innerJoin(sportTranslations, and(
+    //         eq(sports.id, sportTranslations.sportId),
+    //         eq(sportTranslations.locale, 'en')
+    //     ))
+    //     .where(and(
+    //         eq(programs.academicId, academy.id),
+    //         not(eq(programs.name, 'Assessment'))
+    //     ))
+    //     .orderBy(asc(programs.createdAt))
+
+    const programsData = await db.query.programs.findMany({
+        where: and(
+            eq(programs.academicId, academy.id),
+            not(eq(programs.name, 'Assessment')),
+        ),
+        with: {
+            packages: {
+                with: {
+                    schedules: true
+                }
+            },
+            coachPrograms: {
+                with: {
+                    coach: {
+                        columns: {
+                            id: true,
+                            name: true,
+                            image: true
+                        }
+                    }
+                }
+            },
+            branch: {
+                with: {
+                    branchTranslations: {
+                        where: eq(branchTranslations.locale, 'en'),
+                        columns: {
+                            name: true
+                        }
+                    }
+                }
+            },
+            sport: {
+                with: {
+                    sportTranslations: {
+                        where: eq(sportTranslations.locale, 'en'),
+                        columns: {
+                            name: true
+                        }
+                    }
+                }
+            }
+        },
+        orderBy: asc(programs.createdAt)
+    })
+
+    const finalProgramsData = programsData.map(program => ({
+        ...program,
+        packages: program.packages.map(pkg => ({
+            ...pkg,
+            schedules: pkg.schedules.map(s => ({
+                ...s,
+            }))
+        })),
+        coaches: program.coachPrograms.map(cp => ({
+            ...cp.coach,
+            image: cp.coach.image || ''
+        })),
+        branch: program.branch?.branchTranslations[0]?.name || '',
+        sport: program.sport?.sportTranslations[0]?.name || ''
+    }))
+
+    return {
+        data: finalProgramsData,
+        error: null
+    }
+}
 
 export async function getPrograms() {
     const session = await auth()
@@ -39,6 +160,7 @@ export async function getPrograms() {
             endDateOfBirth: programs.endDateOfBirth,
             branchName: branchTranslations.name,
             sportName: sportTranslations.name,
+            color: programs.color,
             coaches: sql<string[]>`(
                 SELECT COALESCE(array_agg(coach_id), ARRAY[]::integer[])
                 FROM ${coachProgram}
@@ -113,6 +235,7 @@ export async function createProgram(data: {
     type: string
     coaches: number[]
     packagesData: Package[]
+    color: string
 }) {
     const session = await auth()
 
@@ -144,6 +267,7 @@ export async function createProgram(data: {
                     numberOfSeats: data.numberOfSeats,
                     type: data.type,
                     academicId: academy.id,
+                    color: data.color,
                 })
                 .returning({
                     id: programs.id,
@@ -222,6 +346,7 @@ export async function updateProgram(id: number, data: {
     numberOfSeats: number
     type: string
     coaches: number[]
+    color: string
     packagesData: Package[]
 }) {
     const session = await auth()
@@ -244,7 +369,8 @@ export async function updateProgram(id: number, data: {
                     endDateOfBirth: formatDateForDB(data.endDateOfBirth),
                     numberOfSeats: data.numberOfSeats,
                     type: data.type,
-                    updatedAt: sql`now()`
+                    updatedAt: sql`now()`,
+                    color: data.color,
                 })
                 .where(eq(programs.id, id))
 

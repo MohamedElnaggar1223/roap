@@ -24,7 +24,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Button } from '@/components/ui/button';
 import { getAllCoaches } from '@/lib/actions/coaches.actions';
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon } from "lucide-react"
+import { CalendarIcon } from 'lucide-react'
 import { format } from "date-fns"
 import {
     Select,
@@ -39,16 +39,46 @@ import EditPackage from './new-edit-package';
 import { TrashIcon } from 'lucide-react';
 import { getProgramPackages } from '@/lib/actions/packages.actions';
 import AutoGrowingTextarea from '@/components/ui/autogrowing-textarea';
+// import { calculateAge } from '../utils/calculateAge';
+
+const calculateAge = (birthDate: string): number => {
+    const today = new Date();
+    const birth = new Date(birthDate);
+
+    let years = today.getFullYear() - birth.getFullYear();
+    let months = today.getMonth() - birth.getMonth();
+    let days = today.getDate() - birth.getDate();
+
+    // Adjust years and months if the current date is before the birth date in the current year
+    if (days < 0) {
+        months--;
+        days += new Date(today.getFullYear(), today.getMonth(), 0).getDate();
+    }
+
+    if (months < 0) {
+        years--;
+        months += 12;
+    }
+
+    // Calculate total months with fractional part
+    const totalMonths = years * 12 + months + (days / 30); // Average days in a month.
+    console.log(totalMonths)
+
+    return (totalMonths / 12);
+};
 
 const addProgramSchema = z.object({
     name: z.string().min(1, "Name is required"),
     description: z.string().min(1, "Description is required"),
     branchId: z.string().min(1, "Branch is required"),
     sportId: z.string().min(1, "Sport is required"),
-    startDateOfBirth: z.number().min(1, "Start age is required").max(100),
-    endDateOfBirth: z.number().min(1, "End age is required").max(100),
+    startAge: z.number().min(0, "Start age must be 0 or greater").max(100, "Start age must be 100 or less").multipleOf(0.5, "Start age must be in increments of 0.5"),
+    startAgeUnit: z.enum(["months", "years"]),
+    endAge: z.number().min(0.5, "End age must be 0.5 or greater").max(100, "End age must be 100 or less").multipleOf(0.5, "End age must be in increments of 0.5").optional(),
+    endAgeUnit: z.enum(["months", "years", "unlimited"]),
     numberOfSeats: z.string().min(1, "Number of slots is required"),
     type: z.enum(["TEAM", "PRIVATE"]),
+    color: z.string().min(1),
 })
 
 interface Branch {
@@ -107,15 +137,84 @@ interface Program {
     endDateOfBirth: string | null;
     branchName: string;
     sportName: string;
+    color: string | null;
 }
 
 type Props = {
     branches: Branch[]
     sports: Sport[]
     programEdited: Program
+    academySports?: { id: number }[]
 }
 
-export default function EditProgram({ branches, sports, programEdited }: Props) {
+const ColorSelector = ({ form, disabled = false }: { form: any; disabled?: boolean }) => {
+    return (
+        <FormField
+            control={form.control}
+            name="color"
+            render={({ field }) => (
+                <FormItem className='flex-1'>
+                    <FormLabel>Color {field.value}</FormLabel>
+                    <div className="flex items-center gap-2">
+                        <Select
+                            disabled={disabled}
+                            onValueChange={field.onChange}
+                            defaultValue={field.value || 'select'}
+                        >
+                            <FormControl>
+                                <SelectTrigger className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter flex-1'>
+                                    <SelectValue placeholder="Select a color" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                <SelectItem value="select" disabled className="flex items-center gap-2">
+                                    Select a color
+                                </SelectItem>
+                                {calendarColors.map((color) => (
+                                    <SelectItem
+                                        key={color.value}
+                                        value={color.value}
+                                        className="flex items-center gap-2"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <div
+                                                className="w-4 h-4 rounded-full"
+                                                style={{ backgroundColor: color.value }}
+                                            />
+                                            {color.name}
+                                        </div>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        {field.value && (
+                            <div
+                                className="w-10 h-10 rounded-full border border-gray-300"
+                                style={{ backgroundColor: field.value }}
+                            />
+                        )}
+                    </div>
+                </FormItem>
+            )}
+        />
+    );
+};
+
+const calendarColors = [
+    { name: 'Olive Green', value: '#DCE5AE', textColor: '#000000' },
+    { name: 'Lavender', value: '#E6E6FA', textColor: '#000000' },
+    { name: 'Sky Blue', value: '#87CEEB', textColor: '#000000' },
+    { name: 'Mint Green', value: '#98FF98', textColor: '#000000' },
+    { name: 'Light Coral', value: '#F08080', textColor: '#000000' },
+    { name: 'Peach', value: '#FFDAB9', textColor: '#000000' },
+    { name: 'Light Yellow', value: '#FFFFE0', textColor: '#000000' },
+    { name: 'Thistle', value: '#D8BFD8', textColor: '#000000' },
+    { name: 'Powder Blue', value: '#B0E0E6', textColor: '#000000' },
+    { name: 'Pale Green', value: '#98FB98', textColor: '#000000' },
+    { name: 'Light Pink', value: '#FFB6C1', textColor: '#000000' }
+];
+
+export default function EditProgram({ branches, sports, programEdited, academySports }: Props) {
     const router = useRouter()
 
     const [editProgramOpen, setEditProgramOpen] = useState(false)
@@ -134,11 +233,6 @@ export default function EditProgram({ branches, sports, programEdited }: Props) 
     const [editPackageOpen, setEditPackageOpen] = useState(false);
     const [editedPackage, setEditedPackage] = useState<{ editedPackage: Package, index?: number } | null>(null);
 
-    const dateToAge = (date: Date) => {
-        const today = new Date()
-        const age = today.getFullYear() - date.getFullYear()
-        return age
-    }
 
     useEffect(() => {
         if (isLoading || isValidating) return
@@ -154,12 +248,20 @@ export default function EditProgram({ branches, sports, programEdited }: Props) 
             sportId: programEdited.sportId?.toString() ?? '',
             numberOfSeats: programEdited.numberOfSeats?.toString() ?? '',
             type: programEdited.type as 'TEAM' | 'PRIVATE' ?? 'TEAM',
-            startDateOfBirth: programEdited.startDateOfBirth ?
-                dateToAge(new Date(programEdited.startDateOfBirth)) : undefined,
-            endDateOfBirth: programEdited.endDateOfBirth ?
-                dateToAge(new Date(programEdited.endDateOfBirth)) : undefined,
+            startAge: programEdited.startDateOfBirth ? calculateAge(programEdited.startDateOfBirth) < 1 ? calculateAge(programEdited.startDateOfBirth) * 12 : calculateAge(programEdited.startDateOfBirth) : 0,
+            startAgeUnit: programEdited.startDateOfBirth ? calculateAge(programEdited.startDateOfBirth) < 1 ? 'months' : 'years' : 'years',
+            endAge: programEdited.endDateOfBirth ? calculateAge(programEdited.endDateOfBirth) < 0 ? undefined : calculateAge(programEdited.endDateOfBirth) : 100,
+            endAgeUnit: programEdited.endDateOfBirth ? calculateAge(programEdited.endDateOfBirth) < 0 ? 'unlimited' : 'years' : 'unlimited',
+            color: programEdited.color ?? '',
         }
     })
+
+    console.log(form.getValues('startAge'))
+    console.log(form.getValues('endAge'))
+
+    const errors = form.formState.errors
+
+    console.log(errors)
 
     const onSubmit = async (values: z.infer<typeof addProgramSchema>) => {
         try {
@@ -170,11 +272,66 @@ export default function EditProgram({ branches, sports, programEdited }: Props) 
                 message: 'Please select at least one gender'
             })
 
-            const startDate = new Date()
-            startDate.setFullYear(startDate.getFullYear() - values.startDateOfBirth)
+            const getAgeInYears = (age: number, unit: string) => {
+                return unit === 'months' ? age / 12 : age;
+            };
 
-            const endDate = new Date()
-            endDate.setFullYear(endDate.getFullYear() - values.endDateOfBirth)
+            const calculateDateFromYears = (age: number, unit: string) => {
+                const ageInYears = getAgeInYears(age, unit);
+                const date = new Date();
+                const years = Math.floor(ageInYears);
+                const months = (ageInYears - years) * 12;
+
+                date.setFullYear(date.getFullYear() - years);
+                date.setMonth(date.getMonth() - months);
+                return date;
+            };
+
+            const getAgeInMonths = (age: number, unit: string): number => {
+                return unit === 'months' ? age : age * 12;
+            };
+
+            const calculateDateFromMonths = (age: number, unit: string): Date => {
+                const ageInMonths = getAgeInMonths(age, unit);
+                const date = new Date();
+                const totalMonths = date.getMonth() - Math.floor(ageInMonths);
+                const years = Math.floor(totalMonths / 12);
+                const months = totalMonths % 12;
+
+                date.setFullYear(date.getFullYear() - years);
+                date.setMonth(months);
+
+                // Adjust for fractional months
+                const fractionalMonth = ageInMonths % 1;
+                if (fractionalMonth > 0) {
+                    const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+                    const daysToSubtract = Math.round(daysInMonth * fractionalMonth);
+                    date.setDate(date.getDate() - daysToSubtract);
+                }
+
+                return date;
+            };
+
+            const startDate = values.startAgeUnit === 'months' ?
+                calculateDateFromMonths(values.startAge!, values.startAgeUnit) :
+                calculateDateFromYears(values.startAge!, values.startAgeUnit);
+
+            let endDate: Date;
+            if (values.endAgeUnit === 'unlimited') {
+                // Set a very large date for "unlimited" (e.g., 100 years from now)
+                endDate = new Date();
+                endDate.setFullYear(endDate.getFullYear() + 100);
+            } else {
+                if (values.endAge === null) {
+                    return form.setError('endAge', {
+                        type: 'custom',
+                        message: 'End age is required for limited duration'
+                    });
+                }
+                else endDate = values.endAgeUnit === 'months' ?
+                    calculateDateFromMonths(values.endAge!, values.endAgeUnit) :
+                    calculateDateFromYears(values.endAge!, values.endAgeUnit);
+            }
 
             const result = await updateProgram(programEdited.id, {
                 name: values.name,
@@ -188,9 +345,12 @@ export default function EditProgram({ branches, sports, programEdited }: Props) 
                 type: values.type,
                 coaches: selectedCoaches,
                 packagesData: createdPackages,
+                color: values.color,
             })
 
+
             if (result.error) {
+                console.error('Error creating program:', result.error)
                 if (result?.field) {
                     form.setError(result.field as any, {
                         type: 'custom',
@@ -391,47 +551,98 @@ export default function EditProgram({ branches, sports, programEdited }: Props) 
                                     </div>
 
                                     <div className="flex w-full gap-4 items-start justify-between">
-                                        <FormField
-                                            control={form.control}
-                                            name='startDateOfBirth'
-                                            render={({ field }) => (
-                                                <FormItem className="flex flex-col flex-1">
-                                                    <FormLabel>Start Age</FormLabel>
-                                                    <FormControl>
-                                                        <Input
-                                                            type="number"
-                                                            {...field}
-                                                            onChange={e => field.onChange(Number(e.target.value))}
-                                                            min={1}
-                                                            max={100}
-                                                            className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
-                                                        />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
+                                        <div className="flex flex-1 gap-2">
+                                            <FormField
+                                                control={form.control}
+                                                name='startAge'
+                                                render={({ field }) => (
+                                                    <FormItem className="flex flex-col flex-1">
+                                                        <FormLabel>Start Age</FormLabel>
+                                                        <FormControl>
+                                                            <Input
+                                                                type="number"
+                                                                {...field}
+                                                                onChange={e => field.onChange(Number(e.target.value))}
+                                                                step={0.5}
+                                                                min={0}
+                                                                max={100}
+                                                                disabled={isLoading || isValidating || loading}
+                                                                className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
+                                                            />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name="startAgeUnit"
+                                                render={({ field }) => (
+                                                    <FormItem className="flex flex-col flex-1">
+                                                        <FormLabel>Unit</FormLabel>
+                                                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading || isValidating || loading}>
+                                                            <FormControl>
+                                                                <SelectTrigger className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'>
+                                                                    <SelectValue placeholder="Select unit" />
+                                                                </SelectTrigger>
+                                                            </FormControl>
+                                                            <SelectContent>
+                                                                <SelectItem value="months">Months</SelectItem>
+                                                                <SelectItem value="years">Years</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
 
-                                        <FormField
-                                            control={form.control}
-                                            name='endDateOfBirth'
-                                            render={({ field }) => (
-                                                <FormItem className="flex flex-col flex-1">
-                                                    <FormLabel>End Age</FormLabel>
-                                                    <FormControl>
-                                                        <Input
-                                                            type="number"
-                                                            {...field}
-                                                            min={1}
-                                                            max={100}
-                                                            onChange={e => field.onChange(Number(e.target.value))}
-                                                            className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
-                                                        />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
+                                        <div className="flex flex-1 gap-2">
+                                            <FormField
+                                                control={form.control}
+                                                name='endAge'
+                                                render={({ field }) => (
+                                                    <FormItem className="flex flex-col flex-1">
+                                                        <FormLabel>End Age</FormLabel>
+                                                        <FormControl>
+                                                            <Input
+                                                                type="number"
+                                                                {...field}
+                                                                onChange={e => field.onChange(Number(e.target.value))}
+                                                                step={0.5}
+                                                                min={0.5}
+                                                                max={100}
+                                                                disabled={isLoading || isValidating || loading || form.watch('endAgeUnit') === 'unlimited'}
+                                                                className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
+                                                            />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name="endAgeUnit"
+                                                render={({ field }) => (
+                                                    <FormItem className="flex flex-col flex-1">
+                                                        <FormLabel>Unit</FormLabel>
+                                                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading || isValidating || loading}>
+                                                            <FormControl>
+                                                                <SelectTrigger className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'>
+                                                                    <SelectValue placeholder="Select unit" />
+                                                                </SelectTrigger>
+                                                            </FormControl>
+                                                            <SelectContent>
+                                                                <SelectItem value="months">Months</SelectItem>
+                                                                <SelectItem value="years">Years</SelectItem>
+                                                                <SelectItem value="unlimited">Unlimited</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
                                     </div>
 
                                     <div className="flex flex-col gap-4 w-full">
@@ -495,6 +706,10 @@ export default function EditProgram({ branches, sports, programEdited }: Props) 
                                     </div>
 
                                     <div className="flex w-full gap-4 items-start justify-between">
+                                        <ColorSelector form={form} disabled={loading} />
+                                    </div>
+
+                                    <div className="flex w-full gap-4 items-start justify-between">
 
                                         <FormField
                                             control={form.control}
@@ -509,9 +724,9 @@ export default function EditProgram({ branches, sports, programEdited }: Props) 
                                                             </SelectTrigger>
                                                         </FormControl>
                                                         <SelectContent>
-                                                            {sports.map((sport) => (
+                                                            {academySports?.map((sport) => (
                                                                 <SelectItem key={sport.id} value={sport.id.toString()}>
-                                                                    {sport.name}
+                                                                    {sports?.find(s => s.id === sport.id)?.name}
                                                                 </SelectItem>
                                                             ))}
                                                         </SelectContent>
@@ -638,3 +853,4 @@ export default function EditProgram({ branches, sports, programEdited }: Props) 
         </>
     )
 }
+

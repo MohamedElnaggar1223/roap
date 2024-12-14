@@ -16,6 +16,10 @@ export type Profile = {
     gender: string | null
     birthday: string | null
     image: string | null
+    country: string | null
+    nationality: string | null
+    city: string | null
+    streetAddress: string | null
 }
 
 export type Booking = {
@@ -68,6 +72,10 @@ export const getAthletesAction = async (academicId: number) => {
                         gender: profiles.gender,
                         birthday: profiles.birthday,
                         image: profiles.image,
+                        country: profiles.country,
+                        nationality: profiles.nationality,
+                        city: profiles.city,
+                        streetAddress: profiles.streetAddress,
                     },
                     booking: {
                         id: bookings.id,
@@ -121,7 +129,7 @@ export const getAthletesAction = async (academicId: number) => {
                         secondGuardianName: row.secondGuardianName,
                         secondGuardianRelationship: row.secondGuardianRelationship,
                         user: row.user ?? { email: null, phoneNumber: null },
-                        profile: row.profile ?? { name: null, gender: null, birthday: null, image: null },
+                        profile: row.profile ?? { name: null, gender: null, birthday: null, image: null, country: null, nationality: null, city: null, streetAddress: null },
                         bookings: []
                     }
                     acc.push(athlete)
@@ -182,11 +190,15 @@ export async function createAthlete(data: {
     firstGuardianRelationship?: string
     secondGuardianName?: string
     secondGuardianRelationship?: string
+    country?: string
+    nationality?: string
+    city?: string
+    streetAddress?: string
 }) {
     const session = await auth()
 
     if (!session?.user || session.user.role !== 'academic') {
-        return { error: 'Unauthorized', field: 'root' }
+        return { error: 'Unauthorized', field: 'root', data: null }
     }
 
     const academic = await db.query.academics.findFirst({
@@ -196,13 +208,14 @@ export async function createAthlete(data: {
         }
     })
 
-    if (!academic) return { error: 'Academy not found', field: 'root' }
+    if (!academic) return { error: 'Academy not found', field: 'root', data: null }
 
     // Validate guardian information for fellow type
     if (data.type === 'fellow' && (!data.firstGuardianName || !data.firstGuardianRelationship)) {
         return {
             error: 'First guardian information is required for fellow athletes',
-            field: !data.firstGuardianName ? 'firstGuardianName' : 'firstGuardianRelationship'
+            field: !data.firstGuardianName ? 'firstGuardianName' : 'firstGuardianRelationship',
+            data: null
         }
     }
 
@@ -216,7 +229,7 @@ export async function createAthlete(data: {
                 .limit(1)
 
             if (existingUser.length > 0) {
-                return { error: 'User with this email already exists', field: 'email' }
+                return { error: 'User with this email already exists', field: 'email', data: null }
             }
 
             // Create new user
@@ -228,7 +241,8 @@ export async function createAthlete(data: {
                     isAthletic: true,
                     role: 'user',
                     createdAt: sql`now()`,
-                    updatedAt: sql`now()`
+                    updatedAt: sql`now()`,
+                    name: data.name,
                 })
                 .returning({ id: users.id })
 
@@ -242,6 +256,10 @@ export async function createAthlete(data: {
                     birthday: formatDateForDB(data.birthday),
                     image: data.image ? 'images/' + data.image : null,
                     relationship: 'self',
+                    country: data.country,
+                    nationality: data.nationality,
+                    city: data.city,
+                    streetAddress: data.streetAddress,
                     createdAt: sql`now()`,
                     updatedAt: sql`now()`
                 })
@@ -269,7 +287,7 @@ export async function createAthlete(data: {
         })
     } catch (error) {
         console.error('Error creating athlete:', error)
-        return { error: 'Failed to create athlete', field: 'root' }
+        return { error: 'Failed to create athlete', field: 'root', data: null }
     }
     finally {
         revalidateTag(`athletes-${academic?.id}`)
@@ -289,6 +307,10 @@ export async function updateAthlete(id: number, data: {
     firstGuardianRelationship?: string
     secondGuardianName?: string
     secondGuardianRelationship?: string
+    country?: string
+    nationality?: string
+    city?: string
+    streetAddress?: string
 }) {
     const session = await auth()
 
@@ -351,7 +373,8 @@ export async function updateAthlete(id: number, data: {
                 .set({
                     email: data.email,
                     phoneNumber: data.phoneNumber || null,
-                    updatedAt: sql`now()`
+                    updatedAt: sql`now()`,
+                    name: data.name,
                 })
                 .where(eq(users.id, userId))
 
@@ -364,6 +387,10 @@ export async function updateAthlete(id: number, data: {
                         gender: data.gender,
                         birthday: formatDateForDB(data.birthday),
                         image: data.image.includes('images/') ? data.image : 'images/' + data.image,
+                        country: data.country,
+                        nationality: data.nationality,
+                        city: data.city,
+                        streetAddress: data.streetAddress,
                         updatedAt: sql`now()`
                     })
                     .where(eq(profiles.id, profileId))

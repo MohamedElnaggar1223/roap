@@ -34,6 +34,10 @@ interface Athlete {
         gender: string | null
         birthday: string | null
         image: string | null
+        country: string | null
+        nationality: string | null
+        city: string | null
+        streetAddress: string | null
     }
 }
 
@@ -244,7 +248,7 @@ export function AthletesDataTable({ data }: AthletesDataTableProps) {
                                 {athlete.bookings?.length}
                             </div>
                             <div className="py-4 px-4 bg-main-white rounded-r-[20px] flex items-center justify-end gap-2">
-                                {athlete.certificate && (
+                                {/* {athlete.certificate && (
                                     <Button
                                         variant="ghost"
                                         size="icon"
@@ -261,7 +265,7 @@ export function AthletesDataTable({ data }: AthletesDataTableProps) {
                                             height={20}
                                         />
                                     </Button>
-                                )}
+                                )} */}
                                 <div onClick={(e) => e.stopPropagation()}>
                                     <EditAthlete athleteEdited={athlete} />
                                 </div>

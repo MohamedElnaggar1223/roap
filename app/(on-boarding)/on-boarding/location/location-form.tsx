@@ -24,7 +24,7 @@ import { useRouter } from 'next/navigation'
 
 const locationSchema = z.object({
     name: z.string().min(1, "Name is required"),
-    nameInGoogleMap: z.string().min(1, "Name in Google Map is required"),
+    nameInGoogleMap: z.string().optional(),
     url: z.string()
         .min(1, "Google Maps URL is required")
         .refine((url) => {
@@ -137,10 +137,12 @@ export default function OnboardingLocationForm({ academyDetails, sports, facilit
             name: !!academyDetails.name,
             description: !!academyDetails.description,
             sports: !!academyDetails.sports && academyDetails.sports.length > 0,
-            logo: !!academyDetails.logo
+            logo: !!academyDetails.logo,
+            hasGallery: !!academyDetails.gallery && academyDetails.gallery.length > 0,
+            hasPolicy: !!academyDetails.policy
         })
-        updateRequirements('gallery', { hasGallery: (academyDetails.gallery ?? []).length > 0 })
-        updateRequirements('policy', { hasPolicy: !!academyDetails.policy })
+        // updateRequirements('gallery', { hasGallery: (academyDetails.gallery ?? []).length > 0 })
+        // updateRequirements('policy', { hasPolicy: !!academyDetails.policy })
         updateRequirements('coach', {
             name: (academyDetails?.coaches ?? []).length > 0 && !!academyDetails?.coaches![0].name,
             title: (academyDetails?.coaches ?? []).length > 0 && !!academyDetails?.coaches![0].title,
@@ -154,7 +156,6 @@ export default function OnboardingLocationForm({ academyDetails, sports, facilit
         })
         updateRequirements('location', {
             name: !!existingLocation?.name,
-            nameInGoogleMap: !!existingLocation?.nameInGoogleMap,
             url: !!existingLocation?.url,
             sports: (existingLocation?.sports ?? [])?.length > 0,
             facilities: (existingLocation?.facilities ?? []).length > 0,
@@ -166,7 +167,6 @@ export default function OnboardingLocationForm({ academyDetails, sports, facilit
         const values = form.getValues()
         const currentRequirements = {
             name: !!values.name && values.name.length > 0,
-            nameInGoogleMap: !!values.nameInGoogleMap && values.nameInGoogleMap.length > 0,
             url: !!values.url && values.url.length > 0,
             sports: selectedSports.length > 0,
             facilities: selectedAmenities.length > 0,
@@ -196,7 +196,7 @@ export default function OnboardingLocationForm({ academyDetails, sports, facilit
                         }
                     }
 
-                    if (!values.name || !values.nameInGoogleMap || !values.url ||
+                    if (!values.name || !values.url ||
                         !selectedSports.length || !selectedAmenities.length) {
                         return {
                             success: false,
@@ -277,7 +277,7 @@ export default function OnboardingLocationForm({ academyDetails, sports, facilit
                     control={form.control}
                     name="nameInGoogleMap"
                     render={({ field }) => (
-                        <FormItem>
+                        <FormItem className='hidden absolute'>
                             <FormLabel>Name in Google Maps</FormLabel>
                             <FormControl>
                                 <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
@@ -332,14 +332,14 @@ export default function OnboardingLocationForm({ academyDetails, sports, facilit
                             </PopoverTrigger>
                             <PopoverContent className="w-56 p-0" align="start">
                                 <div className="p-2">
-                                    {sports?.map(sport => (
+                                    {academyDetails.sports?.map((sport) => (
                                         <p
-                                            key={sport.id}
-                                            onClick={() => handleSelectSport(sport.id)}
+                                            key={sport}
+                                            onClick={() => handleSelectSport(sport)}
                                             className="p-2 flex items-center justify-start gap-2 text-left cursor-pointer hover:bg-[#fafafa] rounded-lg"
                                         >
-                                            {selectedSports.includes(sport.id) && <X className="size-3" fill='#1f441f' />}
-                                            {sport.name}
+                                            {selectedSports.includes(sport) && <X className="size-3" fill='#1f441f' />}
+                                            {sports?.find(s => s.id === sport)?.name}
                                         </p>
                                     ))}
                                 </div>

@@ -20,6 +20,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import AddBlock from "./add-block"
+import BookingDialog from "./add-booking"
 
 type Event = {
   id: number | null
@@ -36,6 +38,7 @@ type Event = {
   coachName: string | null
   packageId: number | null
   coachId: number | null
+  color: string | null
 }
 
 type GroupedEvent = {
@@ -45,6 +48,8 @@ type GroupedEvent = {
   packageName: string
   count: number
   events: Event[]
+  programName: string
+  color: string
 }
 
 type CalendarView = 'day' | 'week' | 'month' | 'list'
@@ -54,18 +59,26 @@ const TIME_SLOTS = Array.from({ length: 16 }, (_, i) => i + 8)
 
 const groupEvents = (events: Event[]): GroupedEvent[] => {
   const groupedMap = events.reduce((acc, event) => {
-    if (!event.startTime || !event.endTime || !event.coachName || !event.packageId) return acc
+    if (!event.startTime || !event.endTime) return acc
 
-    const key = `${event.startTime}-${event.endTime}-${event.coachName}-${event.packageId}`
+    // Different key generation for blocks vs regular events
+    const key = event.programName === 'block'
+      ? `block-${event.startTime}-${event.endTime}-${event.id}`
+      : `${event.startTime}-${event.endTime}-${event.coachName}-${event.packageId}`
+
+    // Skip regular events without required fields
+    if (event.programName !== 'block' && (!event.coachName || !event.packageId)) return acc
 
     if (!acc.has(key)) {
       acc.set(key, {
-        time: `${event.startTime}-${event.endTime}`,
-        coachName: event.coachName,
-        packageId: event.packageId,
-        packageName: event.packageName || '',
+        time: `${event.startTime.split(':').length < 3 ? event.startTime + ':00' : event.startTime}-${event.endTime.split(':').length < 3 ? event.endTime + ':00' : event.endTime}`,
+        coachName: event.coachName || '',
+        packageId: event.packageId || 0,
+        packageName: event.programName === 'block' ? 'Blocked Time' : (event.packageName || ''),
         count: 0,
-        events: []
+        events: [],
+        programName: event.programName || '',
+        color: event.programName !== 'block' ? event.color ?? '' : '#E6E7DE'
       })
     }
 
@@ -78,7 +91,6 @@ const groupEvents = (events: Event[]): GroupedEvent[] => {
 
   return Array.from(groupedMap.values())
 }
-
 const EventDetailsDialog = ({
   isOpen,
   onClose,
@@ -111,10 +123,10 @@ const EventDetailsDialog = ({
                 <div className="font-medium text-[#1F441F]">{event.studentName}</div>
                 {/* <div className="text-sm text-[#454745]">
                   Birthday: {new Date(event.studentBirthday!).toLocaleDateString()}
-                </div>
-                <div className="text-sm text-[#454745]">
-                  Status: {event.status}
                 </div> */}
+                <div className="text-sm text-[#454745]">
+                  Package: {event.packageName}
+                </div>
               </div>
             ))}
           </div>
@@ -189,6 +201,7 @@ export default function Calendar() {
     startTransition(async () => {
       const result = await getCalendarSlots(dateRange.start, dateRange.end)
       if (result?.error) return
+      console.log(result.data)
       setEvents(result.data)
     })
   }, [dateRange])
@@ -257,10 +270,14 @@ export default function Calendar() {
     }
   }, [calendarView, currentDate, dateRange.start])
 
-  console.log('Events', events)
+  console.log('Events', filteredEvents)
 
   return (
     <>
+      <div className="flex-wrap items-center gap-2 mb-2 sm:mb-0 flex">
+        <BookingDialog />
+        <AddBlock />
+      </div>
       <div className="w-full max-w-7xl mx-auto p-2 sm:p-4 bg-[#E0E4D9]">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 bg-[#E0E4D9] p-2 sm:p-4 rounded-lg">
@@ -510,16 +527,17 @@ export default function Calendar() {
                             key={`${groupedEvent.coachName}-${groupedEvent.packageId}`}
                             className={cn(
                               "absolute left-0 right-0 m-1 p-2 text-xs border rounded-md overflow-hidden flex flex-col items-start justify-start gap-1 cursor-pointer",
-                              colors[index % colors.length]
+                              // groupedEvent.color ? `!bg-[${groupedEvent.color}]` : colors[index % colors.length]
                             )}
                             style={{
                               top: `${index * 6}rem`,
                               height: "5rem",
+                              backgroundColor: groupedEvent.color ? groupedEvent.color : colors[index % colors.length]
                             }}
                             onClick={() => setSelectedGroupedEvent(groupedEvent)}
                           >
-                            <div className="font-bold uppercase text-[10px] font-inter text-[#1F441F]">
-                              • {groupedEvent.packageName}
+                            <div className={cn("font-bold uppercase text-[10px] font-inter", groupedEvent.programName === 'block' ? 'text-[#CA5154]' : "text-[#1F441F]")}>
+                              • {groupedEvent.programName}
                             </div>
                             <div className='text-[10px] font-inter text-[#454745]'>
                               {formatTimeRange(
@@ -528,7 +546,7 @@ export default function Calendar() {
                               )}
                             </div>
                             <div className="hidden sm:block font-normal text-sm text-[#1F441F] font-inter">
-                              {groupedEvent.coachName}, {groupedEvent.count}
+                              {groupedEvent.programName === 'block' ? '' : `${groupedEvent.coachName}, ${groupedEvent.count}`}
                             </div>
                           </div>
                         ))}
@@ -587,9 +605,12 @@ const DayView = ({ events, date, setSelectedGroupedEvent }: { events: Event[], d
                     key={`${groupedEvent.coachName}-${groupedEvent.packageId}`}
                     className={cn(
                       "p-2 text-xs border rounded-md cursor-pointer",
-                      colors[index % colors.length]
+                      // groupedEvent.color ? `!bg-[${groupedEvent.color}]` : colors[index % colors.length]
                     )}
                     onClick={() => setSelectedGroupedEvent(groupedEvent)}
+                    style={{
+                      backgroundColor: groupedEvent.color ? groupedEvent.color : colors[index % colors.length]
+                    }}
                   >
                     <div className="font-bold uppercase text-[10px] font-inter text-[#1F441F]">
                       • {groupedEvent.packageName}
@@ -660,9 +681,12 @@ const MonthView = ({ events, currentDate, setSelectedGroupedEvent }: { events: E
                     key={`${groupedEvent.coachName}-${groupedEvent.packageId}`}
                     className={cn(
                       "text-xs p-1 rounded cursor-pointer",
-                      colors[index % colors.length]
+                      // // groupedEvent.color ? `!bg-[${groupedEvent.color}]` : colors[index % colors.length]
                     )}
                     onClick={() => setSelectedGroupedEvent(groupedEvent)}
+                    style={{
+                      backgroundColor: groupedEvent.color ? groupedEvent.color : colors[index % colors.length]
+                    }}
                   >
                     <div className="font-bold uppercase text-[10px] text-[#1F441F]">
                       • {groupedEvent.packageName} ({groupedEvent.count})
@@ -735,9 +759,12 @@ const ListView = ({
                     key={`${groupedEvent.coachName}-${groupedEvent.packageId}`}
                     className={cn(
                       "p-3 text-sm border rounded-md cursor-pointer",
-                      colors[index % colors.length]
+                      // groupedEvent.color ? `!bg-[${groupedEvent.color}]` : colors[index % colors.length]
                     )}
                     onClick={() => setSelectedGroupedEvent(groupedEvent)}
+                    style={{
+                      backgroundColor: groupedEvent.color ? groupedEvent.color : colors[index % colors.length]
+                    }}
                   >
                     <div className="font-bold uppercase text-xs font-inter text-[#1F441F]">
                       • {groupedEvent.packageName}

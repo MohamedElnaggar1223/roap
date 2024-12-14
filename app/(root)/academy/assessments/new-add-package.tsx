@@ -42,6 +42,8 @@ const packageSchema = z.object({
     entryFees: z.string().default("0"),
     entryFeesExplanation: z.string().optional(),
     entryFeesAppliedUntil: z.array(z.string()).default([]).optional(),
+    entryFeesStartDate: z.date().optional(),
+    entryFeesEndDate: z.date().optional(),
     schedules: z.array(z.object({
         day: z.string().min(1, "Day is required"),
         from: z.string().min(1, "Start time is required"),
@@ -54,6 +56,9 @@ const packageSchema = z.object({
         return false;
     }
     if (data.type === "Monthly" && parseFloat(data.entryFees) > 0 && data.entryFeesAppliedUntil?.length === 0) {
+        return false;
+    }
+    if (data.type !== "Monthly" && parseFloat(data.entryFees) > 0 && (!data.entryFeesStartDate || !data.entryFeesEndDate)) {
         return false;
     }
     return true;
@@ -73,7 +78,9 @@ interface Package {
     memo: string | null
     entryFees: number
     entryFeesExplanation?: string
-    entryFeesAppliedUntil?: string[];
+    entryFeesAppliedUntil?: string[]
+    entryFeesStartDate?: Date
+    entryFeesEndDate?: Date
     id?: number
 }
 
@@ -129,7 +136,9 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
             price: '',
             memo: '',
             entryFees: '0',
-            schedules: [{ day: '', from: '', to: '', memo: '' }]
+            schedules: [{ day: '', from: '', to: '', memo: '' }],
+            entryFeesStartDate: undefined,
+            entryFeesEndDate: undefined
         }
     })
 
@@ -173,6 +182,10 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                     entryFeesExplanation: showEntryFeesFields ? values.entryFeesExplanation : undefined,
                     entryFeesAppliedUntil: values.type === "Monthly" && showEntryFeesFields ?
                         values.entryFeesAppliedUntil : undefined,
+                    entryFeesStartDate: values.type !== "Monthly" && showEntryFeesFields ?
+                        values.entryFeesStartDate : undefined,
+                    entryFeesEndDate: values.type !== "Monthly" && showEntryFeesFields ?
+                        values.entryFeesEndDate : undefined,
                     schedules: values.schedules.map(schedule => ({
                         day: schedule.day,
                         from: schedule.from,
@@ -196,11 +209,11 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                 const packageName = values.type === "Term" ?
                     `Term ${values.termNumber}` :
                     values.type === "Monthly" ?
-                        `Monthly ${values.name}` :
+                        `Monthly ${values.name ?? ''}` :
                         values.name
 
                 setCreatedPackages(prev => [...prev, {
-                    name: packageName!,
+                    name: packageName ?? '',
                     price: parseFloat(values.price),
                     startDate: values.startDate,
                     endDate: values.endDate,
@@ -210,6 +223,10 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                     entryFeesExplanation: showEntryFeesFields ? values.entryFeesExplanation : undefined,
                     entryFeesAppliedUntil: values.type === "Monthly" && showEntryFeesFields ?
                         values.entryFeesAppliedUntil : undefined,
+                    entryFeesStartDate: values.type !== "Monthly" && showEntryFeesFields ?
+                        values.entryFeesStartDate : undefined,
+                    entryFeesEndDate: values.type !== "Monthly" && showEntryFeesFields ?
+                        values.entryFeesEndDate : undefined,
                     type: values.type
                 }])
                 onOpenChange(false)
@@ -321,7 +338,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                             </FormItem>
                                         )}
                                     />
-                                ) : (
+                                ) : packageType === 'Full Season' ? (
                                     <FormField
                                         control={form.control}
                                         name="name"
@@ -335,7 +352,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                             </FormItem>
                                         )}
                                     />
-                                )}
+                                ) : null}
 
                                 <FormField
                                     control={form.control}
@@ -516,6 +533,68 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                     />
                                 )}
 
+                                {showEntryFeesFields && packageType !== "Monthly" && (
+                                    <div className="flex gap-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="entryFeesStartDate"
+                                            render={({ field }) => (
+                                                <FormItem className="flex-1">
+                                                    <FormLabel>Entry Fees Start Date</FormLabel>
+                                                    <Popover>
+                                                        <PopoverTrigger asChild>
+                                                            <FormControl>
+                                                                <Button variant={"outline"} className='w-full h-14 bg-transparent hover:bg-transparent'>
+                                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                                                </Button>
+                                                            </FormControl>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-auto p-0" align="start">
+                                                            <Calendar
+                                                                mode="single"
+                                                                selected={field.value}
+                                                                onSelect={field.onChange}
+                                                                initialFocus
+                                                            />
+                                                        </PopoverContent>
+                                                    </Popover>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
+                                        <FormField
+                                            control={form.control}
+                                            name="entryFeesEndDate"
+                                            render={({ field }) => (
+                                                <FormItem className="flex-1">
+                                                    <FormLabel>Entry Fees End Date</FormLabel>
+                                                    <Popover>
+                                                        <PopoverTrigger asChild>
+                                                            <FormControl>
+                                                                <Button variant={"outline"} className='w-full h-14 bg-transparent hover:bg-transparent'>
+                                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                                                </Button>
+                                                            </FormControl>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-auto p-0" align="start">
+                                                            <Calendar
+                                                                mode="single"
+                                                                selected={field.value}
+                                                                onSelect={field.onChange}
+                                                                initialFocus
+                                                            />
+                                                        </PopoverContent>
+                                                    </Popover>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                )}
+
 
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center">
@@ -579,7 +658,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                                                 <Input
                                                                     {...field}
                                                                     type="time"
-                                                                    step="1"
+                                                                    step="60"
                                                                     className="px-2 py-6 rounded-[10px] border border-gray-500 font-inter"
                                                                 />
                                                             </FormControl>
@@ -598,7 +677,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                                                 <Input
                                                                     {...field}
                                                                     type="time"
-                                                                    step="1"
+                                                                    step="60"
                                                                     className="px-2 py-6 rounded-[10px] border border-gray-500 font-inter"
                                                                 />
                                                             </FormControl>

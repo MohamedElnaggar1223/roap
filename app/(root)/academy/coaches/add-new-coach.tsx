@@ -44,6 +44,7 @@ type Props = {
         name: string;
         locale: string;
     }[];
+    academySports?: { id: number }[]
 }
 
 type FileState = {
@@ -51,7 +52,7 @@ type FileState = {
     file: File | null;
 }
 
-export default function AddNewCoach({ sports, languages }: Props) {
+export default function AddNewCoach({ sports, languages, academySports }: Props) {
     const router = useRouter()
 
     const inputRef = useRef<HTMLInputElement>(null)
@@ -347,7 +348,7 @@ export default function AddNewCoach({ sports, languages }: Props) {
                                         control={form.control}
                                         name='privateSessionPercentage'
                                         render={({ field }) => (
-                                            <FormItem>
+                                            <FormItem className='hidden absolute'>
                                                 <FormLabel>Private Session Percentage</FormLabel>
                                                 <FormControl>
                                                     <Input {...field} type="number" min="0" max="100" className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
@@ -412,14 +413,14 @@ export default function AddNewCoach({ sports, languages }: Props) {
                                                         }}
                                                     >
                                                         <div className="p-2">
-                                                            {sports?.map(sport => (
+                                                            {academySports?.map(sport => (
                                                                 <p
                                                                     key={sport.id}
                                                                     onClick={() => handleSelectSport(sport.id)}
                                                                     className="p-2 flex items-center justify-start gap-2 text-left cursor-pointer hover:bg-[#fafafa] rounded-lg"
                                                                 >
                                                                     {selectedSports.includes(sport.id) && <X className="size-3" fill='#1f441f' />}
-                                                                    {sport.name}
+                                                                    {sports?.find(s => s.id === sport.id)?.name}
                                                                 </p>
                                                             ))}
                                                         </div>

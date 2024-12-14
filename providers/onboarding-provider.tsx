@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 
-export type StepId = 'academy-details' | 'gallery' | 'policy' | 'location' | 'coach' | 'program'
+export type StepId = 'academy-details' | 'location' | 'coach' | 'program' | 'assessment'
 
 interface Step {
     id: StepId
@@ -18,16 +18,11 @@ interface StepRequirements {
         description: boolean
         sports: boolean
         logo: boolean
-    }
-    'gallery': {
         hasGallery: boolean
-    }
-    'policy': {
         hasPolicy: boolean
     }
     'location': {
         name: boolean
-        nameInGoogleMap: boolean
         url: boolean
         sports: boolean
         facilities: boolean
@@ -51,6 +46,18 @@ interface StepRequirements {
         packages: boolean
         numberOfSeats: boolean
         gender: boolean
+        color: boolean
+    }
+    'assessment': {
+        description: boolean
+        coaches: boolean
+        packages: boolean
+        branchId: boolean
+        sportId: boolean
+        startDateOfBirth: boolean
+        endDateOfBirth: boolean
+        gender: boolean
+        numberOfSeats: boolean
     }
 }
 
@@ -77,18 +84,6 @@ const STEPS: Step[] = [
         isCompleted: false
     },
     {
-        id: 'gallery',
-        title: 'Academy Gallery',
-        path: '/on-boarding/gallery',
-        isCompleted: false
-    },
-    {
-        id: 'policy',
-        title: 'Academy Policy',
-        path: '/on-boarding/policy',
-        isCompleted: false
-    },
-    {
         id: 'location',
         title: 'Location',
         path: '/on-boarding/location',
@@ -105,7 +100,13 @@ const STEPS: Step[] = [
         title: 'Program',
         path: '/on-boarding/program',
         isCompleted: false
-    }
+    },
+    {
+        id: 'assessment',
+        title: 'Assessment',
+        path: '/on-boarding/assessment',
+        isCompleted: false
+    },
 ]
 
 export function OnboardingProvider({ children }: { children: React.ReactNode }) {
@@ -117,17 +118,12 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             name: false,
             description: false,
             sports: false,
-            logo: false
-        },
-        'gallery': {
-            hasGallery: false
-        },
-        'policy': {
+            logo: false,
+            hasGallery: false,
             hasPolicy: false
         },
         'location': {
             name: false,
-            nameInGoogleMap: false,
             url: false,
             sports: false,
             facilities: false
@@ -151,7 +147,19 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             packages: false,
             numberOfSeats: false,
             gender: false,
-        }
+            color: false,
+        },
+        'assessment': {
+            description: false,
+            coaches: false,
+            packages: false,
+            branchId: false,
+            sportId: false,
+            startDateOfBirth: false,
+            endDateOfBirth: false,
+            gender: false,
+            numberOfSeats: false,
+        },
     })
 
     const currentStep = steps.find(step => step.path === pathname) || steps[0]
@@ -160,6 +168,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
 
     const isStepComplete = (stepId: StepId) => {
         const stepRequirements = requirements[stepId]
+        console.log("Step Requirements: ", stepRequirements)
         if (!stepRequirements) return false
 
         const allRequirementsMet = Object.values(stepRequirements).every(Boolean)

@@ -112,6 +112,8 @@ export async function createLocation(data: {
     isDefault: boolean
     sports: number[]
     facilities: number[]
+    latitude?: string
+    longitude?: string
 }) {
     const session = await auth()
 
@@ -158,6 +160,8 @@ export async function createLocation(data: {
                     isDefault: data.isDefault ? true : false,
                     slug,
                     academicId: academy.id,
+                    latitude: data.latitude,
+                    longitude: data.longitude,
                 })
                 .returning({
                     id: branches.id,
@@ -223,6 +227,8 @@ export async function updateLocation(id: number, data: {
     isDefault: boolean
     sports: number[]
     facilities: number[]
+    latitude?: string
+    longitude?: string
 }) {
     const session = await auth()
 
@@ -256,7 +262,9 @@ export async function updateLocation(id: number, data: {
                     nameInGoogleMap: data.nameInGoogleMap,
                     url: data.url,
                     isDefault: data.isDefault,
-                    updatedAt: sql`now()`
+                    updatedAt: sql`now()`,
+                    latitude: data.latitude,
+                    longitude: data.longitude,
                 })
                 .where(eq(branches.id, id)),
 

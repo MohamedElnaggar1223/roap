@@ -14,8 +14,13 @@ export type Database = {
           academic_id: number
           certificate: string | null
           created_at: string | null
+          first_guardian_name: string | null
+          first_guardian_relationship: string | null
           id: number
           profile_id: number | null
+          second_guardian_name: string | null
+          second_guardian_relationship: string | null
+          type: Database["public"]["Enums"]["athletic_type"] | null
           updated_at: string | null
           user_id: number
         }
@@ -23,8 +28,13 @@ export type Database = {
           academic_id: number
           certificate?: string | null
           created_at?: string | null
+          first_guardian_name?: string | null
+          first_guardian_relationship?: string | null
           id?: never
           profile_id?: number | null
+          second_guardian_name?: string | null
+          second_guardian_relationship?: string | null
+          type?: Database["public"]["Enums"]["athletic_type"] | null
           updated_at?: string | null
           user_id: number
         }
@@ -32,8 +42,13 @@ export type Database = {
           academic_id?: number
           certificate?: string | null
           created_at?: string | null
+          first_guardian_name?: string | null
+          first_guardian_relationship?: string | null
           id?: never
           profile_id?: number | null
+          second_guardian_name?: string | null
+          second_guardian_relationship?: string | null
+          type?: Database["public"]["Enums"]["athletic_type"] | null
           updated_at?: string | null
           user_id?: number
         }
@@ -138,6 +153,7 @@ export type Database = {
           extra: string | null
           id: number
           image: string | null
+          onboarded: boolean
           policy: string | null
           slug: string
           status: Database["public"]["Enums"]["status"] | null
@@ -150,6 +166,7 @@ export type Database = {
           extra?: string | null
           id?: never
           image?: string | null
+          onboarded?: boolean
           policy?: string | null
           slug: string
           status?: Database["public"]["Enums"]["status"] | null
@@ -162,6 +179,7 @@ export type Database = {
           extra?: string | null
           id?: never
           image?: string | null
+          onboarded?: boolean
           policy?: string | null
           slug?: string
           status?: Database["public"]["Enums"]["status"] | null
@@ -900,10 +918,78 @@ export type Database = {
         }
         Relationships: []
       }
+      media: {
+        Row: {
+          created_at: string | null
+          id: number
+          referable_id: number
+          referable_type: string
+          type: string
+          updated_at: string | null
+          url: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: never
+          referable_id: number
+          referable_type: string
+          type?: string
+          updated_at?: string | null
+          url: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: never
+          referable_id?: number
+          referable_type?: string
+          type?: string
+          updated_at?: string | null
+          url?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string | null
+          data: string
+          id: string
+          notifiable_id: number
+          notifiable_type: string
+          read_at: string | null
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          data: string
+          id: string
+          notifiable_id: number
+          notifiable_type: string
+          read_at?: string | null
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          data?: string
+          id?: string
+          notifiable_id?: number
+          notifiable_type?: string
+          read_at?: string | null
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       packages: {
         Row: {
           created_at: string | null
           end_date: string
+          entry_fees: number
+          entry_fees_applied_until: string[] | null
+          entry_fees_end_date: string | null
+          entry_fees_explanation: string | null
+          entry_fees_start_date: string | null
           id: number
           memo: string | null
           name: string
@@ -917,6 +1003,11 @@ export type Database = {
         Insert: {
           created_at?: string | null
           end_date: string
+          entry_fees?: number
+          entry_fees_applied_until?: string[] | null
+          entry_fees_end_date?: string | null
+          entry_fees_explanation?: string | null
+          entry_fees_start_date?: string | null
           id?: never
           memo?: string | null
           name?: string
@@ -930,6 +1021,11 @@ export type Database = {
         Update: {
           created_at?: string | null
           end_date?: string
+          entry_fees?: number
+          entry_fees_applied_until?: string[] | null
+          entry_fees_end_date?: string | null
+          entry_fees_explanation?: string | null
+          entry_fees_start_date?: string | null
           id?: never
           memo?: string | null
           name?: string
@@ -1043,6 +1139,7 @@ export type Database = {
         Row: {
           academic_id: number | null
           branch_id: number | null
+          color: string | null
           created_at: string | null
           description: string | null
           end_date_of_birth: string | null
@@ -1058,6 +1155,7 @@ export type Database = {
         Insert: {
           academic_id?: number | null
           branch_id?: number | null
+          color?: string | null
           created_at?: string | null
           description?: string | null
           end_date_of_birth?: string | null
@@ -1073,6 +1171,7 @@ export type Database = {
         Update: {
           academic_id?: number | null
           branch_id?: number | null
+          color?: string | null
           created_at?: string | null
           description?: string | null
           end_date_of_birth?: string | null
@@ -1105,6 +1204,50 @@ export type Database = {
             columns: ["sport_id"]
             isOneToOne: false
             referencedRelation: "sports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promo_codes: {
+        Row: {
+          academic_id: number
+          code: string
+          created_at: string | null
+          discount_type: Database["public"]["Enums"]["discount_type"]
+          discountValue: number
+          end_date: string
+          id: number
+          start_date: string
+          updated_at: string | null
+        }
+        Insert: {
+          academic_id: number
+          code: string
+          created_at?: string | null
+          discount_type: Database["public"]["Enums"]["discount_type"]
+          discountValue: number
+          end_date: string
+          id?: never
+          start_date: string
+          updated_at?: string | null
+        }
+        Update: {
+          academic_id?: number
+          code?: string
+          created_at?: string | null
+          discount_type?: Database["public"]["Enums"]["discount_type"]
+          discountValue?: number
+          end_date?: string
+          id?: never
+          start_date?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promo_codes_academic_id_foreign"
+            columns: ["academic_id"]
+            isOneToOne: false
+            referencedRelation: "academics"
             referencedColumns: ["id"]
           },
         ]
@@ -1536,6 +1679,8 @@ export type Database = {
       }
     }
     Enums: {
+      athletic_type: "primary" | "fellow"
+      discount_type: "fixed" | "percentage"
       status: "pending" | "accepted" | "rejected"
       user_roles: "admin" | "user" | "academic"
     }

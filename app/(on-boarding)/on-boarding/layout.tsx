@@ -14,6 +14,7 @@ import { checkAcademyStatus } from "@/lib/actions/check-academy-status";
 import { cn } from "@/lib/utils";
 import { OnboardingSaveProvider } from "@/providers/onboarding-save-provider";
 import { Toaster } from "@/components/ui/toaster";
+import LogOutBtn from "@/components/on-boarding/logout-btn";
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
@@ -42,6 +43,7 @@ export default async function OnboardingLayout({
                             <div className="">
                                 {children}
                             </div>
+                            <LogOutBtn />
                             <Toaster />
                         </main>
                     </OnboardingSaveProvider>

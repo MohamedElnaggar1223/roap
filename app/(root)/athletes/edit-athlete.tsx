@@ -27,6 +27,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { getImageUrl, uploadImageToSupabase } from '@/lib/supabase-images'
+import { countries, nationalities } from '@/constants'
 
 type Athlete = {
     id: number
@@ -41,6 +42,10 @@ type Athlete = {
     secondGuardianName: string | null
     secondGuardianRelationship: string | null
     profile?: {
+        country: string | null
+        nationality: string | null
+        city: string | null
+        streetAddress: string | null
         name: string
         gender: string | null
         birthday: string | null
@@ -89,6 +94,10 @@ export default function EditAthlete({ athleteEdited }: Props) {
             firstGuardianRelationship: athleteEdited.firstGuardianRelationship || '',
             secondGuardianName: athleteEdited.secondGuardianName || '',
             secondGuardianRelationship: athleteEdited.secondGuardianRelationship || '',
+            city: athleteEdited.profile?.city || '',
+            streetAddress: athleteEdited.profile?.streetAddress || '',
+            nationality: athleteEdited.profile?.nationality || '',
+            country: athleteEdited.profile?.country || '',
         }
     })
 
@@ -258,10 +267,10 @@ export default function EditAthlete({ athleteEdited }: Props) {
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => {
-                                                                        if (selectedImage.preview) URL.revokeObjectURL(selectedImage.preview)
-                                                                        setSelectedImage({ preview: '', file: null })
-                                                                        if (imageInputRef.current) imageInputRef.current.value = ''
-                                                                        field.onChange('')
+                                                                        if (selectedImage.preview) URL.revokeObjectURL(selectedImage.preview);
+                                                                        setSelectedImage({ preview: '', file: null });
+                                                                        if (imageInputRef.current) imageInputRef.current.value = '';
+                                                                        field.onChange('');
                                                                     }}
                                                                     className="absolute -top-2 -right-2 bg-red-500 rounded-[31px] p-1 z-[10]"
                                                                 >
@@ -291,12 +300,11 @@ export default function EditAthlete({ athleteEdited }: Props) {
                                             </FormItem>
                                         )}
                                     />
-                                    {/* Athlete Type */}
                                     <FormField
                                         control={form.control}
                                         name='type'
                                         render={({ field }) => (
-                                            <FormItem>
+                                            <FormItem className='flex-1'>
                                                 <FormLabel>Athlete Type</FormLabel>
                                                 <Select
                                                     onValueChange={(value: 'primary' | 'fellow') => {
@@ -311,15 +319,14 @@ export default function EditAthlete({ athleteEdited }: Props) {
                                                         </SelectTrigger>
                                                     </FormControl>
                                                     <SelectContent>
-                                                        <SelectItem value="primary">Primary</SelectItem>
-                                                        <SelectItem value="fellow">Fellow</SelectItem>
+                                                        <SelectItem value="primary">Athlete</SelectItem>
+                                                        <SelectItem value="fellow">Guardian</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
                                     />
-
                                     {athleteType === 'fellow' && (
                                         <>
                                             <div className='flex w-full gap-2 items-start justify-center'>
@@ -425,103 +432,136 @@ export default function EditAthlete({ athleteEdited }: Props) {
                                         )}
                                     />
 
+                                    <div className="flex gap-4">
+
+                                        <div className='flex w-full gap-2 items-start justify-center'>
+                                            <FormField
+                                                control={form.control}
+                                                name='gender'
+                                                render={({ field }) => (
+                                                    <FormItem className='flex-1'>
+                                                        <FormLabel>Gender</FormLabel>
+                                                        <Select onValueChange={field.onChange} value={field.value}>
+                                                            <FormControl>
+                                                                <SelectTrigger className='px-2 h-12 rounded-[10px] border border-gray-500 font-inter'>
+                                                                    <SelectValue placeholder="Select gender" />
+                                                                </SelectTrigger>
+                                                            </FormControl>
+                                                            <SelectContent>
+                                                                <SelectItem value="male">Male</SelectItem>
+                                                                <SelectItem value="female">Female</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
+
+                                        <div className='flex w-full gap-2 items-start justify-center'>
+                                            <FormField
+                                                control={form.control}
+                                                name='birthday'
+                                                render={({ field }) => (
+                                                    <FormItem className='flex-1'>
+                                                        <FormLabel>Date of Birth</FormLabel>
+                                                        <FormControl>
+                                                            <Input
+                                                                type="date"
+                                                                {...field}
+                                                                value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
+                                                                onChange={(e) => field.onChange(new Date(e.target.value))}
+                                                                className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
+                                                            />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+
+                                        </div>
+                                    </div>
                                     <div className='flex w-full gap-2 items-start justify-center'>
                                         <FormField
                                             control={form.control}
-                                            name='gender'
+                                            name='nationality'
                                             render={({ field }) => (
                                                 <FormItem className='flex-1'>
-                                                    <FormLabel>Gender</FormLabel>
+                                                    <FormLabel>Nationality</FormLabel>
                                                     <Select onValueChange={field.onChange} value={field.value}>
                                                         <FormControl>
                                                             <SelectTrigger className='px-2 h-12 rounded-[10px] border border-gray-500 font-inter'>
-                                                                <SelectValue placeholder="Select gender" />
+                                                                <SelectValue placeholder="Select nationality" />
                                                             </SelectTrigger>
                                                         </FormControl>
                                                         <SelectContent>
-                                                            <SelectItem value="male">Male</SelectItem>
-                                                            <SelectItem value="female">Female</SelectItem>
+                                                            {nationalities.map((nationality) => (
+                                                                <SelectItem key={nationality} value={nationality}>
+                                                                    {nationality}
+                                                                </SelectItem>
+                                                            ))}
                                                         </SelectContent>
                                                     </Select>
                                                     <FormMessage />
                                                 </FormItem>
                                             )}
                                         />
+                                        <FormField
+                                            control={form.control}
+                                            name='country'
+                                            render={({ field }) => (
+                                                <FormItem className='flex-1'>
+                                                    <FormLabel>Country</FormLabel>
+                                                    <Select onValueChange={field.onChange} value={field.value}>
+                                                        <FormControl>
+                                                            <SelectTrigger className='px-2 h-12 rounded-[10px] border border-gray-500 font-inter'>
+                                                                <SelectValue placeholder="Select country" />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            {countries.map((country) => (
+                                                                <SelectItem key={country} value={country}>
+                                                                    {country}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
                                     </div>
 
-                                    <FormField
-                                        control={form.control}
-                                        name='birthday'
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Date of Birth</FormLabel>
-                                                <FormControl>
-                                                    <Input
-                                                        type="date"
-                                                        {...field}
-                                                        value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
-                                                        onChange={(e) => field.onChange(new Date(e.target.value))}
-                                                        className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
-                                                    />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
+                                    <div className='flex w-full gap-2 items-start justify-center'>
+                                        <FormField
+                                            control={form.control}
+                                            name='city'
+                                            render={({ field }) => (
+                                                <FormItem className='flex-1'>
+                                                    <FormLabel>City</FormLabel>
+                                                    <FormControl>
+                                                        <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name='streetAddress'
+                                            render={({ field }) => (
+                                                <FormItem className='flex-1'>
+                                                    <FormLabel>Street Address</FormLabel>
+                                                    <FormControl>
+                                                        <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
 
-                                    {/* Certificate Upload */}
-                                    <FormField
-                                        control={form.control}
-                                        name='certificate'
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Certificate (Optional)</FormLabel>
-                                                <FormControl>
-                                                    <div className="flex flex-col gap-4 relative w-44">
-                                                        {(field.value || selectedCertificate.preview) ? (
-                                                            <div className="relative w-44 h-44">
-                                                                <Image
-                                                                    src={selectedCertificate.preview || '/images/placeholder.svg'}
-                                                                    alt="Certificate Preview"
-                                                                    fill
-                                                                    className="rounded-[31px] object-cover"
-                                                                />
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        if (selectedCertificate.preview) URL.revokeObjectURL(selectedCertificate.preview)
-                                                                        setSelectedCertificate({ preview: '', file: null })
-                                                                        if (certificateInputRef.current) certificateInputRef.current.value = ''
-                                                                        field.onChange('')
-                                                                    }}
-                                                                    className="absolute -top-2 -right-2 bg-red-500 rounded-[31px] p-1 z-[10]"
-                                                                >
-                                                                    <X className="h-4 w-4 text-white" />
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <Image
-                                                                src='/images/placeholder.svg'
-                                                                alt='Certificate Placeholder'
-                                                                width={176}
-                                                                height={176}
-                                                                className='rounded-[31px] object-cover'
-                                                            />
-                                                        )}
-                                                        <Input
-                                                            type="file"
-                                                            accept="image/*"
-                                                            onChange={(e) => handleImageChange(e, 'certificate')}
-                                                            hidden
-                                                            ref={certificateInputRef}
-                                                            className='absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer z-[5]'
-                                                        />
-                                                    </div>
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
 
                                 </div>
                             </div>

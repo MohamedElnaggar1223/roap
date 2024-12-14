@@ -1,13 +1,16 @@
-import { pgTable, uniqueIndex, index, bigint, varchar, boolean, timestamp, unique, foreignKey, date, doublePrecision, text, integer, check, time, uuid, pgEnum } from "drizzle-orm/pg-core"
+import { pgTable, uniqueIndex, index, bigint, varchar, boolean, timestamp, unique, foreignKey, date, time, doublePrecision, text, integer, check, uuid, pgEnum } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
+export const athleticType = pgEnum("athletic_type", ['primary', 'fellow'])
+export const blockScope = pgEnum("block_scope", ['all', 'specific'])
+export const discountType = pgEnum("discount_type", ['fixed', 'percentage'])
 export const status = pgEnum("status", ['pending', 'accepted', 'rejected'])
 export const userRoles = pgEnum("user_roles", ['admin', 'user', 'academic'])
 
 
 export const users = pgTable("users", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "users_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "users_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	name: varchar({ length: 255 }).default(sql`NULL`),
 	email: varchar({ length: 255 }).default(sql`NULL`),
 	phoneNumber: varchar("phone_number", { length: 255 }).default(sql`NULL`),
@@ -36,7 +39,7 @@ export const users = pgTable("users", {
 
 export const joinUs = pgTable("join_us", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "join_us_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "join_us_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	name: varchar({ length: 255 }).notNull(),
 	email: varchar({ length: 255 }).notNull(),
 	phone: varchar({ length: 255 }).notNull(),
@@ -50,7 +53,7 @@ export const joinUs = pgTable("join_us", {
 
 export const profiles = pgTable("profiles", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "profiles_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "profiles_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	name: varchar({ length: 255 }).notNull(),
 	gender: varchar({ length: 255 }).default(sql`NULL`),
 	birthday: date(),
@@ -71,16 +74,41 @@ export const profiles = pgTable("profiles", {
 	}
 });
 
+export const blocks = pgTable("blocks", {
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "blocks_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	academicId: bigint("academic_id", { mode: "number" }).notNull(),
+	date: date().notNull(),
+	startTime: time("start_time").notNull(),
+	endTime: time("end_time").notNull(),
+	branchScope: blockScope("branch_scope").default('all'),
+	sportScope: blockScope("sport_scope").default('all'),
+	packageScope: blockScope("package_scope").default('all'),
+	coachScope: blockScope("coach_scope").default('all'),
+	note: varchar({ length: 255 }).default(sql`NULL`),
+	createdAt: timestamp("created_at", { mode: 'string' }),
+	updatedAt: timestamp("updated_at", { mode: 'string' }),
+}, (table) => {
+	return {
+		blocksAcademicIdFkey: foreignKey({
+			columns: [table.academicId],
+			foreignColumns: [academics.id],
+			name: "blocks_academic_id_fkey"
+		}).onDelete("cascade"),
+	}
+});
+
 export const spokenLanguages = pgTable("spoken_languages", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "spoken_languages_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "spoken_languages_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	createdAt: timestamp("created_at", { mode: 'string' }),
 	updatedAt: timestamp("updated_at", { mode: 'string' }),
 });
 
 export const spokenLanguageTranslations = pgTable("spoken_language_translations", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "spoken_language_translations_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "spoken_language_translations_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	spokenLanguageId: bigint("spoken_language_id", { mode: "number" }).notNull(),
 	locale: varchar({ length: 255 }).notNull(),
@@ -98,16 +126,43 @@ export const spokenLanguageTranslations = pgTable("spoken_language_translations"
 	}
 });
 
+export const blockBranches = pgTable("block_branches", {
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "block_branches_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	blockId: bigint("block_id", { mode: "number" }).notNull(),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	branchId: bigint("branch_id", { mode: "number" }).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }),
+	updatedAt: timestamp("updated_at", { mode: 'string' }),
+}, (table) => {
+	return {
+		idxBlockBranchesBlockId: index("idx_block_branches_block_id").using("btree", table.blockId.asc().nullsLast().op("int8_ops")),
+		idxBlockBranchesBranchId: index("idx_block_branches_branch_id").using("btree", table.branchId.asc().nullsLast().op("int8_ops")),
+		blockBranchesBlockIdFkey: foreignKey({
+			columns: [table.blockId],
+			foreignColumns: [blocks.id],
+			name: "block_branches_block_id_fkey"
+		}).onDelete("cascade"),
+		blockBranchesBranchIdFkey: foreignKey({
+			columns: [table.branchId],
+			foreignColumns: [branches.id],
+			name: "block_branches_branch_id_fkey"
+		}).onDelete("cascade"),
+		blockBranchesBlockIdBranchIdKey: unique("block_branches_block_id_branch_id_key").on(table.blockId, table.branchId),
+	}
+});
+
 export const countries = pgTable("countries", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "countries_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "countries_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	createdAt: timestamp("created_at", { mode: 'string' }),
 	updatedAt: timestamp("updated_at", { mode: 'string' }),
 });
 
 export const countryTranslations = pgTable("country_translations", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "country_translations_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "country_translations_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	countryId: bigint("country_id", { mode: "number" }).notNull(),
 	locale: varchar({ length: 255 }).notNull(),
@@ -127,7 +182,7 @@ export const countryTranslations = pgTable("country_translations", {
 
 export const states = pgTable("states", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "states_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "states_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	countryId: bigint("country_id", { mode: "number" }).notNull(),
 	createdAt: timestamp("created_at", { mode: 'string' }),
@@ -144,7 +199,7 @@ export const states = pgTable("states", {
 
 export const stateTranslations = pgTable("state_translations", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "state_translations_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "state_translations_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	stateId: bigint("state_id", { mode: "number" }).notNull(),
 	locale: varchar({ length: 255 }).notNull(),
@@ -164,7 +219,7 @@ export const stateTranslations = pgTable("state_translations", {
 
 export const cities = pgTable("cities", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "cities_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "cities_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	stateId: bigint("state_id", { mode: "number" }).notNull(),
 	createdAt: timestamp("created_at", { mode: 'string' }),
@@ -181,7 +236,7 @@ export const cities = pgTable("cities", {
 
 export const cityTranslations = pgTable("city_translations", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "city_translations_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "city_translations_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	cityId: bigint("city_id", { mode: "number" }).notNull(),
 	locale: varchar({ length: 255 }).notNull(),
@@ -201,7 +256,7 @@ export const cityTranslations = pgTable("city_translations", {
 
 export const addresses = pgTable("addresses", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "addresses_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "addresses_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	streetAddress: varchar("street_address", { length: 255 }).notNull(),
 	postalCode: varchar("postal_code", { length: 255 }).default(sql`NULL`),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
@@ -228,14 +283,14 @@ export const addresses = pgTable("addresses", {
 
 export const facilities = pgTable("facilities", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "facilities_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "facilities_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	createdAt: timestamp("created_at", { mode: 'string' }),
 	updatedAt: timestamp("updated_at", { mode: 'string' }),
 });
 
 export const facilityTranslations = pgTable("facility_translations", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "facility_translations_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "facility_translations_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	facilityId: bigint("facility_id", { mode: "number" }).notNull(),
 	locale: varchar({ length: 255 }).notNull(),
@@ -255,7 +310,7 @@ export const facilityTranslations = pgTable("facility_translations", {
 
 export const sports = pgTable("sports", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "sports_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "sports_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	slug: varchar({ length: 255 }).default(sql`NULL`),
 	image: varchar({ length: 255 }).default(sql`NULL`),
 	createdAt: timestamp("created_at", { mode: 'string' }),
@@ -268,7 +323,7 @@ export const sports = pgTable("sports", {
 
 export const sportTranslations = pgTable("sport_translations", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "sport_translations_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "sport_translations_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	sportId: bigint("sport_id", { mode: "number" }).notNull(),
 	locale: varchar({ length: 255 }).notNull(),
@@ -286,9 +341,36 @@ export const sportTranslations = pgTable("sport_translations", {
 	}
 });
 
+export const blockSports = pgTable("block_sports", {
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "block_sports_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	blockId: bigint("block_id", { mode: "number" }).notNull(),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	sportId: bigint("sport_id", { mode: "number" }).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }),
+	updatedAt: timestamp("updated_at", { mode: 'string' }),
+}, (table) => {
+	return {
+		idxBlockSportsBlockId: index("idx_block_sports_block_id").using("btree", table.blockId.asc().nullsLast().op("int8_ops")),
+		idxBlockSportsSportId: index("idx_block_sports_sport_id").using("btree", table.sportId.asc().nullsLast().op("int8_ops")),
+		blockSportsBlockIdFkey: foreignKey({
+			columns: [table.blockId],
+			foreignColumns: [blocks.id],
+			name: "block_sports_block_id_fkey"
+		}).onDelete("cascade"),
+		blockSportsSportIdFkey: foreignKey({
+			columns: [table.sportId],
+			foreignColumns: [sports.id],
+			name: "block_sports_sport_id_fkey"
+		}).onDelete("cascade"),
+		blockSportsBlockIdSportIdKey: unique("block_sports_block_id_sport_id_key").on(table.blockId, table.sportId),
+	}
+});
+
 export const academics = pgTable("academics", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "academics_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "academics_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	slug: varchar({ length: 255 }).notNull(),
 	entryFees: doublePrecision("entry_fees").default(0).notNull(),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
@@ -299,6 +381,7 @@ export const academics = pgTable("academics", {
 	policy: text(),
 	extra: varchar({ length: 255 }).default(sql`NULL`),
 	status: status().default('pending'),
+	onboarded: boolean().default(false).notNull(),
 }, (table) => {
 	return {
 		slugUnique: uniqueIndex("academics_slug_unique").using("btree", table.slug.asc().nullsLast().op("text_ops")),
@@ -312,7 +395,7 @@ export const academics = pgTable("academics", {
 
 export const academicTranslations = pgTable("academic_translations", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "academic_translations_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "academic_translations_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	academicId: bigint("academic_id", { mode: "number" }).notNull(),
 	locale: varchar({ length: 255 }).notNull(),
@@ -333,7 +416,7 @@ export const academicTranslations = pgTable("academic_translations", {
 
 export const branches = pgTable("branches", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "branches_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "branches_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	slug: varchar({ length: 255 }).notNull(),
 	latitude: varchar({ length: 255 }).default(sql`NULL`),
 	longitude: varchar({ length: 255 }).default(sql`NULL`),
@@ -358,9 +441,36 @@ export const branches = pgTable("branches", {
 	}
 });
 
+export const blockPackages = pgTable("block_packages", {
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "block_packages_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	blockId: bigint("block_id", { mode: "number" }).notNull(),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	packageId: bigint("package_id", { mode: "number" }).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }),
+	updatedAt: timestamp("updated_at", { mode: 'string' }),
+}, (table) => {
+	return {
+		idxBlockPackagesBlockId: index("idx_block_packages_block_id").using("btree", table.blockId.asc().nullsLast().op("int8_ops")),
+		idxBlockPackagesPackageId: index("idx_block_packages_package_id").using("btree", table.packageId.asc().nullsLast().op("int8_ops")),
+		blockPackagesBlockIdFkey: foreignKey({
+			columns: [table.blockId],
+			foreignColumns: [blocks.id],
+			name: "block_packages_block_id_fkey"
+		}).onDelete("cascade"),
+		blockPackagesPackageIdFkey: foreignKey({
+			columns: [table.packageId],
+			foreignColumns: [packages.id],
+			name: "block_packages_package_id_fkey"
+		}).onDelete("cascade"),
+		blockPackagesBlockIdPackageIdKey: unique("block_packages_block_id_package_id_key").on(table.blockId, table.packageId),
+	}
+});
+
 export const branchTranslations = pgTable("branch_translations", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "branch_translations_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "branch_translations_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	branchId: bigint("branch_id", { mode: "number" }).notNull(),
 	locale: varchar({ length: 255 }).notNull(),
@@ -380,7 +490,7 @@ export const branchTranslations = pgTable("branch_translations", {
 
 export const branchFacility = pgTable("branch_facility", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "branch_facility_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "branch_facility_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	branchId: bigint("branch_id", { mode: "number" }).notNull(),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
@@ -402,9 +512,32 @@ export const branchFacility = pgTable("branch_facility", {
 	}
 });
 
+export const promoCodes = pgTable("promo_codes", {
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "promo_codes_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	code: varchar({ length: 50 }).notNull(),
+	discountType: discountType("discount_type").notNull(),
+	discountValue: doublePrecision().notNull(),
+	startDate: timestamp("start_date", { mode: 'string' }).notNull(),
+	endDate: timestamp("end_date", { mode: 'string' }).notNull(),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	academicId: bigint("academic_id", { mode: "number" }).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }),
+	updatedAt: timestamp("updated_at", { mode: 'string' }),
+}, (table) => {
+	return {
+		promoCodesAcademicIdForeign: foreignKey({
+			columns: [table.academicId],
+			foreignColumns: [academics.id],
+			name: "promo_codes_academic_id_foreign"
+		}).onDelete("cascade"),
+		promoCodesCodeAcademicUnique: unique("promo_codes_code_academic_unique").on(table.code, table.academicId),
+	}
+});
+
 export const branchSport = pgTable("branch_sport", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "branch_sport_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "branch_sport_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	branchId: bigint("branch_id", { mode: "number" }).notNull(),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
@@ -426,48 +559,9 @@ export const branchSport = pgTable("branch_sport", {
 	}
 });
 
-export const programs = pgTable("programs", {
-	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "programs_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
-	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	academicId: bigint("academic_id", { mode: "number" }),
-	type: varchar({ length: 255 }),
-	numberOfSeats: integer("number_of_seats"),
-	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	branchId: bigint("branch_id", { mode: "number" }),
-	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	sportId: bigint("sport_id", { mode: "number" }),
-	gender: varchar({ length: 255 }).default(sql`NULL`),
-	name: varchar({ length: 255 }).default(sql`NULL`),
-	description: varchar({ length: 255 }).default(sql`NULL`),
-	startDateOfBirth: date("start_date_of_birth"),
-	endDateOfBirth: date("end_date_of_birth"),
-	createdAt: timestamp("created_at", { mode: 'string' }),
-	updatedAt: timestamp("updated_at", { mode: 'string' }),
-}, (table) => {
-	return {
-		programsAcademicIdForeign: foreignKey({
-			columns: [table.academicId],
-			foreignColumns: [academics.id],
-			name: "programs_academic_id_foreign"
-		}).onDelete("cascade"),
-		programsBranchIdForeign: foreignKey({
-			columns: [table.branchId],
-			foreignColumns: [branches.id],
-			name: "programs_branch_id_foreign"
-		}).onDelete("cascade"),
-		programsSportIdForeign: foreignKey({
-			columns: [table.sportId],
-			foreignColumns: [sports.id],
-			name: "programs_sport_id_foreign"
-		}),
-		programsTypeCheck: check("programs_type_check", sql`(type)::text = ANY ((ARRAY['TEAM'::character varying, 'PRIVATE'::character varying])::text[])`),
-	}
-});
-
 export const academicSport = pgTable("academic_sport", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "academic_sport_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "academic_sport_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	academicId: bigint("academic_id", { mode: "number" }).notNull(),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
@@ -489,36 +583,65 @@ export const academicSport = pgTable("academic_sport", {
 	}
 });
 
-export const academicAthletic = pgTable("academic_athletic", {
+export const media = pgTable("media", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "academic_athletic_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "media_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	referableType: varchar("referable_type", { length: 255 }).notNull(),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	academicId: bigint("academic_id", { mode: "number" }).notNull(),
-	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	userId: bigint("user_id", { mode: "number" }).notNull(),
-	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	profileId: bigint("profile_id", { mode: "number" }),
-	certificate: varchar({ length: 255 }).default(sql`NULL`),
+	referableId: bigint("referable_id", { mode: "number" }).notNull(),
+	url: varchar({ length: 255 }).notNull(),
+	type: varchar({ length: 255 }).default('0').notNull(),
 	createdAt: timestamp("created_at", { mode: 'string' }),
 	updatedAt: timestamp("updated_at", { mode: 'string' }),
 }, (table) => {
 	return {
-		academicAthleticAcademicIdForeign: foreignKey({
+		referableTypeReferableIdIdx: index().using("btree", table.referableType.asc().nullsLast().op("int8_ops"), table.referableId.asc().nullsLast().op("int8_ops")),
+	}
+});
+
+export const programs = pgTable("programs", {
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "programs_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	academicId: bigint("academic_id", { mode: "number" }),
+	type: varchar({ length: 255 }),
+	numberOfSeats: integer("number_of_seats"),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	branchId: bigint("branch_id", { mode: "number" }),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	sportId: bigint("sport_id", { mode: "number" }),
+	gender: varchar({ length: 255 }).default(sql`NULL`),
+	name: varchar({ length: 255 }).default(sql`NULL`),
+	description: varchar({ length: 255 }).default(sql`NULL`),
+	startDateOfBirth: date("start_date_of_birth"),
+	endDateOfBirth: date("end_date_of_birth"),
+	createdAt: timestamp("created_at", { mode: 'string' }),
+	updatedAt: timestamp("updated_at", { mode: 'string' }),
+	color: varchar({ length: 255 }).default(sql`NULL`),
+}, (table) => {
+	return {
+		programsAcademicIdForeign: foreignKey({
 			columns: [table.academicId],
 			foreignColumns: [academics.id],
-			name: "academic_athletic_academic_id_foreign"
+			name: "programs_academic_id_foreign"
+		}).onDelete("cascade"),
+		programsBranchIdForeign: foreignKey({
+			columns: [table.branchId],
+			foreignColumns: [branches.id],
+			name: "programs_branch_id_foreign"
+		}).onDelete("cascade"),
+		programsSportIdForeign: foreignKey({
+			columns: [table.sportId],
+			foreignColumns: [sports.id],
+			name: "programs_sport_id_foreign"
 		}),
-		academicAthleticUserIdForeign: foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "academic_athletic_user_id_foreign"
-		}),
+		programsTypeCheck: check("programs_type_check", sql`(type)::text = ANY ((ARRAY['TEAM'::character varying, 'PRIVATE'::character varying])::text[])`),
 	}
 });
 
 export const coaches = pgTable("coaches", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "coaches_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "coaches_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	name: varchar({ length: 255 }).notNull(),
 	title: varchar({ length: 255 }).default(sql`NULL`),
 	image: varchar({ length: 255 }).default(sql`NULL`),
@@ -540,9 +663,68 @@ export const coaches = pgTable("coaches", {
 	}
 });
 
+export const blockCoaches = pgTable("block_coaches", {
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "block_coaches_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	blockId: bigint("block_id", { mode: "number" }).notNull(),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	coachId: bigint("coach_id", { mode: "number" }).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }),
+	updatedAt: timestamp("updated_at", { mode: 'string' }),
+}, (table) => {
+	return {
+		idxBlockCoachesBlockId: index("idx_block_coaches_block_id").using("btree", table.blockId.asc().nullsLast().op("int8_ops")),
+		idxBlockCoachesCoachId: index("idx_block_coaches_coach_id").using("btree", table.coachId.asc().nullsLast().op("int8_ops")),
+		blockCoachesBlockIdFkey: foreignKey({
+			columns: [table.blockId],
+			foreignColumns: [blocks.id],
+			name: "block_coaches_block_id_fkey"
+		}).onDelete("cascade"),
+		blockCoachesCoachIdFkey: foreignKey({
+			columns: [table.coachId],
+			foreignColumns: [coaches.id],
+			name: "block_coaches_coach_id_fkey"
+		}).onDelete("cascade"),
+		blockCoachesBlockIdCoachIdKey: unique("block_coaches_block_id_coach_id_key").on(table.blockId, table.coachId),
+	}
+});
+
+export const academicAthletic = pgTable("academic_athletic", {
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "academic_athletic_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	academicId: bigint("academic_id", { mode: "number" }).notNull(),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	userId: bigint("user_id", { mode: "number" }).notNull(),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	profileId: bigint("profile_id", { mode: "number" }),
+	certificate: varchar({ length: 255 }).default(sql`NULL`),
+	createdAt: timestamp("created_at", { mode: 'string' }),
+	updatedAt: timestamp("updated_at", { mode: 'string' }),
+	type: athleticType().default('primary'),
+	firstGuardianName: varchar("first_guardian_name", { length: 255 }).default(sql`NULL`),
+	firstGuardianRelationship: varchar("first_guardian_relationship", { length: 255 }).default(sql`NULL`),
+	secondGuardianName: varchar("second_guardian_name", { length: 255 }).default(sql`NULL`),
+	secondGuardianRelationship: varchar("second_guardian_relationship", { length: 255 }).default(sql`NULL`),
+}, (table) => {
+	return {
+		academicAthleticAcademicIdForeign: foreignKey({
+			columns: [table.academicId],
+			foreignColumns: [academics.id],
+			name: "academic_athletic_academic_id_foreign"
+		}),
+		academicAthleticUserIdForeign: foreignKey({
+			columns: [table.userId],
+			foreignColumns: [users.id],
+			name: "academic_athletic_user_id_foreign"
+		}),
+	}
+});
+
 export const packages = pgTable("packages", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "packages_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "packages_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	name: varchar({ length: 255 }).default('Assessment Package').notNull(),
 	price: doublePrecision().notNull(),
 	startDate: date("start_date").notNull(),
@@ -554,6 +736,11 @@ export const packages = pgTable("packages", {
 	createdAt: timestamp("created_at", { mode: 'string' }),
 	updatedAt: timestamp("updated_at", { mode: 'string' }),
 	memo: text(),
+	entryFees: doublePrecision("entry_fees").default(0).notNull(),
+	entryFeesExplanation: text("entry_fees_explanation"),
+	entryFeesAppliedUntil: text("entry_fees_applied_until").array(),
+	entryFeesStartDate: date("entry_fees_start_date"),
+	entryFeesEndDate: date("entry_fees_end_date"),
 }, (table) => {
 	return {
 		packagesProgramIdForeign: foreignKey({
@@ -564,9 +751,25 @@ export const packages = pgTable("packages", {
 	}
 });
 
+export const notifications = pgTable("notifications", {
+	id: uuid().primaryKey().notNull(),
+	type: varchar({ length: 255 }).notNull(),
+	notifiableType: varchar("notifiable_type", { length: 255 }).notNull(),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	notifiableId: bigint("notifiable_id", { mode: "number" }).notNull(),
+	data: text().notNull(),
+	readAt: timestamp("read_at", { mode: 'string' }),
+	createdAt: timestamp("created_at", { mode: 'string' }),
+	updatedAt: timestamp("updated_at", { mode: 'string' }),
+}, (table) => {
+	return {
+		notifiableTypeNotifiableIdIdx: index().using("btree", table.notifiableType.asc().nullsLast().op("int8_ops"), table.notifiableId.asc().nullsLast().op("int8_ops")),
+	}
+});
+
 export const schedules = pgTable("schedules", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "schedules_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "schedules_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	day: varchar({ length: 255 }).notNull(),
 	from: time().notNull(),
 	to: time().notNull(),
@@ -587,7 +790,7 @@ export const schedules = pgTable("schedules", {
 
 export const bookings = pgTable("bookings", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "bookings_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "bookings_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	status: varchar({ length: 255 }).default('pending').notNull(),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	coachId: bigint("coach_id", { mode: "number" }),
@@ -624,7 +827,7 @@ export const bookings = pgTable("bookings", {
 
 export const bookingSessions = pgTable("booking_sessions", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "booking_sessions_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "booking_sessions_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	date: date().notNull(),
 	from: varchar({ length: 255 }).notNull(),
 	to: varchar({ length: 255 }).notNull(),
@@ -646,7 +849,7 @@ export const bookingSessions = pgTable("booking_sessions", {
 
 export const coachPackage = pgTable("coach_package", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "coach_package_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "coach_package_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	coachId: bigint("coach_id", { mode: "number" }).notNull(),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
@@ -670,7 +873,7 @@ export const coachPackage = pgTable("coach_package", {
 
 export const coachProgram = pgTable("coach_program", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "coach_program_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "coach_program_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	coachId: bigint("coach_id", { mode: "number" }).notNull(),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
@@ -694,7 +897,7 @@ export const coachProgram = pgTable("coach_program", {
 
 export const coachSpokenLanguage = pgTable("coach_spoken_language", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "coach_spoken_language_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "coach_spoken_language_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	spokenLanguageId: bigint("spoken_language_id", { mode: "number" }).notNull(),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
@@ -718,7 +921,7 @@ export const coachSpokenLanguage = pgTable("coach_spoken_language", {
 
 export const coachSport = pgTable("coach_sport", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "coach_sport_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "coach_sport_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	coachId: bigint("coach_id", { mode: "number" }).notNull(),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
@@ -742,7 +945,7 @@ export const coachSport = pgTable("coach_sport", {
 
 export const subscriptions = pgTable("subscriptions", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "subscriptions_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "subscriptions_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	userId: bigint("user_id", { mode: "number" }).notNull(),
 	type: varchar({ length: 255 }).notNull(),
@@ -768,7 +971,7 @@ export const subscriptions = pgTable("subscriptions", {
 
 export const subscriptionItems = pgTable("subscription_items", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "subscription_items_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "subscription_items_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	subscriptionId: bigint("subscription_id", { mode: "number" }).notNull(),
 	stripeId: varchar("stripe_id", { length: 255 }).notNull(),
@@ -791,7 +994,7 @@ export const subscriptionItems = pgTable("subscription_items", {
 
 export const wishlist = pgTable("wishlist", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "wishlist_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "wishlist_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	academicId: bigint("academic_id", { mode: "number" }).notNull(),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
@@ -816,7 +1019,7 @@ export const wishlist = pgTable("wishlist", {
 
 export const payments = pgTable("payments", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "payments_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "payments_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	resourceableType: varchar("resourceable_type", { length: 255 }).notNull(),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	resourceableId: bigint("resourceable_id", { mode: "number" }).notNull(),

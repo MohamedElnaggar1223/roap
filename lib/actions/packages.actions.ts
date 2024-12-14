@@ -16,11 +16,11 @@ interface Schedule {
 }
 
 export async function getProgramPackages(url: string | null, programId: number) {
-    if (!url) return
+    if (!url) return { data: null, error: null }
     const session = await auth()
 
     if (!session?.user || session.user.role !== 'academic') {
-        return { error: 'Unauthorized' }
+        return { error: 'Unauthorized', data: null }
     }
 
     const packagesWithSchedules = await db
@@ -34,6 +34,8 @@ export async function getProgramPackages(url: string | null, programId: number) 
             entryFees: packages.entryFees,
             entryFeesExplanation: packages.entryFeesExplanation,
             entryFeesAppliedUntil: packages.entryFeesAppliedUntil,
+            entryFeesStartDate: packages.entryFeesStartDate,
+            entryFeesEndDate: packages.entryFeesEndDate,
             schedules: sql<Schedule[]>`json_agg(
                 json_build_object(
                     'id', ${schedules.id},
@@ -62,7 +64,7 @@ export async function getProgramPackages(url: string | null, programId: number) 
             }))
         )
 
-    return { data: packagesWithSchedules }
+    return { data: packagesWithSchedules, error: null }
 }
 
 export async function createPackage(data: {
@@ -74,7 +76,9 @@ export async function createPackage(data: {
     memo?: string | null
     entryFees: number
     entryFeesExplanation?: string
-    entryFeesAppliedUntil?: string[];
+    entryFeesAppliedUntil?: string[]
+    entryFeesStartDate?: Date
+    entryFeesEndDate?: Date
     schedules: {
         day: string
         from: string
@@ -106,6 +110,10 @@ export async function createPackage(data: {
                     entryFees: data.entryFees,
                     entryFeesExplanation: data.entryFeesExplanation,
                     entryFeesAppliedUntil: data.entryFeesAppliedUntil || null,
+                    entryFeesStartDate: data.entryFeesStartDate ?
+                        formatDateForDB(data.entryFeesStartDate) : null,
+                    entryFeesEndDate: data.entryFeesEndDate ?
+                        formatDateForDB(data.entryFeesEndDate) : null,
                     createdAt: sql`now()`,
                     updatedAt: sql`now()`,
                     sessionPerWeek: data.schedules.length
@@ -146,7 +154,9 @@ export async function updatePackage(id: number, data: {
     memo?: string | null
     entryFees: number
     entryFeesExplanation?: string
-    entryFeesAppliedUntil?: string[];
+    entryFeesAppliedUntil?: string[]
+    entryFeesStartDate?: Date
+    entryFeesEndDate?: Date
     schedules: {
         id?: number
         day: string
@@ -161,6 +171,8 @@ export async function updatePackage(id: number, data: {
         return { error: 'Unauthorized' }
     }
 
+    console.log(data)
+
     try {
         await db.transaction(async (tx) => {
             await tx
@@ -174,8 +186,12 @@ export async function updatePackage(id: number, data: {
                     entryFees: data.entryFees,
                     entryFeesExplanation: data.entryFeesExplanation,
                     entryFeesAppliedUntil: data.entryFeesAppliedUntil || null,
+                    entryFeesStartDate: data.entryFeesStartDate ?
+                        formatDateForDB(data.entryFeesStartDate) : null,
+                    entryFeesEndDate: data.entryFeesEndDate ?
+                        formatDateForDB(data.entryFeesEndDate) : null,
                     updatedAt: sql`now()`,
-                    sessionPerWeek: data.schedules.length ?? 0
+                    sessionPerWeek: data.schedules.length
                 })
                 .where(eq(packages.id, id))
 

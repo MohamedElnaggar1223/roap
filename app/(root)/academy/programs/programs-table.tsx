@@ -53,15 +53,17 @@ interface Program {
     endDateOfBirth: string | null;
     branchName: string;
     sportName: string;
+    color: string | null;
 }
 
 interface ProgramsDataTableProps {
     data: Program[]
     branches: Branch[]
     sports: Sport[]
+    academySports?: { id: number }[]
 }
 
-export function ProgramsDataTable({ data, branches, sports }: ProgramsDataTableProps) {
+export function ProgramsDataTable({ data, branches, sports, academySports }: ProgramsDataTableProps) {
     const router = useRouter()
 
     const [selectedSport, setSelectedSport] = useState<string | null>(null)
@@ -86,12 +88,36 @@ export function ProgramsDataTable({ data, branches, sports }: ProgramsDataTableP
         )
     }
 
-    const calculateAge = (birthDate: string) => {
-        const today = new Date()
-        const birth = new Date(birthDate)
-        let age = today.getFullYear() - birth.getFullYear()
-        return age
-    }
+    const calculateAge = (birthDate: string): string => {
+        const today = new Date();
+        const birth = new Date(birthDate);
+
+        let years = today.getFullYear() - birth.getFullYear();
+        let months = today.getMonth() - birth.getMonth();
+        let days = today.getDate() - birth.getDate();
+
+        // Adjust years and months if the current date is before the birth date in the current year
+        if (days < 0) {
+            months--;
+            days += new Date(today.getFullYear(), today.getMonth(), 0).getDate();
+        }
+
+        if (months < 0) {
+            years--;
+            months += 12;
+        }
+
+        // Calculate total months with fractional part
+        const totalMonths = years * 12 + months + (days / 30.44); // Average days in a month.
+
+        if (totalMonths < 12) {
+            // If less than a year, return in months (with one decimal place)
+            return `${Math.round(totalMonths * 10) / 10} Months`;
+        } else {
+            // If a year or more, calculate years with one decimal place
+            return `${Math.round((totalMonths / 12) * 10) / 10} Years`;
+        }
+    };
 
     const debouncedSearch = useDebouncedCallback((value: string) => {
         const lowercasedValue = value.toLowerCase()
@@ -127,6 +153,7 @@ export function ProgramsDataTable({ data, branches, sports }: ProgramsDataTableP
                     <AddNewProgram
                         branches={branches}
                         sports={sports}
+                        academySports={academySports}
                     />
                     <div className="flex items-center gap-2">
                         <span className="text-sm">Filters:</span>
@@ -328,6 +355,7 @@ export function ProgramsDataTable({ data, branches, sports }: ProgramsDataTableP
                                         programEdited={program}
                                         branches={branches}
                                         sports={sports}
+                                        academySports={academySports}
                                     />
                                 </div>
                             </Fragment>

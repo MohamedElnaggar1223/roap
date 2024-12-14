@@ -144,14 +144,15 @@ export default function OnboardingCoachForm({ academyDetails, sports, languages 
             name: !!academyDetails.name,
             description: !!academyDetails.description,
             sports: !!academyDetails.sports && academyDetails.sports.length > 0,
-            logo: !!academyDetails.logo
+            logo: !!academyDetails.logo,
+            hasGallery: !!academyDetails.gallery && academyDetails.gallery.length > 0,
+            hasPolicy: !!academyDetails.policy
         })
-        updateRequirements('gallery', { hasGallery: (academyDetails.gallery ?? []).length > 0 })
-        updateRequirements('policy', { hasPolicy: !!academyDetails.policy })
+        // updateRequirements('gallery', { hasGallery: (academyDetails.gallery ?? []).length > 0 })
+        // updateRequirements('policy', { hasPolicy: !!academyDetails.policy })
         updateRequirements('location', {
             name: (academyDetails.locations ?? [])?.length > 0 && !!academyDetails.locations![0].name,
             branchId: (academyDetails.locations ?? [])?.length > 0 && !!academyDetails.locations![0].id,
-            nameInGoogleMap: (academyDetails.locations ?? [])?.length > 0 && !!academyDetails.locations![0].nameInGoogleMap,
             url: (academyDetails.locations ?? [])?.length > 0 && !!academyDetails.locations![0].url,
             sports: (academyDetails.locations ?? [])?.length > 0 && (academyDetails.locations![0].sports.length > 0),
             facilities: (academyDetails.locations ?? [])?.length > 0 && (academyDetails.locations![0].facilities.length > 0),
@@ -413,7 +414,7 @@ export default function OnboardingCoachForm({ academyDetails, sports, languages 
                     control={form.control}
                     name="privateSessionPercentage"
                     render={({ field }) => (
-                        <FormItem>
+                        <FormItem className='hidden absolute'>
                             <FormLabel>Private Session Percentage</FormLabel>
                             <FormControl>
                                 <div className="flex items-center">

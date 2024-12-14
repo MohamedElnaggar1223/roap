@@ -2,8 +2,10 @@ import { getAcademyDetails, getAllSports } from "@/lib/actions/academics.actions
 import { getImageUrl } from "@/lib/supabase-images"
 import Image from "next/image"
 import AcademyDetails from "./academy-details"
+import { Suspense } from "react"
+import { AcademyFormLoading } from "./academy-details-loader"
 
-export default async function AcademyDetailsPage() {
+async function AcademyDetailsPage() {
     const { data: academyDetails, error } = await getAcademyDetails()
     const sports = await getAllSports('sports')
 
@@ -28,5 +30,13 @@ export default async function AcademyDetailsPage() {
         <section className='flex flex-col gap-4 bg-[#F1F2E9] rounded-t-[20px] pt-8 px-5 mx-4 flex-1'>
             <AcademyDetails academyDetails={finalAcademyDetails!} sports={sports!} />
         </section>
+    )
+}
+
+export default function AcademyDetailsPageLoader() {
+    return (
+        <Suspense fallback={<AcademyFormLoading />}>
+            <AcademyDetailsPage />
+        </Suspense>
     )
 }
