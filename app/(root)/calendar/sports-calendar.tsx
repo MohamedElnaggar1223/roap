@@ -6,50 +6,50 @@ import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, M
 
 import { Button } from "@/components/ui/button"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn, formatTimeRange } from "@/lib/utils"
 import { getCalendarSlots } from "@/lib/actions/academics.actions"
 import Image from "next/image"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
 } from "@/components/ui/dialog"
 import AddBlock from "./add-block"
 import BookingDialog from "./add-booking"
 
 type Event = {
-  id: number | null
-  date: string | null
-  startTime: string | null
-  endTime: string | null
-  status: string | null
-  programName: string | null
-  studentName: string | null
-  studentBirthday: string | null
-  branchName: string | null
-  sportName: string | null
-  packageName: string | null
-  coachName: string | null
-  packageId: number | null
-  coachId: number | null
-  color: string | null
+	id: number | null
+	date: string | null
+	startTime: string | null
+	endTime: string | null
+	status: string | null
+	programName: string | null
+	studentName: string | null
+	studentBirthday: string | null
+	branchName: string | null
+	sportName: string | null
+	packageName: string | null
+	coachName: string | null
+	packageId: number | null
+	coachId: number | null
+	color: string | null
 }
 
 type GroupedEvent = {
-  time: string
-  coachName: string
-  packageId: number
-  packageName: string
-  count: number
-  events: Event[]
-  programName: string
-  color: string
+	time: string
+	coachName: string
+	packageId: number
+	packageName: string
+	count: number
+	events: Event[]
+	programName: string
+	color: string
 }
 
 type CalendarView = 'day' | 'week' | 'month' | 'list'
@@ -58,737 +58,734 @@ const WEEK_DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
 const TIME_SLOTS = Array.from({ length: 16 }, (_, i) => i + 8)
 
 const groupEvents = (events: Event[]): GroupedEvent[] => {
-  const groupedMap = events.reduce((acc, event) => {
-    if (!event.startTime || !event.endTime) return acc
+	const groupedMap = events.reduce((acc, event) => {
+		if (!event.startTime || !event.endTime) return acc
 
-    // Different key generation for blocks vs regular events
-    const key = event.programName === 'block'
-      ? `block-${event.startTime}-${event.endTime}-${event.id}`
-      : `${event.startTime}-${event.endTime}-${event.coachName}-${event.packageId}`
+		// Different key generation for blocks vs regular events
+		const key = event.programName === 'block'
+			? `block-${event.startTime}-${event.endTime}-${event.id}`
+			: `${event.startTime}-${event.endTime}-${event.coachName}-${event.packageId}`
 
-    // Skip regular events without required fields
-    if (event.programName !== 'block' && (!event.coachName || !event.packageId)) return acc
+		// Skip regular events without required fields
+		if (event.programName !== 'block' && (!event.coachName || !event.packageId)) return acc
 
-    if (!acc.has(key)) {
-      acc.set(key, {
-        time: `${event.startTime.split(':').length < 3 ? event.startTime + ':00' : event.startTime}-${event.endTime.split(':').length < 3 ? event.endTime + ':00' : event.endTime}`,
-        coachName: event.coachName || '',
-        packageId: event.packageId || 0,
-        packageName: event.programName === 'block' ? 'Blocked Time' : (event.packageName || ''),
-        count: 0,
-        events: [],
-        programName: event.programName || '',
-        color: event.programName !== 'block' ? event.color ?? '' : '#E6E7DE'
-      })
-    }
+		if (!acc.has(key)) {
+			acc.set(key, {
+				time: `${event.startTime.split(':').length < 3 ? event.startTime + ':00' : event.startTime}-${event.endTime.split(':').length < 3 ? event.endTime + ':00' : event.endTime}`,
+				coachName: event.coachName || '',
+				packageId: event.packageId || 0,
+				packageName: event.programName === 'block' ? 'Blocked Time' : (event.packageName || ''),
+				count: 0,
+				events: [],
+				programName: event.programName || '',
+				color: event.programName !== 'block' ? event.color ?? '' : '#E6E7DE'
+			})
+		}
 
-    const group = acc.get(key)!
-    group.count++
-    group.events.push(event)
+		const group = acc.get(key)!
+		group.count++
+		group.events.push(event)
 
-    return acc
-  }, new Map<string, GroupedEvent>())
+		return acc
+	}, new Map<string, GroupedEvent>())
 
-  return Array.from(groupedMap.values())
+	return Array.from(groupedMap.values())
 }
 const EventDetailsDialog = ({
-  isOpen,
-  onClose,
-  groupedEvent
+	isOpen,
+	onClose,
+	groupedEvent
 }: {
-  isOpen: boolean
-  onClose: () => void
-  groupedEvent: GroupedEvent | null
+	isOpen: boolean
+	onClose: () => void
+	groupedEvent: GroupedEvent | null
 }) => {
-  if (!groupedEvent) return null
+	if (!groupedEvent) return null
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#F1F2E9] border border-[#868685]">
-        <DialogHeader>
-          <DialogTitle className="text-[#1F441F]">
-            {groupedEvent.packageName} - {groupedEvent.coachName}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="text-sm text-[#454745]">
-            Time: {formatTimeRange(groupedEvent.time.split('-')[0], groupedEvent.time.split('-')[1])}
-          </div>
-          <div className="space-y-2">
-            {groupedEvent.events.map((event) => (
-              <div
-                key={event.id}
-                className="bg-white p-3 rounded-lg border border-[#CDD1C7]"
-              >
-                <div className="font-medium text-[#1F441F]">{event.studentName}</div>
-                {/* <div className="text-sm text-[#454745]">
+	return (
+		<Dialog open={isOpen} onOpenChange={onClose}>
+			<DialogContent className="bg-[#F1F2E9] border border-[#868685]">
+				<DialogHeader>
+					<DialogTitle className="text-[#1F441F]">
+						{groupedEvent.packageName} - {groupedEvent.coachName}
+					</DialogTitle>
+				</DialogHeader>
+				<div className="space-y-4">
+					<div className="text-sm text-[#454745]">
+						Time: {formatTimeRange(groupedEvent.time.split('-')[0], groupedEvent.time.split('-')[1])}
+					</div>
+					<div className="space-y-2">
+						{groupedEvent.events.map((event) => (
+							<div
+								key={event.id}
+								className="bg-white p-3 rounded-lg border border-[#CDD1C7]"
+							>
+								<div className="font-medium text-[#1F441F]">{event.studentName}</div>
+								{/* <div className="text-sm text-[#454745]">
                   Birthday: {new Date(event.studentBirthday!).toLocaleDateString()}
                 </div> */}
-                <div className="text-sm text-[#454745]">
-                  Package: {event.packageName}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
+								<div className="text-sm text-[#454745]">
+									Package: {event.packageName}
+								</div>
+							</div>
+						))}
+					</div>
+				</div>
+			</DialogContent>
+		</Dialog>
+	)
 }
 
 export default function Calendar() {
 
-  const today = new Date()
-  const [events, setEvents] = useState<Event[]>([])
-  const [currentDate, setCurrentDate] = useState(new Date())
-  const [isPending, startTransition] = useTransition()
-  const [filteredEvents, setFilteredEvents] = useState<Event[]>([])
-  const [calendarView, setCalendarView] = useState<CalendarView>('week')
-  const [selectedLocation, setSelectedLocation] = useState<string | null>(null)
-  const [selectedSport, setSelectedSport] = useState<string | null>(null)
-  const [selectedPackage, setSelectedPackage] = useState<string | null>(null)
-  const [selectedCoach, setSelectedCoach] = useState<string | null>(null)
-  const [selectedGroupedEvent, setSelectedGroupedEvent] = useState<GroupedEvent | null>(null)
+	const today = new Date()
+	const [events, setEvents] = useState<Event[]>([])
+	const [currentDate, setCurrentDate] = useState(new Date())
+	const [isPending, startTransition] = useTransition()
+	const [filteredEvents, setFilteredEvents] = useState<Event[]>([])
+	const [calendarView, setCalendarView] = useState<CalendarView>('week')
+	const [selectedLocation, setSelectedLocation] = useState<string | null>(null)
+	const [selectedSport, setSelectedSport] = useState<string | null>(null)
+	const [selectedPackage, setSelectedPackage] = useState<string | null>(null)
+	const [selectedCoach, setSelectedCoach] = useState<string | null>(null)
+	const [selectedGroupedEvent, setSelectedGroupedEvent] = useState<GroupedEvent | null>(null)
+	const [refetch, setRefetch] = useState(false)
 
-  const locations = Array.from(new Set(events.map(e => e.branchName).filter(Boolean)))
-  const sports = Array.from(new Set(events.map(e => e.sportName).filter(Boolean)))
-  const packages = Array.from(new Set(events.map(e => e.packageName).filter(Boolean)))
-  const coaches = Array.from(new Set(events.map(e => e.coachName).filter(Boolean)))
+	const locations = Array.from(new Set(events.map(e => e.branchName).filter(Boolean)))
+	const sports = Array.from(new Set(events.map(e => e.sportName).filter(Boolean)))
+	const packages = Array.from(new Set(events.map(e => e.packageName).filter(Boolean)))
+	const coaches = Array.from(new Set(events.map(e => e.coachName).filter(Boolean)))
 
+	const dateRange = useMemo(() => {
+		switch (calendarView) {
+			case 'day':
+				return {
+					start: currentDate,
+					end: currentDate
+				}
+			case 'list':
+				return {
+					start: startOfWeek(currentDate, { weekStartsOn: 1 }),
+					end: endOfWeek(currentDate, { weekStartsOn: 1 })
+				}
+			case 'week':
+				return {
+					start: startOfWeek(currentDate, { weekStartsOn: 1 }),
+					end: endOfWeek(currentDate, { weekStartsOn: 1 })
+				}
+			case 'month':
+				return {
+					start: startOfMonth(currentDate),
+					end: endOfMonth(currentDate)
+				}
+		}
+	}, [currentDate, calendarView])
 
+	const navigate = (direction: 'prev' | 'next') => {
+		switch (calendarView) {
+			case 'day':
+				setCurrentDate(prev => addDays(prev, direction === 'next' ? 1 : -1))
+				break
+			case 'week':
+				setCurrentDate(prev => addDays(prev, direction === 'next' ? 7 : -7))
+				break
+			case 'month':
+				setCurrentDate(prev => addMonths(prev, direction === 'next' ? 1 : -1))
+				break
+		}
+	}
 
-  const dateRange = useMemo(() => {
-    switch (calendarView) {
-      case 'day':
-        return {
-          start: currentDate,
-          end: currentDate
-        }
-      case 'list':
-        return {
-          start: startOfWeek(currentDate, { weekStartsOn: 1 }),
-          end: endOfWeek(currentDate, { weekStartsOn: 1 })
-        }
-      case 'week':
-        return {
-          start: startOfWeek(currentDate, { weekStartsOn: 1 }),
-          end: endOfWeek(currentDate, { weekStartsOn: 1 })
-        }
-      case 'month':
-        return {
-          start: startOfMonth(currentDate),
-          end: endOfMonth(currentDate)
-        }
-    }
-  }, [currentDate, calendarView])
+	const fetchEvents = useCallback(async () => {
+		console.log("fetching events")
+		startTransition(async () => {
+			const result = await getCalendarSlots(dateRange.start, dateRange.end)
+			if (result?.error) return
+			console.log(result.data)
+			setEvents(result.data)
+		})
+	}, [dateRange, refetch])
 
-  const navigate = (direction: 'prev' | 'next') => {
-    switch (calendarView) {
-      case 'day':
-        setCurrentDate(prev => addDays(prev, direction === 'next' ? 1 : -1))
-        break
-      case 'week':
-        setCurrentDate(prev => addDays(prev, direction === 'next' ? 7 : -7))
-        break
-      case 'month':
-        setCurrentDate(prev => addMonths(prev, direction === 'next' ? 1 : -1))
-        break
-    }
-  }
+	useEffect(() => {
+		fetchEvents()
+	}, [dateRange, refetch])
 
-  const fetchEvents = useCallback(async () => {
-    console.log("fetching events")
-    startTransition(async () => {
-      const result = await getCalendarSlots(dateRange.start, dateRange.end)
-      if (result?.error) return
-      console.log(result.data)
-      setEvents(result.data)
-    })
-  }, [dateRange])
+	useEffect(() => {
+		let filtered = [...events]
 
-  console.log(dateRange)
+		if (selectedLocation) {
+			filtered = filtered.filter(event => event.branchName === selectedLocation)
+		}
+		if (selectedSport) {
+			filtered = filtered.filter(event => event.sportName === selectedSport)
+		}
+		if (selectedPackage) {
+			filtered = filtered.filter(event => event.packageName === selectedPackage)
+		}
+		if (selectedCoach) {
+			filtered = filtered.filter(event => event.coachName === selectedCoach)
+		}
 
-  useEffect(() => {
-    fetchEvents()
-  }, [dateRange])
+		setFilteredEvents(filtered)
+	}, [events, selectedLocation, selectedSport, selectedPackage, selectedCoach])
 
-  useEffect(() => {
-    let filtered = [...events]
+	const getEventStyle = (event: Event) => {
+		switch (event.programName) {
+			case "block":
+				return "bg-[#1C1C1C0D] border-none"
+			default:
+				return ""
+		}
+	}
 
-    if (selectedLocation) {
-      filtered = filtered.filter(event => event.branchName === selectedLocation)
-    }
-    if (selectedSport) {
-      filtered = filtered.filter(event => event.sportName === selectedSport)
-    }
-    if (selectedPackage) {
-      filtered = filtered.filter(event => event.packageName === selectedPackage)
-    }
-    if (selectedCoach) {
-      filtered = filtered.filter(event => event.coachName === selectedCoach)
-    }
+	const getEventsForSlot = (date: Date, hour: number) => {
+		const slotEvents = filteredEvents.filter((event) => {
+			if (!event.date || !event.startTime) return false
 
-    setFilteredEvents(filtered)
-  }, [events, selectedLocation, selectedSport, selectedPackage, selectedCoach])
+			const eventDate = new Date(event.date)
+			const [eventHour] = event.startTime.split(':').map(Number)
 
-  const getEventStyle = (event: Event) => {
-    switch (event.programName) {
-      case "block":
-        return "bg-[#1C1C1C0D] border-none"
-      default:
-        return ""
-    }
-  }
+			return isSameDay(eventDate, date) && eventHour === hour
+		})
 
-  const getEventsForSlot = (date: Date, hour: number) => {
-    const slotEvents = filteredEvents.filter((event) => {
-      if (!event.date || !event.startTime) return false
+		return groupEvents(slotEvents)
+	}
 
-      const eventDate = new Date(event.date)
-      const [eventHour] = event.startTime.split(':').map(Number)
+	const getMaxEventsForTimeSlot = (hour: number) => {
+		return Math.max(...weekDates.map(date => getEventsForSlot(date, hour).length))
+	}
 
-      return isSameDay(eventDate, date) && eventHour === hour
-    })
+	const weekDates = useMemo(() => {
+		switch (calendarView) {
+			case 'day':
+				return [currentDate]
+			case 'list':
+				return WEEK_DAYS.map((_, i) => addDays(dateRange.start, i))
+			case 'week':
+				return WEEK_DAYS.map((_, i) => addDays(dateRange.start, i))
+			case 'month':
+				return WEEK_DAYS.map((_, i) => addDays(dateRange.start, i))
+		}
+	}, [calendarView, currentDate, dateRange.start])
 
-    return groupEvents(slotEvents)
-  }
+	console.log('Events', filteredEvents)
 
-  const getMaxEventsForTimeSlot = (hour: number) => {
-    return Math.max(...weekDates.map(date => getEventsForSlot(date, hour).length))
-  }
+	return (
+		<>
+			<div className="flex-wrap items-center gap-2 mb-2 sm:mb-0 flex">
+				<BookingDialog setRefetch={setRefetch} />
+				<AddBlock setRefetch={setRefetch} />
+			</div>
+			<div className="w-full max-w-7xl mx-auto p-2 sm:p-4 bg-[#E0E4D9]">
+				{/* Header */}
+				<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 bg-[#E0E4D9] p-2 sm:p-4 rounded-lg">
+					<div className="flex flex-wrap items-center gap-2 mb-2 sm:mb-0">
+						<span className="text-sm font-medium">Filters:</span>
 
-  const weekDates = useMemo(() => {
-    switch (calendarView) {
-      case 'day':
-        return [currentDate]
-      case 'list':
-        return WEEK_DAYS.map((_, i) => addDays(dateRange.start, i))
-      case 'week':
-        return WEEK_DAYS.map((_, i) => addDays(dateRange.start, i))
-      case 'month':
-        return WEEK_DAYS.map((_, i) => addDays(dateRange.start, i))
-    }
-  }, [calendarView, currentDate, dateRange.start])
+						{/* Location Filter */}
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
+									<MapPin className="h-4 w-4" />
+									{selectedLocation || 'Locations'}
+									<ChevronDown className="w-4 h-4" />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent>
+								<DropdownMenuItem onClick={() => setSelectedLocation(null)}>
+									All Locations
+								</DropdownMenuItem>
+								{locations.map(location => (
+									<DropdownMenuItem
+										key={location}
+										onClick={() => setSelectedLocation(location)}
+									>
+										{location}
+									</DropdownMenuItem>
+								))}
+							</DropdownMenuContent>
+						</DropdownMenu>
 
-  console.log('Events', filteredEvents)
+						{/* Sports Filter */}
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
+									<Image
+										src='/images/sports.svg'
+										width={16}
+										height={16}
+										alt='Sports'
+									/>
+									{selectedSport || 'Sports'}
+									<ChevronDown className="w-4 h-4" />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent>
+								<DropdownMenuItem onClick={() => setSelectedSport(null)}>
+									All Sports
+								</DropdownMenuItem>
+								{sports.map(sport => (
+									<DropdownMenuItem
+										key={sport}
+										onClick={() => setSelectedSport(sport)}
+									>
+										{sport}
+									</DropdownMenuItem>
+								))}
+							</DropdownMenuContent>
+						</DropdownMenu>
 
-  return (
-    <>
-      <div className="flex-wrap items-center gap-2 mb-2 sm:mb-0 flex">
-        <BookingDialog />
-        <AddBlock />
-      </div>
-      <div className="w-full max-w-7xl mx-auto p-2 sm:p-4 bg-[#E0E4D9]">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 bg-[#E0E4D9] p-2 sm:p-4 rounded-lg">
-          <div className="flex flex-wrap items-center gap-2 mb-2 sm:mb-0">
-            <span className="text-sm font-medium">Filters:</span>
+						{/* Packages Filter */}
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
+									<Image
+										src='/images/sports.svg'
+										width={16}
+										height={16}
+										alt='Sports'
+									/>
+									{selectedPackage || 'Packages'}
+									<ChevronDown className="w-4 h-4" />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent>
+								<DropdownMenuItem onClick={() => setSelectedPackage(null)}>
+									All Packages
+								</DropdownMenuItem>
+								{packages.map(pkg => (
+									<DropdownMenuItem
+										key={pkg}
+										onClick={() => setSelectedPackage(pkg)}
+									>
+										{pkg}
+									</DropdownMenuItem>
+								))}
+							</DropdownMenuContent>
+						</DropdownMenu>
 
-            {/* Location Filter */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
-                  <MapPin className="h-4 w-4" />
-                  {selectedLocation || 'Locations'}
-                  <ChevronDown className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => setSelectedLocation(null)}>
-                  All Locations
-                </DropdownMenuItem>
-                {locations.map(location => (
-                  <DropdownMenuItem
-                    key={location}
-                    onClick={() => setSelectedLocation(location)}
-                  >
-                    {location}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+						{/* Coaches Filter */}
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
+									<Image
+										src='/images/sports.svg'
+										width={16}
+										height={16}
+										alt='Sports'
+									/>
+									{selectedCoach || 'Coaches'}
+									<ChevronDown className="w-4 h-4" />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent>
+								<DropdownMenuItem onClick={() => setSelectedCoach(null)}>
+									All Coaches
+								</DropdownMenuItem>
+								{coaches.map(coach => (
+									<DropdownMenuItem
+										key={coach}
+										onClick={() => setSelectedCoach(coach)}
+									>
+										{coach}
+									</DropdownMenuItem>
+								))}
+							</DropdownMenuContent>
+						</DropdownMenu>
+					</div>
 
-            {/* Sports Filter */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
-                  <Image
-                    src='/images/sports.svg'
-                    width={16}
-                    height={16}
-                    alt='Sports'
-                  />
-                  {selectedSport || 'Sports'}
-                  <ChevronDown className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => setSelectedSport(null)}>
-                  All Sports
-                </DropdownMenuItem>
-                {sports.map(sport => (
-                  <DropdownMenuItem
-                    key={sport}
-                    onClick={() => setSelectedSport(sport)}
-                  >
-                    {sport}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+					<div className="flex items-center gap-2">
+						<Button
+							variant="outline"
+							size="icon"
+							className="h-7 w-7 sm:h-8 sm:w-8 bg-[#F1F2E9] border border-[#868685] rounded-xl"
+							onClick={() => navigate('prev')}
+						>
+							<ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
+						</Button>
 
-            {/* Packages Filter */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
-                  <Image
-                    src='/images/sports.svg'
-                    width={16}
-                    height={16}
-                    alt='Sports'
-                  />
-                  {selectedPackage || 'Packages'}
-                  <ChevronDown className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => setSelectedPackage(null)}>
-                  All Packages
-                </DropdownMenuItem>
-                {packages.map(pkg => (
-                  <DropdownMenuItem
-                    key={pkg}
-                    onClick={() => setSelectedPackage(pkg)}
-                  >
-                    {pkg}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+						<div className="flex gap-0">
+							<Button
+								variant="outline"
+								className="text-xs sm:text-sm h-7 sm:h-9 bg-[#F1F2E9] border border-[#868685] rounded-xl rounded-r-none"
+								onClick={() => setCurrentDate(new Date())}
+							>
+								Today
+							</Button>
 
-            {/* Coaches Filter */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
-                  <Image
-                    src='/images/sports.svg'
-                    width={16}
-                    height={16}
-                    alt='Sports'
-                  />
-                  {selectedCoach || 'Coaches'}
-                  <ChevronDown className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => setSelectedCoach(null)}>
-                  All Coaches
-                </DropdownMenuItem>
-                {coaches.map(coach => (
-                  <DropdownMenuItem
-                    key={coach}
-                    onClick={() => setSelectedCoach(coach)}
-                  >
-                    {coach}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+							<Button
+								variant="outline"
+								className="text-xs sm:text-sm h-7 sm:h-9 bg-[#F1F2E9] border border-[#868685] rounded-xl rounded-l-none border-l-0"
+							>
+								{format(currentDate, 'MMMM yyyy')}
+							</Button>
+						</div>
 
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-7 w-7 sm:h-8 sm:w-8 bg-[#F1F2E9] border border-[#868685] rounded-xl"
-              onClick={() => navigate('prev')}
-            >
-              <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
-            </Button>
+						<Button
+							variant="outline"
+							size="icon"
+							className="h-7 w-7 sm:h-8 sm:w-8 bg-[#F1F2E9] border border-[#868685] rounded-xl"
+							onClick={() => navigate('next')}
+						>
+							<ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+						</Button>
 
-            <div className="flex gap-0">
-              <Button
-                variant="outline"
-                className="text-xs sm:text-sm h-7 sm:h-9 bg-[#F1F2E9] border border-[#868685] rounded-xl rounded-r-none"
-                onClick={() => setCurrentDate(new Date())}
-              >
-                Today
-              </Button>
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
+									<CalendarDays className="w-4 h-4" />
+									{calendarView.charAt(0).toUpperCase() + calendarView.slice(1)}
+									<ChevronDown className="w-4 h-4" />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent>
+								<DropdownMenuItem onClick={() => setCalendarView('day')}>Day</DropdownMenuItem>
+								<DropdownMenuItem onClick={() => setCalendarView('week')}>Week</DropdownMenuItem>
+								<DropdownMenuItem onClick={() => setCalendarView('month')}>Month</DropdownMenuItem>
+								<DropdownMenuItem onClick={() => setCalendarView('list')}>List</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					</div>
 
-              <Button
-                variant="outline"
-                className="text-xs sm:text-sm h-7 sm:h-9 bg-[#F1F2E9] border border-[#868685] rounded-xl rounded-l-none border-l-0"
-              >
-                {format(currentDate, 'MMMM yyyy')}
-              </Button>
-            </div>
+				</div>
 
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-7 w-7 sm:h-8 sm:w-8 bg-[#F1F2E9] border border-[#868685] rounded-xl"
-              onClick={() => navigate('next')}
-            >
-              <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
-            </Button>
+				{calendarView === 'day' ? (
+					<DayView
+						events={filteredEvents}
+						date={currentDate}
+						setSelectedGroupedEvent={setSelectedGroupedEvent}
+					/>
+				) : calendarView === 'month' ? (
+					<MonthView
+						events={filteredEvents}
+						currentDate={currentDate}
+						setSelectedGroupedEvent={setSelectedGroupedEvent}
+					/>
+				) : calendarView === 'list' ? (
+					<ListView
+						events={filteredEvents}
+						currentDate={currentDate}
+						setSelectedGroupedEvent={setSelectedGroupedEvent}
+					/>
+				) : (
+					<div className="bg-white rounded-lg overflow-hidden">
+						{/* Days header */}
+						<div className="grid grid-cols-1 sm:grid-cols-[repeat(15,minmax(0,1fr))] border-[#CDD1C7] border-b bg-[#E0E4D9]">
+							<div className="hidden sm:block p-2 border-r border-[#CDD1C7]" />
+							{weekDates.map((date, i) => (
+								<div
+									key={i}
+									className={cn(
+										"p-2 text-center border-[#CDD1C7] border-r last:border-r-0 rounded-t-2xl bg-[#F1F2E9] col-span-2",
+										isSameDay(date, today) && "bg-[#FEFFF6]"
+									)}
+								>
+									<div className="font-medium text-xs text-[#6A6C6A]">{WEEK_DAYS[i]}</div>
+									<div className="text-lg sm:text-2xl">{format(date, "d")}</div>
+								</div>
+							))}
+						</div>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
-                  <CalendarDays className="w-4 h-4" />
-                  {calendarView.charAt(0).toUpperCase() + calendarView.slice(1)}
-                  <ChevronDown className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => setCalendarView('day')}>Day</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setCalendarView('week')}>Week</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setCalendarView('month')}>Month</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setCalendarView('list')}>List</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+						{/* Time slots */}
+						<div className="grid grid-cols-1 sm:grid-cols-[repeat(15,minmax(0,1fr))] bg-[#F1F2E9]">
+							{/* Time labels */}
+							<div className="hidden sm:block border-r border-[#CDD1C7] col-span-1 bg-[#E0E4D9]">
+								{TIME_SLOTS.map((hour) => {
+									const maxEvents = getMaxEventsForTimeSlot(hour)
+									return (
+										<div
+											key={hour}
+											className={"p-2 bg-[#E0E4D9]"}
+											style={{ height: `${Math.max(5, maxEvents * 6)}rem` }}
+										>
+											<span className="text-xs text-gray-500">{hour % 12 || 12} {hour >= 12 ? 'PM' : 'AM'}</span>
+										</div>
+									)
+								})}
+							</div>
 
-        </div>
+							{/* Days columns */}
+							{weekDates.map((date, dayIndex) => (
+								<div key={dayIndex} className={cn("border-r last:border-r-0 border-[#CDD1C7] col-span-2", isSameDay(date, today) && "bg-[#FEFFF6]")}>
+									{TIME_SLOTS.map((hour) => {
+										const slotEvents = getEventsForSlot(date, hour)
+										const maxEvents = getMaxEventsForTimeSlot(hour)
+										const colors = ['bg-[#DCE5AE]', 'bg-[#AED3E5]', 'bg-[#AEE5D3]', 'bg-[#E5DCAE]']
+										return (
+											<div
+												key={`${dayIndex}-${hour}`}
+												className="border-b last:border-b-0 border-[#CDD1C7] relative"
+												style={{ minHeight: "5rem", height: `${Math.max(5, maxEvents * 6)}rem` }}
+											>
+												<div className="sm:hidden absolute top-0 left-0 text-xs text-gray-500 p-1">
+													{hour % 12 || 12} {hour >= 12 ? 'PM' : 'AM'}
+												</div>
+												{slotEvents.map((groupedEvent, index) => (
+													<div
+														key={`${groupedEvent.coachName}-${groupedEvent.packageId}`}
+														className={cn(
+															"absolute left-0 right-0 m-1 p-2 text-xs border rounded-md overflow-hidden flex flex-col items-start justify-start gap-1 cursor-pointer",
+															// groupedEvent.color ? `!bg-[${groupedEvent.color}]` : colors[index % colors.length]
+														)}
+														style={{
+															top: `${index * 6}rem`,
+															height: "5rem",
+															backgroundColor: groupedEvent.color ? groupedEvent.color : colors[index % colors.length]
+														}}
+														onClick={() => setSelectedGroupedEvent(groupedEvent)}
+													>
+														<div className={cn("font-bold uppercase text-[10px] font-inter", groupedEvent.programName === 'block' ? 'text-[#CA5154]' : "text-[#1F441F]")}>
+															• {groupedEvent.programName}
+														</div>
+														<div className='text-[10px] font-inter text-[#454745]'>
+															{formatTimeRange(
+																groupedEvent.time.split('-')[0],
+																groupedEvent.time.split('-')[1]
+															)}
+														</div>
+														<div className="hidden sm:block font-normal text-sm text-[#1F441F] font-inter">
+															{groupedEvent.programName === 'block' ? '' : `${groupedEvent.coachName}, ${groupedEvent.count}`}
+														</div>
+													</div>
+												))}
+											</div>
+										)
+									})}
+								</div>
+							))}
+						</div>
+					</div>
+				)}
+				{/* Calendar Grid */}
 
-        {calendarView === 'day' ? (
-          <DayView
-            events={filteredEvents}
-            date={currentDate}
-            setSelectedGroupedEvent={setSelectedGroupedEvent}
-          />
-        ) : calendarView === 'month' ? (
-          <MonthView
-            events={filteredEvents}
-            currentDate={currentDate}
-            setSelectedGroupedEvent={setSelectedGroupedEvent}
-          />
-        ) : calendarView === 'list' ? (
-          <ListView
-            events={filteredEvents}
-            currentDate={currentDate}
-            setSelectedGroupedEvent={setSelectedGroupedEvent}
-          />
-        ) : (
-          <div className="bg-white rounded-lg overflow-hidden">
-            {/* Days header */}
-            <div className="grid grid-cols-1 sm:grid-cols-[repeat(15,minmax(0,1fr))] border-[#CDD1C7] border-b bg-[#E0E4D9]">
-              <div className="hidden sm:block p-2 border-r border-[#CDD1C7]" />
-              {weekDates.map((date, i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    "p-2 text-center border-[#CDD1C7] border-r last:border-r-0 rounded-t-2xl bg-[#F1F2E9] col-span-2",
-                    isSameDay(date, today) && "bg-[#FEFFF6]"
-                  )}
-                >
-                  <div className="font-medium text-xs text-[#6A6C6A]">{WEEK_DAYS[i]}</div>
-                  <div className="text-lg sm:text-2xl">{format(date, "d")}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Time slots */}
-            <div className="grid grid-cols-1 sm:grid-cols-[repeat(15,minmax(0,1fr))] bg-[#F1F2E9]">
-              {/* Time labels */}
-              <div className="hidden sm:block border-r border-[#CDD1C7] col-span-1 bg-[#E0E4D9]">
-                {TIME_SLOTS.map((hour) => {
-                  const maxEvents = getMaxEventsForTimeSlot(hour)
-                  return (
-                    <div
-                      key={hour}
-                      className={"p-2 bg-[#E0E4D9]"}
-                      style={{ height: `${Math.max(5, maxEvents * 6)}rem` }}
-                    >
-                      <span className="text-xs text-gray-500">{hour % 12 || 12} {hour >= 12 ? 'PM' : 'AM'}</span>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Days columns */}
-              {weekDates.map((date, dayIndex) => (
-                <div key={dayIndex} className={cn("border-r last:border-r-0 border-[#CDD1C7] col-span-2", isSameDay(date, today) && "bg-[#FEFFF6]")}>
-                  {TIME_SLOTS.map((hour) => {
-                    const slotEvents = getEventsForSlot(date, hour)
-                    const maxEvents = getMaxEventsForTimeSlot(hour)
-                    const colors = ['bg-[#DCE5AE]', 'bg-[#AED3E5]', 'bg-[#AEE5D3]', 'bg-[#E5DCAE]']
-                    return (
-                      <div
-                        key={`${dayIndex}-${hour}`}
-                        className="border-b last:border-b-0 border-[#CDD1C7] relative"
-                        style={{ minHeight: "5rem", height: `${Math.max(5, maxEvents * 6)}rem` }}
-                      >
-                        <div className="sm:hidden absolute top-0 left-0 text-xs text-gray-500 p-1">
-                          {hour % 12 || 12} {hour >= 12 ? 'PM' : 'AM'}
-                        </div>
-                        {slotEvents.map((groupedEvent, index) => (
-                          <div
-                            key={`${groupedEvent.coachName}-${groupedEvent.packageId}`}
-                            className={cn(
-                              "absolute left-0 right-0 m-1 p-2 text-xs border rounded-md overflow-hidden flex flex-col items-start justify-start gap-1 cursor-pointer",
-                              // groupedEvent.color ? `!bg-[${groupedEvent.color}]` : colors[index % colors.length]
-                            )}
-                            style={{
-                              top: `${index * 6}rem`,
-                              height: "5rem",
-                              backgroundColor: groupedEvent.color ? groupedEvent.color : colors[index % colors.length]
-                            }}
-                            onClick={() => setSelectedGroupedEvent(groupedEvent)}
-                          >
-                            <div className={cn("font-bold uppercase text-[10px] font-inter", groupedEvent.programName === 'block' ? 'text-[#CA5154]' : "text-[#1F441F]")}>
-                              • {groupedEvent.programName}
-                            </div>
-                            <div className='text-[10px] font-inter text-[#454745]'>
-                              {formatTimeRange(
-                                groupedEvent.time.split('-')[0],
-                                groupedEvent.time.split('-')[1]
-                              )}
-                            </div>
-                            <div className="hidden sm:block font-normal text-sm text-[#1F441F] font-inter">
-                              {groupedEvent.programName === 'block' ? '' : `${groupedEvent.coachName}, ${groupedEvent.count}`}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )
-                  })}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        {/* Calendar Grid */}
-
-      </div>
-      <EventDetailsDialog
-        isOpen={!!selectedGroupedEvent}
-        onClose={() => setSelectedGroupedEvent(null)}
-        groupedEvent={selectedGroupedEvent}
-      />
-    </>
-  )
+			</div>
+			<EventDetailsDialog
+				isOpen={!!selectedGroupedEvent}
+				onClose={() => setSelectedGroupedEvent(null)}
+				groupedEvent={selectedGroupedEvent}
+			/>
+		</>
+	)
 }
 
 const DayView = ({ events, date, setSelectedGroupedEvent }: { events: Event[], date: Date, setSelectedGroupedEvent: React.Dispatch<React.SetStateAction<GroupedEvent | null>> }) => {
-  const groupTimeEvents = (hour: number) => {
-    const timeEvents = events.filter((event) => {
-      if (!event.startTime) return false
-      const [eventHour] = event.startTime.split(':').map(Number)
-      return eventHour === hour
-    })
-    return groupEvents(timeEvents)
-  }
+	const groupTimeEvents = (hour: number) => {
+		const timeEvents = events.filter((event) => {
+			if (!event.startTime) return false
+			const [eventHour] = event.startTime.split(':').map(Number)
+			return eventHour === hour
+		})
+		return groupEvents(timeEvents)
+	}
 
-  return (
-    <div className="bg-transparent rounded-lg overflow-hidden">
-      <div className="grid grid-cols-1 border-[#CDD1C7] border-b bg-[#E0E4D9]">
-        <div className="p-4 text-center border-[#CDD1C7] rounded-t-2xl bg-[#F1F2E9]">
-          <div className="font-medium text-xs text-[#6A6C6A]">{format(date, 'EEEE').toUpperCase()}</div>
-          <div className="text-2xl">{format(date, 'd')}</div>
-        </div>
-      </div>
+	return (
+		<div className="bg-transparent rounded-lg overflow-hidden">
+			<div className="grid grid-cols-1 border-[#CDD1C7] border-b bg-[#E0E4D9]">
+				<div className="p-4 text-center border-[#CDD1C7] rounded-t-2xl bg-[#F1F2E9]">
+					<div className="font-medium text-xs text-[#6A6C6A]">{format(date, 'EEEE').toUpperCase()}</div>
+					<div className="text-2xl">{format(date, 'd')}</div>
+				</div>
+			</div>
 
-      <div className="bg-[#E0E4D9]">
-        {TIME_SLOTS.map((hour) => {
-          const groupedEvents = groupTimeEvents(hour)
-          const colors = ['bg-[#DCE5AE]', 'bg-[#AED3E5]', 'bg-[#AEE5D3]', 'bg-[#E5DCAE]']
+			<div className="bg-[#E0E4D9]">
+				{TIME_SLOTS.map((hour) => {
+					const groupedEvents = groupTimeEvents(hour)
+					const colors = ['bg-[#DCE5AE]', 'bg-[#AED3E5]', 'bg-[#AEE5D3]', 'bg-[#E5DCAE]']
 
-          return (
-            <div key={hour} className="border-[#CDD1C7] bg-[#F1F2E9] my-1 p-2 min-h-[5rem] rounded-xl">
-              <div className="text-xs text-gray-500">
-                {hour % 12 || 12} {hour >= 12 ? 'PM' : 'AM'}
-              </div>
-              <div className="space-y-2">
-                {groupedEvents.map((groupedEvent, index) => (
-                  <div
-                    key={`${groupedEvent.coachName}-${groupedEvent.packageId}`}
-                    className={cn(
-                      "p-2 text-xs border rounded-md cursor-pointer",
-                      // groupedEvent.color ? `!bg-[${groupedEvent.color}]` : colors[index % colors.length]
-                    )}
-                    onClick={() => setSelectedGroupedEvent(groupedEvent)}
-                    style={{
-                      backgroundColor: groupedEvent.color ? groupedEvent.color : colors[index % colors.length]
-                    }}
-                  >
-                    <div className="font-bold uppercase text-[10px] font-inter text-[#1F441F]">
-                      • {groupedEvent.packageName}
-                    </div>
-                    <div className='text-[10px] font-inter text-[#454745]'>
-                      {formatTimeRange(
-                        groupedEvent.time.split('-')[0],
-                        groupedEvent.time.split('-')[1]
-                      )}
-                    </div>
-                    <div className="font-normal text-sm text-[#1F441F] font-inter">
-                      {groupedEvent.coachName}, {groupedEvent.count}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
+					return (
+						<div key={hour} className="border-[#CDD1C7] bg-[#F1F2E9] my-1 p-2 min-h-[5rem] rounded-xl">
+							<div className="text-xs text-gray-500">
+								{hour % 12 || 12} {hour >= 12 ? 'PM' : 'AM'}
+							</div>
+							<div className="space-y-2">
+								{groupedEvents.map((groupedEvent, index) => (
+									<div
+										key={`${groupedEvent.coachName}-${groupedEvent.packageId}`}
+										className={cn(
+											"p-2 text-xs border rounded-md cursor-pointer",
+											// groupedEvent.color ? `!bg-[${groupedEvent.color}]` : colors[index % colors.length]
+										)}
+										onClick={() => setSelectedGroupedEvent(groupedEvent)}
+										style={{
+											backgroundColor: groupedEvent.color ? groupedEvent.color : colors[index % colors.length]
+										}}
+									>
+										<div className="font-bold uppercase text-[10px] font-inter text-[#1F441F]">
+											• {groupedEvent.packageName}
+										</div>
+										<div className='text-[10px] font-inter text-[#454745]'>
+											{formatTimeRange(
+												groupedEvent.time.split('-')[0],
+												groupedEvent.time.split('-')[1]
+											)}
+										</div>
+										<div className="font-normal text-sm text-[#1F441F] font-inter">
+											{groupedEvent.coachName}, {groupedEvent.count}
+										</div>
+									</div>
+								))}
+							</div>
+						</div>
+					)
+				})}
+			</div>
+		</div>
+	)
 }
 
 const MonthView = ({ events, currentDate, setSelectedGroupedEvent }: { events: Event[], currentDate: Date, setSelectedGroupedEvent: React.Dispatch<React.SetStateAction<GroupedEvent | null>> }) => {
-  const monthDays = useMemo(() => {
-    const start = startOfMonth(currentDate)
-    const end = endOfMonth(currentDate)
-    return eachDayOfInterval({ start, end })
-  }, [currentDate])
+	const monthDays = useMemo(() => {
+		const start = startOfMonth(currentDate)
+		const end = endOfMonth(currentDate)
+		return eachDayOfInterval({ start, end })
+	}, [currentDate])
 
-  const getGroupedEventsForDay = (date: Date) => {
-    const dayEvents = events.filter((event) => {
-      if (!event.date) return false
-      return format(new Date(event.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
-    })
-    return groupEvents(dayEvents)
-  }
+	const getGroupedEventsForDay = (date: Date) => {
+		const dayEvents = events.filter((event) => {
+			if (!event.date) return false
+			return format(new Date(event.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
+		})
+		return groupEvents(dayEvents)
+	}
 
-  return (
-    <div className="bg-white rounded-lg overflow-hidden">
-      <div className="grid grid-cols-7 text-center border-[#CDD1C7] bg-[#E0E4D9]">
-        {WEEK_DAYS.map((day) => (
-          <div key={day} className="p-2 font-medium text-[#6A6C6A]">
-            {day}
-          </div>
-        ))}
-      </div>
+	return (
+		<div className="bg-white rounded-lg overflow-hidden">
+			<div className="grid grid-cols-7 text-center border-[#CDD1C7] bg-[#E0E4D9]">
+				{WEEK_DAYS.map((day) => (
+					<div key={day} className="p-2 font-medium text-[#6A6C6A]">
+						{day}
+					</div>
+				))}
+			</div>
 
-      <div className="grid grid-cols-7 bg-[#E0E4D9]">
-        {monthDays.map((date, i) => {
-          const groupedEvents = getGroupedEventsForDay(date)
-          const colors = ['bg-[#DCE5AE]', 'bg-[#AED3E5]', 'bg-[#AEE5D3]', 'bg-[#E5DCAE]']
+			<div className="grid grid-cols-7 bg-[#E0E4D9]">
+				{monthDays.map((date, i) => {
+					const groupedEvents = getGroupedEventsForDay(date)
+					const colors = ['bg-[#DCE5AE]', 'bg-[#AED3E5]', 'bg-[#AEE5D3]', 'bg-[#E5DCAE]']
 
-          return (
-            <div
-              key={i}
-              className={cn(
-                "min-h-[8rem] p-2 border-r border-b border-[#CDD1C7] rounded-xl bg-[#F1F2E9]",
-                !isSameMonth(date, currentDate) && "bg-gray-50",
-                isToday(date) && "bg-[#FEFFF6]"
-              )}
-            >
-              <div className="font-medium text-sm mb-1">{format(date, 'd')}</div>
-              <div className="space-y-1">
-                {groupedEvents.slice(0, 3).map((groupedEvent, index) => (
-                  <div
-                    key={`${groupedEvent.coachName}-${groupedEvent.packageId}`}
-                    className={cn(
-                      "text-xs p-1 rounded cursor-pointer",
-                      // // groupedEvent.color ? `!bg-[${groupedEvent.color}]` : colors[index % colors.length]
-                    )}
-                    onClick={() => setSelectedGroupedEvent(groupedEvent)}
-                    style={{
-                      backgroundColor: groupedEvent.color ? groupedEvent.color : colors[index % colors.length]
-                    }}
-                  >
-                    <div className="font-bold uppercase text-[10px] text-[#1F441F]">
-                      • {groupedEvent.packageName} ({groupedEvent.count})
-                    </div>
-                  </div>
-                ))}
-                {groupedEvents.length > 3 && (
-                  <div className="text-xs text-gray-500">
-                    +{groupedEvents.length - 3} more
-                  </div>
-                )}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
+					return (
+						<div
+							key={i}
+							className={cn(
+								"min-h-[8rem] p-2 border-r border-b border-[#CDD1C7] rounded-xl bg-[#F1F2E9]",
+								!isSameMonth(date, currentDate) && "bg-gray-50",
+								isToday(date) && "bg-[#FEFFF6]"
+							)}
+						>
+							<div className="font-medium text-sm mb-1">{format(date, 'd')}</div>
+							<div className="space-y-1">
+								{groupedEvents.slice(0, 3).map((groupedEvent, index) => (
+									<div
+										key={`${groupedEvent.coachName}-${groupedEvent.packageId}`}
+										className={cn(
+											"text-xs p-1 rounded cursor-pointer",
+											// // groupedEvent.color ? `!bg-[${groupedEvent.color}]` : colors[index % colors.length]
+										)}
+										onClick={() => setSelectedGroupedEvent(groupedEvent)}
+										style={{
+											backgroundColor: groupedEvent.color ? groupedEvent.color : colors[index % colors.length]
+										}}
+									>
+										<div className="font-bold uppercase text-[10px] text-[#1F441F]">
+											• {groupedEvent.packageName} ({groupedEvent.count})
+										</div>
+									</div>
+								))}
+								{groupedEvents.length > 3 && (
+									<div className="text-xs text-gray-500">
+										+{groupedEvents.length - 3} more
+									</div>
+								)}
+							</div>
+						</div>
+					)
+				})}
+			</div>
+		</div>
+	)
 }
 
 const ListView = ({
-  events,
-  currentDate,
-  setSelectedGroupedEvent
+	events,
+	currentDate,
+	setSelectedGroupedEvent
 }: {
-  events: Event[],
-  currentDate: Date,
-  setSelectedGroupedEvent: React.Dispatch<React.SetStateAction<GroupedEvent | null>>
+	events: Event[],
+	currentDate: Date,
+	setSelectedGroupedEvent: React.Dispatch<React.SetStateAction<GroupedEvent | null>>
 }) => {
-  const weekDates = useMemo(() => {
-    const start = startOfWeek(currentDate, { weekStartsOn: 1 })
-    return Array.from({ length: 7 }, (_, i) => addDays(start, i))
-  }, [currentDate])
+	const weekDates = useMemo(() => {
+		const start = startOfWeek(currentDate, { weekStartsOn: 1 })
+		return Array.from({ length: 7 }, (_, i) => addDays(start, i))
+	}, [currentDate])
 
-  const getGroupedEventsForDay = (date: Date) => {
-    const dayEvents = events.filter((event) => {
-      if (!event.date) return false
-      return format(new Date(event.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
-    })
-    return groupEvents(dayEvents)
-  }
+	const getGroupedEventsForDay = (date: Date) => {
+		const dayEvents = events.filter((event) => {
+			if (!event.date) return false
+			return format(new Date(event.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
+		})
+		return groupEvents(dayEvents)
+	}
 
-  return (
-    <div className="bg-transparent space-y-4">
-      {weekDates.map((date, i) => {
-        const groupedEvents = getGroupedEventsForDay(date)
-        const colors = ['bg-[#DCE5AE]', 'bg-[#AED3E5]', 'bg-[#AEE5D3]', 'bg-[#E5DCAE]']
+	return (
+		<div className="bg-transparent space-y-4">
+			{weekDates.map((date, i) => {
+				const groupedEvents = getGroupedEventsForDay(date)
+				const colors = ['bg-[#DCE5AE]', 'bg-[#AED3E5]', 'bg-[#AEE5D3]', 'bg-[#E5DCAE]']
 
-        return (
-          <div
-            key={i}
-            className={cn(
-              "rounded-xl overflow-hidden border border-[#CDD1C7]",
-              isSameDay(date, new Date()) ? "bg-[#FEFFF6]" : "bg-[#F1F2E9]"
-            )}
-          >
-            <div className="p-4">
-              <div className="font-medium text-xs text-[#6A6C6A]">
-                {format(date, 'EEEE').toUpperCase()}
-              </div>
-              <div className="text-lg">
-                {format(date, 'd MMMM yyyy')}
-              </div>
-            </div>
+				return (
+					<div
+						key={i}
+						className={cn(
+							"rounded-xl overflow-hidden border border-[#CDD1C7]",
+							isSameDay(date, new Date()) ? "bg-[#FEFFF6]" : "bg-[#F1F2E9]"
+						)}
+					>
+						<div className="p-4">
+							<div className="font-medium text-xs text-[#6A6C6A]">
+								{format(date, 'EEEE').toUpperCase()}
+							</div>
+							<div className="text-lg">
+								{format(date, 'd MMMM yyyy')}
+							</div>
+						</div>
 
-            <div className="space-y-2 p-4 pt-0">
-              {groupedEvents.length > 0 ? (
-                groupedEvents.map((groupedEvent, index) => (
-                  <div
-                    key={`${groupedEvent.coachName}-${groupedEvent.packageId}`}
-                    className={cn(
-                      "p-3 text-sm border rounded-md cursor-pointer",
-                      // groupedEvent.color ? `!bg-[${groupedEvent.color}]` : colors[index % colors.length]
-                    )}
-                    onClick={() => setSelectedGroupedEvent(groupedEvent)}
-                    style={{
-                      backgroundColor: groupedEvent.color ? groupedEvent.color : colors[index % colors.length]
-                    }}
-                  >
-                    <div className="font-bold uppercase text-xs font-inter text-[#1F441F]">
-                      • {groupedEvent.packageName}
-                    </div>
-                    <div className='text-xs font-inter text-[#454745] mt-1'>
-                      {formatTimeRange(
-                        groupedEvent.time.split('-')[0],
-                        groupedEvent.time.split('-')[1]
-                      )}
-                    </div>
-                    <div className="font-normal text-sm text-[#1F441F] font-inter mt-1">
-                      {groupedEvent.coachName}, {groupedEvent.count} students
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="p-3 text-sm text-[#454745] bg-white/50 rounded-md border border-[#CDD1C7]">
-                  No bookings scheduled for this day
-                </div>
-              )}
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
+						<div className="space-y-2 p-4 pt-0">
+							{groupedEvents.length > 0 ? (
+								groupedEvents.map((groupedEvent, index) => (
+									<div
+										key={`${groupedEvent.coachName}-${groupedEvent.packageId}`}
+										className={cn(
+											"p-3 text-sm border rounded-md cursor-pointer",
+											// groupedEvent.color ? `!bg-[${groupedEvent.color}]` : colors[index % colors.length]
+										)}
+										onClick={() => setSelectedGroupedEvent(groupedEvent)}
+										style={{
+											backgroundColor: groupedEvent.color ? groupedEvent.color : colors[index % colors.length]
+										}}
+									>
+										<div className="font-bold uppercase text-xs font-inter text-[#1F441F]">
+											• {groupedEvent.packageName}
+										</div>
+										<div className='text-xs font-inter text-[#454745] mt-1'>
+											{formatTimeRange(
+												groupedEvent.time.split('-')[0],
+												groupedEvent.time.split('-')[1]
+											)}
+										</div>
+										<div className="font-normal text-sm text-[#1F441F] font-inter mt-1">
+											{groupedEvent.coachName}, {groupedEvent.count} students
+										</div>
+									</div>
+								))
+							) : (
+								<div className="p-3 text-sm text-[#454745] bg-white/50 rounded-md border border-[#CDD1C7]">
+									No bookings scheduled for this day
+								</div>
+							)}
+						</div>
+					</div>
+				)
+			})}
+		</div>
+	)
 }

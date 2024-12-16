@@ -72,8 +72,12 @@ export default function AddNewAthlete({ addNewAthleteOpen, setAddNewAthleteOpen,
             type: 'primary',
             firstGuardianName: '',
             firstGuardianRelationship: '',
+            firstGuardianEmail: '',
+            firstGuardianPhone: '',
             secondGuardianName: '',
             secondGuardianRelationship: '',
+            secondGuardianEmail: '',
+            secondGuardianPhone: '',
             city: '',
             streetAddress: '',
             nationality: '',
@@ -84,27 +88,41 @@ export default function AddNewAthlete({ addNewAthleteOpen, setAddNewAthleteOpen,
     const onSubmit = async (values: z.infer<typeof addAthleteSchema>) => {
         try {
             // Validate guardian fields for fellow type
-            if (values.type === 'fellow') {
-                let hasError = false;
+            let hasError = false;
 
-                if (!values.firstGuardianName?.trim()) {
-                    form.setError('firstGuardianName', {
-                        type: 'custom',
-                        message: 'First guardian name is required for fellow athletes'
-                    });
-                    hasError = true;
-                }
-
-                if (!values.firstGuardianRelationship?.trim()) {
-                    form.setError('firstGuardianRelationship', {
-                        type: 'custom',
-                        message: 'First guardian relationship is required for fellow athletes'
-                    });
-                    hasError = true;
-                }
-
-                if (hasError) return;
+            if (!values.firstGuardianName?.trim()) {
+                form.setError('firstGuardianName', {
+                    type: 'custom',
+                    message: 'First guardian name is required'
+                });
+                hasError = true;
             }
+
+            if (!values.firstGuardianRelationship?.trim()) {
+                form.setError('firstGuardianRelationship', {
+                    type: 'custom',
+                    message: 'First guardian relationship is required'
+                });
+                hasError = true;
+            }
+
+            if (!values.firstGuardianEmail?.trim()) {
+                form.setError('firstGuardianEmail', {
+                    type: 'custom',
+                    message: 'First guardian email is required'
+                });
+                hasError = true;
+            }
+
+            if (!values.firstGuardianPhone?.trim()) {
+                form.setError('firstGuardianPhone', {
+                    type: 'custom',
+                    message: 'First guardian phone is required'
+                });
+                hasError = true;
+            }
+
+            if (hasError) return;
 
             setLoading(true)
 
@@ -282,7 +300,7 @@ export default function AddNewAthlete({ addNewAthleteOpen, setAddNewAthleteOpen,
                                         control={form.control}
                                         name='type'
                                         render={({ field }) => (
-                                            <FormItem className='flex-1'>
+                                            <FormItem className='flex-1 absolute hidden'>
                                                 <FormLabel>Athlete Type</FormLabel>
                                                 <Select
                                                     onValueChange={(value: 'primary' | 'fellow') => {
@@ -305,67 +323,123 @@ export default function AddNewAthlete({ addNewAthleteOpen, setAddNewAthleteOpen,
                                             </FormItem>
                                         )}
                                     />
-                                    {athleteType === 'fellow' && (
-                                        <>
-                                            <div className='flex w-full gap-2 items-start justify-center'>
-                                                <FormField
-                                                    control={form.control}
-                                                    name='firstGuardianName'
-                                                    render={({ field }) => (
-                                                        <FormItem className='flex-1'>
-                                                            <FormLabel>First Guardian Name*</FormLabel>
-                                                            <FormControl>
-                                                                <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
-                                                            </FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
-                                                <FormField
-                                                    control={form.control}
-                                                    name='firstGuardianRelationship'
-                                                    render={({ field }) => (
-                                                        <FormItem className='flex-1'>
-                                                            <FormLabel>First Guardian Relationship*</FormLabel>
-                                                            <FormControl>
-                                                                <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
-                                                            </FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
-                                            </div>
+                                    <>
+                                        <div className='flex w-full gap-2 items-start justify-center'>
+                                            <FormField
+                                                control={form.control}
+                                                name='firstGuardianName'
+                                                render={({ field }) => (
+                                                    <FormItem className='flex-1'>
+                                                        <FormLabel>First Guardian Name*</FormLabel>
+                                                        <FormControl>
+                                                            <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name='firstGuardianRelationship'
+                                                render={({ field }) => (
+                                                    <FormItem className='flex-1'>
+                                                        <FormLabel>First Guardian Relationship*</FormLabel>
+                                                        <FormControl>
+                                                            <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
 
-                                            <div className='flex w-full gap-2 items-start justify-center'>
-                                                <FormField
-                                                    control={form.control}
-                                                    name='secondGuardianName'
-                                                    render={({ field }) => (
-                                                        <FormItem className='flex-1'>
-                                                            <FormLabel>Second Guardian Name (Optional)</FormLabel>
-                                                            <FormControl>
-                                                                <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
-                                                            </FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
-                                                <FormField
-                                                    control={form.control}
-                                                    name='secondGuardianRelationship'
-                                                    render={({ field }) => (
-                                                        <FormItem className='flex-1'>
-                                                            <FormLabel>Second Guardian Relationship (Optional)</FormLabel>
-                                                            <FormControl>
-                                                                <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
-                                                            </FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
-                                            </div>
-                                        </>
-                                    )}
+                                        <div className='flex w-full gap-2 items-start justify-center'>
+                                            <FormField
+                                                control={form.control}
+                                                name='firstGuardianEmail'
+                                                render={({ field }) => (
+                                                    <FormItem className='flex-1'>
+                                                        <FormLabel>First Guardian Email</FormLabel>
+                                                        <FormControl>
+                                                            <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name='firstGuardianPhone'
+                                                render={({ field }) => (
+                                                    <FormItem className='flex-1'>
+                                                        <FormLabel>First Guardian Phone</FormLabel>
+                                                        <FormControl>
+                                                            <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
+
+                                        <div className='flex w-full gap-2 items-start justify-center'>
+                                            <FormField
+                                                control={form.control}
+                                                name='secondGuardianName'
+                                                render={({ field }) => (
+                                                    <FormItem className='flex-1'>
+                                                        <FormLabel>Second Guardian Name (Optional)</FormLabel>
+                                                        <FormControl>
+                                                            <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name='secondGuardianRelationship'
+                                                render={({ field }) => (
+                                                    <FormItem className='flex-1'>
+                                                        <FormLabel>Second Guardian Relationship (Optional)</FormLabel>
+                                                        <FormControl>
+                                                            <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
+
+                                        <div className='flex w-full gap-2 items-start justify-center'>
+                                            <FormField
+                                                control={form.control}
+                                                name='secondGuardianEmail'
+                                                render={({ field }) => (
+                                                    <FormItem className='flex-1'>
+                                                        <FormLabel>Second Guardian Email (Optional)</FormLabel>
+                                                        <FormControl>
+                                                            <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name='secondGuardianPhone'
+                                                render={({ field }) => (
+                                                    <FormItem className='flex-1'>
+                                                        <FormLabel>Second Guardian Phone (Optional)</FormLabel>
+                                                        <FormControl>
+                                                            <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
+                                    </>
 
                                     {/* Basic Information */}
                                     <div className='flex w-full gap-2 items-start justify-center'>
@@ -497,11 +571,14 @@ export default function AddNewAthlete({ addNewAthleteOpen, setAddNewAthleteOpen,
                                                             </SelectTrigger>
                                                         </FormControl>
                                                         <SelectContent>
-                                                            {countries.map((country) => (
+                                                            {/* {countries.map((country) => (
                                                                 <SelectItem key={country} value={country}>
                                                                     {country}
                                                                 </SelectItem>
-                                                            ))}
+                                                            ))} */}Z
+                                                            <SelectItem key={'UAE'} value={'UAE'}>
+                                                                {'UAE'}
+                                                            </SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                     <FormMessage />

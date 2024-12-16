@@ -710,8 +710,12 @@ export const academicAthletic = pgTable("academic_athletic", {
     type: athleticType().default('primary'),
     firstGuardianName: varchar("first_guardian_name", { length: 255 }).default(sql`NULL`),
     firstGuardianRelationship: varchar("first_guardian_relationship", { length: 255 }).default(sql`NULL`),
+    firstGuardianEmail: varchar("first_guardian_email", { length: 255 }).default(sql`NULL`),
+    firstGuardianPhone: varchar("first_guardian_phone", { length: 20 }).default(sql`NULL`),
     secondGuardianName: varchar("second_guardian_name", { length: 255 }).default(sql`NULL`),
     secondGuardianRelationship: varchar("second_guardian_relationship", { length: 255 }).default(sql`NULL`),
+    secondGuardianEmail: varchar("second_guardian_email", { length: 255 }).default(sql`NULL`),
+    secondGuardianPhone: varchar("second_guardian_phone", { length: 20 }).default(sql`NULL`),
 }, (table) => {
     return {
         academicAthleticAcademicIdForeign: foreignKey({

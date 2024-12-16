@@ -36,8 +36,23 @@ const CustomPieChart = ({ data, title, isTime = false }: {
     title: string,
     isTime?: boolean
 }) => {
+    // Check if data is empty or all counts are 0
+    const hasData = data.length > 0 && data.some(item => item.count > 0)
+
     // Calculate total for percentages
     const total = data.reduce((sum, item) => sum + item.count, 0)
+
+    // If no data, display a message
+    if (!hasData) {
+        return (
+            <Card className="p-4 bg-[#F1F2E9] border-none shadow-none">
+                <h3 className="text-lg font-semibold mb-4 text-[#1F441F] font-inter">{title}</h3>
+                <div className="h-[300px] flex items-center justify-center">
+                    <p className="text-[#6A6C6A] text-sm">No data yet</p>
+                </div>
+            </Card>
+        )
+    }
 
     // Custom renderer for the legend to include percentages
     const renderLegend = (props: any) => {
@@ -131,19 +146,25 @@ export function DashboardClient({ stats }: { stats: DashboardStats }) {
             {/* Top Section */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <Card className="p-6 space-y-4 bg-[#F1F2E9] shadow-none border-none col-span-1">
-                    <h3 className="text-sm font-normal mb-2 text-[#1F441F] font-inter">Monthly Bookings</h3>
+                    <h3 className="text-sm font-normal mb-2 text-[#1F441F] font-inter">New Bookings</h3>
                     <div className="flex items-center justify-between">
-                        <p className="text-3xl font-bold text-[#1F441F] font-inter">{stats.currentMonthCount}</p>
-                        <div className={`flex items-center ${percentageChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {percentageChange >= 0 ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
-                            <span className="ml-1">{Math.abs(percentageChange).toFixed(1)}%</span>
-                        </div>
+                        <p className="text-3xl font-bold text-[#1F441F] font-inter">
+                            {isNaN(stats.currentMonthCount) ? 'No data yet' : stats.currentMonthCount}
+                        </p>
+                        {!isNaN(percentageChange) && (
+                            <div className={`flex items-center ${percentageChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {percentageChange >= 0 ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
+                                <span className="ml-1">{Math.abs(percentageChange).toFixed(1)}%</span>
+                            </div>
+                        )}
                     </div>
                 </Card>
 
                 <Card className="p-6 space-y-4 bg-[#F1F2E9] shadow-none border-none col-span-3">
                     <h3 className="text-sm font-normal mb-2 text-[#1F441F] font-inter">Total Bookings</h3>
-                    <p className="text-3xl font-bold text-[#1F441F] font-inter">{stats.totalBookings}</p>
+                    <p className="text-3xl font-bold text-[#1F441F] font-inter">
+                        {isNaN(stats.totalBookings) ? 'No data yet' : stats.totalBookings}
+                    </p>
                 </Card>
             </div>
 

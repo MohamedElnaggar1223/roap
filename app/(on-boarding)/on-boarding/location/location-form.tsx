@@ -84,6 +84,8 @@ interface Props {
             startDateOfBirth: string | null;
             endDateOfBirth: string | null;
             branchName: string | null;
+            color: string | null;
+            gender: string | null;
         }[] | undefined
         locations: {
             id: number;
@@ -152,7 +154,17 @@ export default function OnboardingLocationForm({ academyDetails, sports, facilit
             languages: (academyDetails?.coaches ?? []).length > 0 && academyDetails?.coaches![0].languages.length > 0,
         })
         updateRequirements('program', {
-            packages: ((academyDetails.programs ?? []).length > 0 && academyDetails?.programs![0]?.packages.length > 0)
+            name: (academyDetails.programs ?? []).length > 0 && !!academyDetails?.programs![0].name,
+            description: (academyDetails.programs ?? []).length > 0 && !!academyDetails?.programs![0].description,
+            branchId: (academyDetails.programs ?? []).length > 0 && !!academyDetails?.programs![0].branchId,
+            sportId: (academyDetails.programs ?? []).length > 0 && !!academyDetails?.programs![0].sportId,
+            startDateOfBirth: (academyDetails.programs ?? []).length > 0 && !!academyDetails?.programs![0].startDateOfBirth,
+            endDateOfBirth: (academyDetails.programs ?? []).length > 0 && !!academyDetails?.programs![0].endDateOfBirth,
+            type: (academyDetails.programs ?? []).length > 0 && !!academyDetails?.programs![0].type,
+            packages: (academyDetails.programs ?? []).length > 0 && (academyDetails?.programs![0].packages.length > 0),
+            numberOfSeats: (academyDetails.programs ?? []).length > 0 && !!academyDetails?.programs![0].numberOfSeats,
+            gender: (academyDetails.programs ?? []).length > 0 && !!academyDetails?.programs![0].gender,
+            color: (academyDetails.programs ?? []).length > 0 && !!academyDetails?.programs![0].color,
         })
         updateRequirements('location', {
             name: !!existingLocation?.name,

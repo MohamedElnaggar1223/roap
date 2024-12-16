@@ -67,7 +67,9 @@ export function AthletesDataTable({ data }: AthletesDataTableProps) {
             const filtered = data.filter(athlete =>
                 athlete.profile?.name?.toLowerCase().includes(lowercasedValue) ||
                 athlete.email.toLowerCase().includes(lowercasedValue) ||
-                athlete.phoneNumber?.toLowerCase().includes(lowercasedValue)
+                athlete.phoneNumber?.toLowerCase().includes(lowercasedValue) ||
+                athlete.firstGuardianName?.toLowerCase().includes(lowercasedValue) ||
+                athlete.secondGuardianName?.toLowerCase().includes(lowercasedValue)
             )
             setFilteredData(filtered)
         }

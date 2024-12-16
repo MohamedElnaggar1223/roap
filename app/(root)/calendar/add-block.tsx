@@ -34,7 +34,7 @@ type Coach = {
     name: string
 }
 
-export default function CreateBlockDialog() {
+export default function CreateBlockDialog({ setRefetch }: { setRefetch: React.Dispatch<React.SetStateAction<boolean>> }) {
     const [isPending, startTransition] = useTransition()
     const [open, setOpen] = useState(false)
     const [date, setDate] = useState<Date>()
@@ -138,6 +138,7 @@ export default function CreateBlockDialog() {
             }
 
             // toast.success('Block time created successfully')
+            setRefetch((prev) => !prev)
             setOpen(false)
             resetForm()
         })

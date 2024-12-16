@@ -84,12 +84,20 @@ export async function getDashboardStats(): Promise<DashboardResponse> {
                 )
 
             // Get total bookings
+            // const [totalBookings] = await tx
+            //     .select({
+            //         count: sql<number>`count(*)::int`,
+            //     })
+            //     .from(bookingSessions)
+            //     .innerJoin(bookings, eq(bookingSessions.bookingId, bookings.id))
+            //     .innerJoin(packages, eq(bookings.packageId, packages.id))
+            //     .innerJoin(programs, eq(packages.programId, programs.id))
+            //     .where(eq(programs.academicId, academy.id))
             const [totalBookings] = await tx
                 .select({
                     count: sql<number>`count(*)::int`,
                 })
-                .from(bookingSessions)
-                .innerJoin(bookings, eq(bookingSessions.bookingId, bookings.id))
+                .from(bookings)
                 .innerJoin(packages, eq(bookings.packageId, packages.id))
                 .innerJoin(programs, eq(packages.programId, programs.id))
                 .where(eq(programs.academicId, academy.id))

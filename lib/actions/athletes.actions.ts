@@ -188,8 +188,12 @@ export async function createAthlete(data: {
     type: 'primary' | 'fellow'
     firstGuardianName?: string
     firstGuardianRelationship?: string
+    firstGuardianEmail?: string
+    firstGuardianPhone?: string
     secondGuardianName?: string
     secondGuardianRelationship?: string
+    secondGuardianEmail?: string
+    secondGuardianPhone?: string
     country?: string
     nationality?: string
     city?: string
@@ -278,6 +282,10 @@ export async function createAthlete(data: {
                     firstGuardianRelationship: data.firstGuardianRelationship || null,
                     secondGuardianName: data.secondGuardianName || null,
                     secondGuardianRelationship: data.secondGuardianRelationship || null,
+                    secondGuardianEmail: data.secondGuardianEmail || null,
+                    secondGuardianPhone: data.secondGuardianPhone || null,
+                    firstGuardianEmail: data.firstGuardianEmail || null,
+                    firstGuardianPhone: data.firstGuardianPhone || null,
                     createdAt: sql`now()`,
                     updatedAt: sql`now()`
                 })
@@ -305,8 +313,12 @@ export async function updateAthlete(id: number, data: {
     type: 'primary' | 'fellow'
     firstGuardianName?: string
     firstGuardianRelationship?: string
+    firstGuardianEmail?: string
+    firstGuardianPhone?: string
     secondGuardianName?: string
     secondGuardianRelationship?: string
+    secondGuardianEmail?: string
+    secondGuardianPhone?: string
     country?: string
     nationality?: string
     city?: string
@@ -404,8 +416,12 @@ export async function updateAthlete(id: number, data: {
                     type: data.type,
                     firstGuardianName: data.firstGuardianName || null,
                     firstGuardianRelationship: data.firstGuardianRelationship || null,
+                    firstGuardianEmail: data.firstGuardianEmail || null,
+                    firstGuardianPhone: data.firstGuardianPhone || null,
                     secondGuardianName: data.secondGuardianName || null,
                     secondGuardianRelationship: data.secondGuardianRelationship || null,
+                    secondGuardianEmail: data.secondGuardianEmail || null,
+                    secondGuardianPhone: data.secondGuardianPhone || null,
                     updatedAt: sql`now()`
                 })
                 .where(eq(academicAthletic.id, id))

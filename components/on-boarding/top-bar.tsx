@@ -106,7 +106,7 @@ export default function TopBar() {
                     {(isSaving || loading) && <Loader2 className="h-4 w-4 animate-spin" />}
                     Save
                 </button>
-                {completedSteps === 6 && (
+                {completedSteps === 5 && (
                     <button
                         onClick={handleSaveAndContinue}
                         disabled={(isSaving || loading)}

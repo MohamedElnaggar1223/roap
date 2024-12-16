@@ -400,11 +400,26 @@ export default function OnboardingProgramForm({ academyDetails, sports }: Props)
                         }
                     }
 
+                    const getAgeInYears = (age: number, unit: string) => {
+                        return unit === 'months' ? age / 12 : age;
+                    };
+
+                    const calculateDateFromYears = (age: number, unit: string) => {
+                        const ageInYears = getAgeInYears(age, unit);
+                        const date = new Date();
+                        const years = Math.floor(ageInYears);
+                        const months = (ageInYears - years) * 12;
+
+                        date.setFullYear(date.getFullYear() - years);
+                        date.setMonth(date.getMonth() - months);
+                        return date;
+                    };
+
                     const getAgeInMonths = (age: number, unit: string): number => {
                         return unit === 'months' ? age : age * 12;
                     };
 
-                    const calculateDateFromAge = (age: number, unit: string): Date => {
+                    const calculateDateFromMonths = (age: number, unit: string): Date => {
                         const ageInMonths = getAgeInMonths(age, unit);
                         const date = new Date();
                         const totalMonths = date.getMonth() - Math.floor(ageInMonths);
@@ -425,7 +440,9 @@ export default function OnboardingProgramForm({ academyDetails, sports }: Props)
                         return date;
                     };
 
-                    const startDate = calculateDateFromAge(values.startAge, values.startAgeUnit);
+                    const startDate = values.startAgeUnit === 'months' ?
+                        calculateDateFromMonths(values.startAge!, values.startAgeUnit) :
+                        calculateDateFromYears(values.startAge!, values.startAgeUnit);
 
                     let endDate: Date;
                     if (values.endAgeUnit === 'unlimited') {
@@ -433,13 +450,15 @@ export default function OnboardingProgramForm({ academyDetails, sports }: Props)
                         endDate = new Date();
                         endDate.setFullYear(endDate.getFullYear() + 100);
                     } else {
-                        if (values.endAge === undefined) {
+                        if (values.endAge === null) {
                             return {
                                 success: false,
                                 error: 'End age is required for limited duration'
                             };
                         }
-                        endDate = calculateDateFromAge(values.endAge, values.endAgeUnit);
+                        else endDate = values.endAgeUnit === 'months' ?
+                            calculateDateFromMonths(values.endAge!, values.endAgeUnit) :
+                            calculateDateFromYears(values.endAge!, values.endAgeUnit);
                     }
 
                     const programData = {
@@ -450,7 +469,7 @@ export default function OnboardingProgramForm({ academyDetails, sports }: Props)
                         startDateOfBirth: startDate,
                         endDateOfBirth: endDate,
                         branchId: existingLocation.id,
-                        sportId: academyDetails.sports?.[0] || 0,
+                        sportId: parseInt(values.sportId),
                         coaches: selectedCoaches,
                         packagesData: createdPackages!,
                         gender: selectedGenders.length > 0 ? selectedGenders.join(',') : 'mix',
@@ -696,6 +715,31 @@ export default function OnboardingProgramForm({ academyDetails, sports }: Props)
                         </Popover>
                     </div>
                 </div>
+
+                <FormField
+                    control={form.control}
+                    name="sportId"
+                    render={({ field }) => (
+                        <FormItem className='flex-1'>
+                            <FormLabel>Sport</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                    <SelectTrigger className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'>
+                                        <SelectValue placeholder="Select a sport" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {academyDetails.sports?.map((sport) => (
+                                        <SelectItem key={sport} value={sport.toString()}>
+                                            {sports?.find(s => s.id === sport)?.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
 
                 <div className="flex gap-4">
 

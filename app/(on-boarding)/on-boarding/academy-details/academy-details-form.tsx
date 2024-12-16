@@ -79,6 +79,8 @@ interface Props {
             startDateOfBirth: string | null;
             endDateOfBirth: string | null;
             branchName: string | null;
+            color: string | null;
+            gender: string | null;
         }[] | undefined
         locations: {
             sports: string[];
@@ -178,7 +180,20 @@ export default function OnboardingAcademyDetailsForm({ academyDetails, sports, i
             sports: (academyDetails.locations ?? [])?.length > 0 && (academyDetails.locations![0].sports.length > 0),
             facilities: (academyDetails.locations ?? [])?.length > 0 && (academyDetails.locations![0].facilities.length > 0),
         })
-        updateRequirements('program', { packages: ((academyDetails.programs ?? []).length > 0 && academyDetails?.programs![0]?.packages.length > 0) })
+        // updateRequirements('program', { packages: ((academyDetails.programs ?? []).length > 0 && academyDetails?.programs![0]?.packages.length > 0) })
+        updateRequirements('program', {
+            name: (academyDetails.programs ?? []).length > 0 && !!academyDetails?.programs![0].name,
+            description: (academyDetails.programs ?? []).length > 0 && !!academyDetails?.programs![0].description,
+            branchId: (academyDetails.programs ?? []).length > 0 && !!academyDetails?.programs![0].branchId,
+            sportId: (academyDetails.programs ?? []).length > 0 && !!academyDetails?.programs![0].sportId,
+            startDateOfBirth: (academyDetails.programs ?? []).length > 0 && !!academyDetails?.programs![0].startDateOfBirth,
+            endDateOfBirth: (academyDetails.programs ?? []).length > 0 && !!academyDetails?.programs![0].endDateOfBirth,
+            type: (academyDetails.programs ?? []).length > 0 && !!academyDetails?.programs![0].type,
+            packages: (academyDetails.programs ?? []).length > 0 && (academyDetails?.programs![0].packages.length > 0),
+            numberOfSeats: (academyDetails.programs ?? []).length > 0 && !!academyDetails?.programs![0].numberOfSeats,
+            gender: (academyDetails.programs ?? []).length > 0 && !!academyDetails?.programs![0].gender,
+            color: (academyDetails.programs ?? []).length > 0 && !!academyDetails?.programs![0].color,
+        })
     }, [])
 
     useEffect(() => {

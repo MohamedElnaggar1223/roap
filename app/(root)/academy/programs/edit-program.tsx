@@ -259,6 +259,15 @@ export default function EditProgram({ branches, sports, programEdited, academySp
     console.log(form.getValues('startAge'))
     console.log(form.getValues('endAge'))
 
+    const endAgeUnitChange = form.watch('endAgeUnit')
+
+    useEffect(() => {
+        if (endAgeUnitChange === 'unlimited') {
+            console.log("Unlimited")
+            form.setValue('endAge', undefined)
+        }
+    }, [endAgeUnitChange])
+
     const errors = form.formState.errors
 
     console.log(errors)

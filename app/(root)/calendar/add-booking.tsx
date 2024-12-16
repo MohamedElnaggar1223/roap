@@ -379,7 +379,7 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingDetails, athlete
             <div className="space-y-2 flex flex-col">
                 <label className="text-sm font-medium">Coach</label>
                 <select
-                    className='px-2 py-3.5 text-sm rounded-[10px] border border-gray-500 font-inter bg-transparent'
+                    className='px-2 py-3.5 text-sm rounded-[10px] border border-gray-500 font-inter bg-transparent absolute hidden'
                     disabled={!selectedProgram}
                     onChange={(e) => {
                         const coach = selectedProgram?.coaches.find(c => c.id === Number(e.target.value));
@@ -394,6 +394,11 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingDetails, athlete
                         </option>
                     ))}
                 </select>
+                <div className="flex flex-col gap-2">
+                    {selectedProgram?.coaches.map((coach) => (
+                        <p key={coach.id + coach.name} className="text-sm text-gray-500">{coach.name}</p>
+                    ))}
+                </div>
             </div>
 
             {/* Date Selection */}
@@ -554,7 +559,7 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
     );
 };
 
-export default function BookingDialog() {
+export default function BookingDialog({ setRefetch }: { setRefetch: React.Dispatch<React.SetStateAction<boolean>> }) {
     const [open, setOpen] = useState(false);
     const [state, dispatch] = useReducer(bookingReducer, initialState);
     const [loading, setLoading] = useState(false);
@@ -569,6 +574,7 @@ export default function BookingDialog() {
                 date: bookingDetails.date,
                 time: bookingDetails.time
             })
+            setRefetch((prev) => !prev)
         } catch (error) {
             console.error("Error creating booking:", error);
         } finally {
