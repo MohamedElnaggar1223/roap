@@ -47,7 +47,6 @@ interface StepRequirements {
         endDateOfBirth: boolean
         type: boolean
         packages: boolean
-        numberOfSeats: boolean
         gender: boolean
         color: boolean
     }
@@ -151,7 +150,6 @@ export function OnboardingProvider({ children, onboarded }: { children: React.Re
             endDateOfBirth: false,
             type: false,
             packages: false,
-            numberOfSeats: false,
             gender: false,
             color: false,
         },
@@ -240,7 +238,6 @@ export function OnboardingProvider({ children, onboarded }: { children: React.Re
             endDateOfBirth: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].endDateOfBirth,
             type: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].type,
             packages: (finalAcademyDetails?.programs ?? []).length > 0 && (finalAcademyDetails?.programs![0].packages!?.length > 0),
-            numberOfSeats: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].numberOfSeats,
             gender: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].gender,
             color: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].color,
         })
@@ -253,18 +250,6 @@ export function OnboardingProvider({ children, onboarded }: { children: React.Re
             startDateOfBirth: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].startDateOfBirth,
             endDateOfBirth: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].endDateOfBirth,
             gender: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].gender,
-            numberOfSeats: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].numberOfSeats,
-        })
-        console.log({
-            description: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].description,
-            coaches: (finalAcademyDetails?.assessments ?? []).length > 0 && (finalAcademyDetails?.assessments![0].coaches!?.length > 0),
-            packages: (finalAcademyDetails?.assessments ?? []).length > 0 && (finalAcademyDetails?.assessments![0].packages!?.length > 0),
-            branchId: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].branchId,
-            sportId: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].sportId,
-            startDateOfBirth: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].startDateOfBirth,
-            endDateOfBirth: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].endDateOfBirth,
-            gender: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].gender,
-            numberOfSeats: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].numberOfSeats,
         })
 
         if (completedSteps === STEPS.length - 1) {
