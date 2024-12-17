@@ -366,7 +366,6 @@ export async function deleteLocations(ids: number[]) {
 
     await Promise.all(ids.map(async id => await db.delete(branches).where(eq(branches.id, id))))
 
-    // revalidatePath('/academy/locations')
     const academy = await db.query.academics.findFirst({
         where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
         columns: {

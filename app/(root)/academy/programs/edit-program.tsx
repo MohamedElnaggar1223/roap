@@ -416,7 +416,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                 />
             </Button>
             <Dialog open={editProgramOpen} onOpenChange={setEditProgramOpen}>
-                <DialogContent className='bg-main-white min-w-[1536px]'>
+                <DialogContent className='bg-main-white min-w-[920px] max-w-[920px]'>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full'>
                             <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>

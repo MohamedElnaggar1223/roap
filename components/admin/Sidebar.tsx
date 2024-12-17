@@ -14,7 +14,7 @@ import {
 import { CMS } from "./CMS"
 import { JoinUs } from "./JoinUs"
 import { UserManagement } from "./UserManagement"
-import { Contact } from "lucide-react"
+import { Contact, Volleyball } from "lucide-react"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -54,10 +54,17 @@ export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
                                 <span className={cn(pathname?.includes('/academics') && 'text-main')}>Academics</span>
                             </SidebarMenuButton>
                         </Link>
+                        <Link href='/admin/sports'>
+                            <SidebarMenuButton className={cn(pathname?.includes('/sports') && 'bg-sidebar-accent')} tooltip='Sports'>
+                                <Volleyball className={cn(pathname?.includes('/sports') && 'stroke-main')} />
+                                <span className={cn(pathname?.includes('/sports') && 'text-main')}>Sports</span>
+                            </SidebarMenuButton>
+                        </Link>
                     </SidebarGroup>
                     {/* <CMS /> */}
                     {/* <JoinUs /> */}
                     {/* <UserManagement /> */}
+
                 </SidebarContent>
                 <SidebarFooter>
                     <div onClick={handleLogOut} className='flex py-2 cursor-pointer text-sm items-center justify-center gap-1'>
