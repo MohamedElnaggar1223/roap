@@ -190,7 +190,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
             if (packageEdited.id) {
                 setLoading(true)
                 const packageName = values.type === "Term" ?
-                    `Term ${values.termNumber}` :
+                    `Assessment ${values.termNumber}` :
                     values.type === "Monthly" ?
                         `Monthly ${values.name}` :
                         values.name
@@ -255,7 +255,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
             }
             else if (setCreatedPackages) {
                 const packageName = values.type === "Term" ?
-                    `Term ${values.termNumber}` :
+                    `Assessment ${values.termNumber}` :
                     values.type === "Monthly" ?
                         `Monthly ${values.name}` :
                         values.name
@@ -368,7 +368,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                     control={form.control}
                                     name="type"
                                     render={({ field }) => (
-                                        <FormItem>
+                                        <FormItem className='absolute hidden'>
                                             <FormLabel>Type</FormLabel>
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                 <FormControl>
@@ -376,7 +376,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                                         <SelectValue placeholder="Select type" />
                                                     </SelectTrigger>
                                                 </FormControl>
-                                                <SelectContent>
+                                                <SelectContent className='!bg-[#F1F2E9]'>
                                                     <SelectItem value="Term">Term</SelectItem>
                                                     <SelectItem value="Monthly">Monthly</SelectItem>
                                                     <SelectItem value="Full Season">Full Season</SelectItem>
@@ -392,7 +392,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                         control={form.control}
                                         name="termNumber"
                                         render={({ field }) => (
-                                            <FormItem>
+                                            <FormItem className='absolute hidden'>
                                                 <FormLabel>Term Number</FormLabel>
                                                 <FormControl>
                                                     <div className="flex items-center">
@@ -701,7 +701,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                                                     <SelectValue placeholder="Select day" />
                                                                 </SelectTrigger>
                                                             </FormControl>
-                                                            <SelectContent>
+                                                            <SelectContent className='!bg-[#F1F2E9]'>
                                                                 {["sun", "mon", "tue", "wed", "thu", "fri", "sat"].map((day) => (
                                                                     <SelectItem key={day} value={day}>
                                                                         {days[day as keyof typeof days]}

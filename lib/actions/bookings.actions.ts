@@ -90,7 +90,11 @@ export async function getProgramDetails(programId: number): Promise<ProgramDetai
         const program = await db.query.programs.findFirst({
             where: eq(programs.id, programId),
             with: {
-                packages: true,
+                packages: {
+                    with: {
+                        schedules: true
+                    }
+                },
                 coachPrograms: {
                     with: {
                         coach: true
@@ -134,7 +138,14 @@ export async function getProgramDetails(programId: number): Promise<ProgramDetai
                     price: Number(pkg.price),
                     entryFees: pkg.entryFees ? Number(pkg.entryFees) : null,
                     sessionPerWeek: pkg.sessionPerWeek,
-                    sessionDuration: pkg.sessionDuration
+                    sessionDuration: pkg.sessionDuration,
+                    schedules: pkg.schedules.map(s => ({
+                        id: s.id,
+                        day: s.day,
+                        from: s.from,
+                        to: s.to,
+                    })),
+                    endDate: pkg.endDate
                 })),
                 coaches: program.coachPrograms.map(cp => ({
                     id: cp.coach.id,
@@ -217,8 +228,8 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
             await tx.insert(bookingSessions).values({
                 bookingId: booking.id,
                 date: formatDateForDB(new Date(validatedInput.date)),
-                from: validatedInput.time,
-                to: calculateEndTime(validatedInput.time, packageDetails.sessionDuration || 60),
+                from: validatedInput.time.split(' ')[0],
+                to: validatedInput.time.split(' ')[1],
                 status: 'pending',
                 createdAt: sql`now()`,
                 updatedAt: sql`now()`
@@ -240,81 +251,81 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     }
 }
 
-export async function getAvailableTimeSlots(
-    date: string,
-    coachId: number | null
-): Promise<TimeSlotResponse> {
-    try {
-        const parsedDate = formatDateForDB(new Date(date))
+// export async function getAvailableTimeSlots(
+//     date: string,
+//     coachId: number | null
+// ): Promise<TimeSlotResponse> {
+//     try {
+//         const parsedDate = formatDateForDB(new Date(date))
 
-        if (!coachId) {
-            const allTimeSlots = generateTimeSlots().map(time => ({
-                time,
-                isAvailable: true
-            }))
-            return { data: allTimeSlots }
-        }
+//         if (!coachId) {
+//             const allTimeSlots = generateTimeSlots().map(time => ({
+//                 time,
+//                 isAvailable: true
+//             }))
+//             return { data: allTimeSlots }
+//         }
 
-        const bookedSlotsData = await db.query.bookingSessions.findMany({
-            where: and(
-                eq(bookingSessions.date, parsedDate)
-                // eq(bookings.coachId, coachId)
-            ),
-            with: {
-                booking: true
-            }
-        })
+//         const bookedSlotsData = await db.query.bookingSessions.findMany({
+//             where: and(
+//                 eq(bookingSessions.date, parsedDate)
+//                 // eq(bookings.coachId, coachId)
+//             ),
+//             with: {
+//                 booking: true
+//             }
+//         })
 
-        const bookedSlots = bookedSlotsData.filter(slot => slot.booking.coachId === coachId)
+//         const bookedSlots = bookedSlotsData.filter(slot => slot.booking.coachId === coachId)
 
-        const blockedSlotsData = await db.query.blockCoaches.findMany({
-            where: and(
-                // eq(blocks.date, parsedDate),
-                eq(blockCoaches.coachId, coachId)
-            ),
-            with: {
-                block: true
-            }
-        })
+//         const blockedSlotsData = await db.query.blockCoaches.findMany({
+//             where: and(
+//                 // eq(blocks.date, parsedDate),
+//                 eq(blockCoaches.coachId, coachId)
+//             ),
+//             with: {
+//                 block: true
+//             }
+//         })
 
-        const blockedSlots = blockedSlotsData.filter(slot => slot.block.date === parsedDate)
+//         const blockedSlots = blockedSlotsData.filter(slot => slot.block.date === parsedDate)
 
-        const allTimeSlots = generateTimeSlots().map(time => ({
-            time,
-            isAvailable: true
-        }))
+//         const allTimeSlots = generateTimeSlots().map(time => ({
+//             time,
+//             isAvailable: true
+//         }))
 
-        console.log("All time slots", allTimeSlots)
-        console.log("Booked slots", bookedSlots)
-        console.log("Blocked slots", blockedSlots)
+//         console.log("All time slots", allTimeSlots)
+//         console.log("Booked slots", bookedSlots)
+//         console.log("Blocked slots", blockedSlots)
 
-        const availableSlots = allTimeSlots.map(slot => {
-            const isBooked = bookedSlots.some(booking => booking.from === slot.time)
-            const isBlocked = blockedSlots.some(block =>
-                block.block.startTime <= slot.time &&
-                block.block.endTime > slot.time
-            )
+//         const availableSlots = allTimeSlots.map(slot => {
+//             const isBooked = bookedSlots.some(booking => booking.from === slot.time)
+//             const isBlocked = blockedSlots.some(block =>
+//                 block.block.startTime <= slot.time &&
+//                 block.block.endTime > slot.time
+//             )
 
-            return {
-                ...slot,
-                isAvailable: !isBooked && !isBlocked,
-                reason: isBooked ? 'booked' as const :
-                    isBlocked ? 'blocked' as const :
-                        undefined
-            }
-        })
+//             return {
+//                 ...slot,
+//                 isAvailable: !isBooked && !isBlocked,
+//                 reason: isBooked ? 'booked' as const :
+//                     isBlocked ? 'blocked' as const :
+//                         undefined
+//             }
+//         })
 
-        return { data: availableSlots }
+//         return { data: availableSlots }
 
-    } catch (error) {
-        console.error('Error getting available time slots:', error)
-        return {
-            error: {
-                message: 'Failed to fetch available time slots'
-            }
-        }
-    }
-}
+//     } catch (error) {
+//         console.error('Error getting available time slots:', error)
+//         return {
+//             error: {
+//                 message: 'Failed to fetch available time slots'
+//             }
+//         }
+//     }
+// }
 
 async function validateBooking(input: CreateBookingInput): Promise<ValidationResult> {
     const errors: Record<string, string> = {}

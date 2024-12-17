@@ -98,6 +98,7 @@ interface Props {
     onOpenChange: (open: boolean) => void
     programId?: number
     setCreatedPackages?: React.Dispatch<React.SetStateAction<Package[]>>
+    packagesLength?: number
 }
 
 const days = {
@@ -125,7 +126,7 @@ const months = [
     { label: "December", value: 12 }
 ];
 
-export default function AddPackage({ open, onOpenChange, programId, setCreatedPackages }: Props) {
+export default function AddPackage({ open, onOpenChange, programId, setCreatedPackages, packagesLength }: Props) {
     const router = useRouter()
 
     const { mutate } = useOnboarding()
@@ -138,6 +139,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
         defaultValues: {
             type: "Term",
             price: '',
+            termNumber: packagesLength ? (packagesLength + 1).toString() : '1',
             memo: '',
             entryFees: '0',
             schedules: [{ day: '', from: '', to: '', memo: '' }],
@@ -160,7 +162,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
             if (programId) {
                 setLoading(true)
                 const packageName = values.type === "Term" ?
-                    `Term ${values.termNumber}` :
+                    `Assessment ${values.termNumber}` :
                     values.type === "Monthly" ?
                         `Monthly ${values.name}` :
                         values.name
@@ -212,7 +214,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
             }
             else if (setCreatedPackages) {
                 const packageName = values.type === "Term" ?
-                    `Term ${values.termNumber}` :
+                    `Assessment ${values.termNumber}` :
                     values.type === "Monthly" ?
                         `Monthly ${values.name ?? ''}` :
                         values.name
@@ -307,7 +309,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                     control={form.control}
                                     name="type"
                                     render={({ field }) => (
-                                        <FormItem>
+                                        <FormItem className='absolute hidden'>
                                             <FormLabel>Type</FormLabel>
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                 <FormControl>
@@ -315,7 +317,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                                         <SelectValue placeholder="Select type" />
                                                     </SelectTrigger>
                                                 </FormControl>
-                                                <SelectContent>
+                                                <SelectContent className='!bg-[#F1F2E9]'>
                                                     <SelectItem value="Term">Term</SelectItem>
                                                     <SelectItem value="Monthly">Monthly</SelectItem>
                                                     <SelectItem value="Full Season">Full Season</SelectItem>
@@ -331,7 +333,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                         control={form.control}
                                         name="termNumber"
                                         render={({ field }) => (
-                                            <FormItem>
+                                            <FormItem className='absolute hidden'>
                                                 <FormLabel>Term Number</FormLabel>
                                                 <FormControl>
                                                     <div className="flex items-center">
@@ -639,7 +641,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                                                     <SelectValue placeholder="Select day" />
                                                                 </SelectTrigger>
                                                             </FormControl>
-                                                            <SelectContent>
+                                                            <SelectContent className='!bg-[#F1F2E9]'>
                                                                 {["sun", "mon", "tue", "wed", "thu", "fri", "sat"].map((day) => (
                                                                     <SelectItem key={day} value={day}>
                                                                         {days[day as keyof typeof days]}

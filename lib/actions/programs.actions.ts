@@ -61,10 +61,7 @@ export const getProgramsData = async () => {
     //     .orderBy(asc(programs.createdAt))
 
     const programsData = await db.query.programs.findMany({
-        where: and(
-            eq(programs.academicId, academy.id),
-            not(eq(programs.name, 'Assessment')),
-        ),
+        where: eq(programs.academicId, academy.id),
         with: {
             packages: {
                 with: {
@@ -108,6 +105,7 @@ export const getProgramsData = async () => {
 
     const finalProgramsData = programsData.map(program => ({
         ...program,
+        name: program.name === 'Assessment' ? 'Assessment ' + program.sport?.sportTranslations[0]?.name + program.branch?.branchTranslations[0]?.name : program.name,
         packages: program.packages.map(pkg => ({
             ...pkg,
             schedules: pkg.schedules.map(s => ({

@@ -77,7 +77,7 @@ const addProgramSchema = z.object({
     startAgeUnit: z.enum(["months", "years"]),
     endAge: z.number().min(0.5, "End age must be 0.5 or greater").max(100, "End age must be 100 or less").multipleOf(0.5, "End age must be in increments of 0.5").optional(),
     endAgeUnit: z.enum(["months", "years", "unlimited"]),
-    numberOfSeats: z.string().min(1, "Number of slots is required"),
+    numberOfSeats: z.string().optional(),
     type: z.enum(["TEAM", "PRIVATE"]),
     color: z.string().min(1),
 })
@@ -167,7 +167,7 @@ const ColorSelector = ({ form, disabled = false }: { form: any; disabled?: boole
                                     <SelectValue placeholder="Select a color" />
                                 </SelectTrigger>
                             </FormControl>
-                            <SelectContent>
+                            <SelectContent className='!bg-[#F1F2E9]'>
                                 <SelectItem value="select" disabled className="flex items-center gap-2">
                                     Select a color
                                 </SelectItem>
@@ -353,7 +353,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                 gender: selectedGenders.join(','),
                 startDateOfBirth: startDate,
                 endDateOfBirth: endDate,
-                numberOfSeats: parseInt(values.numberOfSeats),
+                numberOfSeats: 0,
                 type: values.type,
                 coaches: selectedCoaches,
                 packagesData: createdPackages,
@@ -474,7 +474,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                                 <SelectValue placeholder="Select a branch" />
                                                             </SelectTrigger>
                                                         </FormControl>
-                                                        <SelectContent>
+                                                        <SelectContent className='!bg-[#F1F2E9]'>
                                                             {branches.map((branch) => (
                                                                 <SelectItem key={branch.id} value={branch.id.toString()}>
                                                                     {branch.name}
@@ -617,7 +617,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                                     <SelectValue placeholder="Select unit" />
                                                                 </SelectTrigger>
                                                             </FormControl>
-                                                            <SelectContent>
+                                                            <SelectContent className='!bg-[#F1F2E9]'>
                                                                 <SelectItem value="months">Months</SelectItem>
                                                                 <SelectItem value="years">Years</SelectItem>
                                                             </SelectContent>
@@ -663,7 +663,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                                     <SelectValue placeholder="Select unit" />
                                                                 </SelectTrigger>
                                                             </FormControl>
-                                                            <SelectContent>
+                                                            <SelectContent className='!bg-[#F1F2E9]'>
                                                                 <SelectItem value="months">Months</SelectItem>
                                                                 <SelectItem value="years">Years</SelectItem>
                                                                 <SelectItem value="unlimited">Unlimited</SelectItem>
@@ -754,7 +754,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                                 <SelectValue placeholder="Select a sport" />
                                                             </SelectTrigger>
                                                         </FormControl>
-                                                        <SelectContent>
+                                                        <SelectContent className='!bg-[#F1F2E9]'>
                                                             {academySports?.map((sport) => (
                                                                 <SelectItem key={sport.id} value={sport.id.toString()}>
                                                                     {sports?.find(s => s.id === sport.id)?.name}
@@ -767,7 +767,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                             )}
                                         />
 
-                                        <FormField
+                                        {/* <FormField
                                             control={form.control}
                                             name='numberOfSeats'
                                             render={({ field }) => (
@@ -779,7 +779,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                     <FormMessage />
                                                 </FormItem>
                                             )}
-                                        />
+                                        /> */}
                                     </div>
 
 
@@ -787,7 +787,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                         control={form.control}
                                         name="type"
                                         render={({ field }) => (
-                                            <FormItem className='flex-1'>
+                                            <FormItem className='flex-1 hidden absolute'>
                                                 <FormLabel>Type</FormLabel>
                                                 <Select disabled={isLoading || isValidating || loading} onValueChange={field.onChange} defaultValue={field.value}>
                                                     <FormControl>
@@ -795,7 +795,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                             <SelectValue placeholder="Select type" />
                                                         </SelectTrigger>
                                                     </FormControl>
-                                                    <SelectContent>
+                                                    <SelectContent className='!bg-[#F1F2E9]'>
                                                         <SelectItem value="TEAM">Team</SelectItem>
                                                         <SelectItem value="PRIVATE">Private</SelectItem>
                                                     </SelectContent>

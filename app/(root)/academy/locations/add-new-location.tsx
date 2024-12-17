@@ -87,12 +87,12 @@ export default function AddNewLocation({ sports, academySports }: Props) {
 
             const coordinates = extractCoordinates(values.url)
 
-            if (!coordinates) {
-                return {
-                    success: false,
-                    error: 'Could not extract coordinates from URL'
-                }
-            }
+            // if (!coordinates) {
+            //     return {
+            //         success: false,
+            //         error: 'Could not extract coordinates from URL'
+            //     }
+            // }
 
             const result = await createLocation({
                 facilities: selectedAmenities,
@@ -101,8 +101,8 @@ export default function AddNewLocation({ sports, academySports }: Props) {
                 sports: selectedSports,
                 url: values.url,
                 isDefault: values.isDefault,
-                latitude: coordinates.latitude,
-                longitude: coordinates.longitude
+                latitude: coordinates?.latitude ?? '',
+                longitude: coordinates?.longitude ?? ''
             })
 
             if (result.error) {

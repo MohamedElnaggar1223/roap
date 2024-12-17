@@ -623,6 +623,7 @@ export const programs = pgTable("programs", {
     createdAt: timestamp("created_at", { mode: 'string' }),
     updatedAt: timestamp("updated_at", { mode: 'string' }),
     color: varchar({ length: 255 }).default(sql`NULL`),
+    assessmentDeductedFromProgram: boolean("assessment_deducted_from_program").default(false).notNull(),
 }, (table) => {
     return {
         programsAcademicIdForeign: foreignKey({

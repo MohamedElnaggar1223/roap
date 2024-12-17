@@ -57,6 +57,7 @@ export async function getAssessments() {
             endDateOfBirth: programs.endDateOfBirth,
             branchName: branchTranslations.name,
             sportName: sportTranslations.name,
+            assessmentDeductedFromProgram: programs.assessmentDeductedFromProgram,
             coaches: sql<string[]>`(
                 SELECT COALESCE(array_agg(coach_id), ARRAY[]::integer[])
                 FROM ${coachProgram}
@@ -66,6 +67,13 @@ export async function getAssessments() {
                 SELECT COALESCE(array_agg(id), ARRAY[]::integer[])
                 FROM ${packages}
                 WHERE ${packages.programId} = ${programs.id}
+            )`,
+            firstPackagePrice: sql<number>`(
+                SELECT ${packages.price}
+                FROM ${packages}
+                WHERE ${packages.programId} = ${programs.id}
+                AND ${packages.id} = ${packages.id}
+                LIMIT 1
             )`
         })
         .from(programs)
@@ -107,6 +115,7 @@ export async function updateAssessment(id: number, data: {
     numberOfSeats: number
     coaches: number[]
     packagesData: Package[]
+    assessmentDeductedFromProgram: boolean
 }) {
     const session = await auth()
 
@@ -128,6 +137,7 @@ export async function updateAssessment(id: number, data: {
                     endDateOfBirth: formatDateForDB(data.endDateOfBirth),
                     numberOfSeats: data.numberOfSeats,
                     type: 'TEAM',
+                    assessmentDeductedFromProgram: data.assessmentDeductedFromProgram,
                     updatedAt: sql`now()`
                 })
                 .where(eq(programs.id, id))

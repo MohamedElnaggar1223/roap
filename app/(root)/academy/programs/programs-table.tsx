@@ -174,7 +174,7 @@ export function ProgramsDataTable({ data, branches, sports, academySports }: Pro
                                     <ChevronDown className="w-4 h-4" />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent className='max-h-48 overflow-auto'>
+                            <DropdownMenuContent className='max-h-48 overflow-auto bg-[#F1F2E9]'>
                                 <DropdownMenuItem onClick={() => setSelectedGender(null)}>All</DropdownMenuItem>
                                 <DropdownMenuItem
                                     key={'male'}
@@ -209,7 +209,7 @@ export function ProgramsDataTable({ data, branches, sports, academySports }: Pro
                                     <ChevronDown className="w-4 h-4" />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent className='max-h-48 overflow-auto'>
+                            <DropdownMenuContent className='max-h-48 overflow-auto bg-[#F1F2E9]'>
                                 <DropdownMenuItem onClick={() => setSelectedType(null)}>All</DropdownMenuItem>
                                 {['Team', 'Private'].map(type => (
                                     <DropdownMenuItem
@@ -234,7 +234,7 @@ export function ProgramsDataTable({ data, branches, sports, academySports }: Pro
                                     <ChevronDown className="w-4 h-4" />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent className='max-h-48 overflow-auto'>
+                            <DropdownMenuContent className='max-h-48 overflow-auto bg-[#F1F2E9]'>
                                 <DropdownMenuItem onClick={() => setSelectedBranch(null)}>All</DropdownMenuItem>
                                 {branches.map(branch => (
                                     <DropdownMenuItem
@@ -259,7 +259,7 @@ export function ProgramsDataTable({ data, branches, sports, academySports }: Pro
                                     <ChevronDown className="w-4 h-4" />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent className='max-h-48 overflow-auto'>
+                            <DropdownMenuContent className='max-h-48 overflow-auto bg-[#F1F2E9]'>
                                 <DropdownMenuItem onClick={() => setSelectedSport(null)}>All</DropdownMenuItem>
                                 {sports.map(sport => (
                                     <DropdownMenuItem

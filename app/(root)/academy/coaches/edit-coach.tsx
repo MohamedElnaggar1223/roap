@@ -309,7 +309,7 @@ export default function EditCoach({ coachEdited, sports, languages, academySport
                                                                 <SelectValue placeholder="Select gender" />
                                                             </SelectTrigger>
                                                         </FormControl>
-                                                        <SelectContent>
+                                                        <SelectContent className='!bg-[#F1F2E9]'>
                                                             <SelectItem value="male">Male</SelectItem>
                                                             <SelectItem value="female">Female</SelectItem>
                                                         </SelectContent>

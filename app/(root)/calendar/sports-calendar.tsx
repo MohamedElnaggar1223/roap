@@ -68,18 +68,18 @@ const groupEvents = (events: Event[]): GroupedEvent[] => {
 			: `${event.startTime}-${event.endTime}-${event.coachName}-${event.packageId}`
 
 		// Skip regular events without required fields
-		if (event.programName !== 'block' && (!event.coachName || !event.packageId)) return acc
+		if (event.programName !== 'block' && (!event.packageId)) return acc
 
 		if (!acc.has(key)) {
 			acc.set(key, {
 				time: `${event.startTime.split(':').length < 3 ? event.startTime + ':00' : event.startTime}-${event.endTime.split(':').length < 3 ? event.endTime + ':00' : event.endTime}`,
-				coachName: event.coachName || '',
+				coachName: event.coachName || 'No Coach',
 				packageId: event.packageId || 0,
 				packageName: event.programName === 'block' ? 'Blocked Time' : (event.packageName || ''),
 				count: 0,
 				events: [],
 				programName: event.programName || '',
-				color: event.programName !== 'block' ? event.color ?? '' : '#E6E7DE'
+				color: event.programName !== 'block' ? event.color ?? '#DCE5AE' : '#E6E7DE'
 			})
 		}
 
@@ -291,7 +291,7 @@ export default function Calendar() {
 									<ChevronDown className="w-4 h-4" />
 								</Button>
 							</DropdownMenuTrigger>
-							<DropdownMenuContent>
+							<DropdownMenuContent className='bg-[#F1F2E9]'>
 								<DropdownMenuItem onClick={() => setSelectedLocation(null)}>
 									All Locations
 								</DropdownMenuItem>
@@ -320,7 +320,7 @@ export default function Calendar() {
 									<ChevronDown className="w-4 h-4" />
 								</Button>
 							</DropdownMenuTrigger>
-							<DropdownMenuContent>
+							<DropdownMenuContent className='bg-[#F1F2E9]'>
 								<DropdownMenuItem onClick={() => setSelectedSport(null)}>
 									All Sports
 								</DropdownMenuItem>
@@ -349,7 +349,7 @@ export default function Calendar() {
 									<ChevronDown className="w-4 h-4" />
 								</Button>
 							</DropdownMenuTrigger>
-							<DropdownMenuContent>
+							<DropdownMenuContent className='bg-[#F1F2E9]'>
 								<DropdownMenuItem onClick={() => setSelectedProgram(null)}>
 									All Programs
 								</DropdownMenuItem>
@@ -378,7 +378,7 @@ export default function Calendar() {
 									<ChevronDown className="w-4 h-4" />
 								</Button>
 							</DropdownMenuTrigger>
-							<DropdownMenuContent>
+							<DropdownMenuContent className='bg-[#F1F2E9]'>
 								<DropdownMenuItem onClick={() => setSelectedGender(null)}>
 									All Genders
 								</DropdownMenuItem>
@@ -438,7 +438,7 @@ export default function Calendar() {
 									<ChevronDown className="w-4 h-4" />
 								</Button>
 							</DropdownMenuTrigger>
-							<DropdownMenuContent>
+							<DropdownMenuContent className='bg-[#F1F2E9]'>
 								<DropdownMenuItem onClick={() => setCalendarView('day')}>Day</DropdownMenuItem>
 								<DropdownMenuItem onClick={() => setCalendarView('week')}>Week</DropdownMenuItem>
 								<DropdownMenuItem onClick={() => setCalendarView('month')}>Month</DropdownMenuItem>

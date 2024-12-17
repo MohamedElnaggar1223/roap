@@ -36,6 +36,7 @@ import useSWR from 'swr'
 import { getProgramPackages } from '@/lib/actions/packages.actions'
 import { getAllCoaches } from '@/lib/actions/coaches.actions'
 import { useOnboarding } from '@/providers/onboarding-provider'
+import { Checkbox } from '@/components/ui/checkbox'
 
 const calculateAge = (birthDate: string): number => {
     const today = new Date();
@@ -69,7 +70,8 @@ const editAssessmentSchema = z.object({
     startAgeUnit: z.enum(["months", "years"]),
     endAge: z.number().min(0.5, "End age must be 0.5 or greater").max(100, "End age must be 100 or less").multipleOf(0.5, "End age must be in increments of 0.5").optional(),
     endAgeUnit: z.enum(["months", "years", "unlimited"]),
-    numberOfSeats: z.string().min(1, "Number of slots is required"),
+    numberOfSeats: z.string().optional(),
+    assessmentDeductedFromProgram: z.boolean().default(false).optional(),
 })
 
 interface Package {
@@ -112,6 +114,7 @@ interface Props {
         endDateOfBirth: string | null;
         branchName: string;
         sportName: string;
+        assessmentDeductedFromProgram: boolean;
     }
     branches: {
         id: number;
@@ -184,6 +187,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
             startAgeUnit: assessment.startDateOfBirth ? calculateAge(assessment.startDateOfBirth) < 1 ? 'months' : 'years' : 'years',
             endAge: assessment.endDateOfBirth ? calculateAge(assessment.endDateOfBirth) < 0 ? undefined : calculateAge(assessment.endDateOfBirth) : 100,
             endAgeUnit: assessment.endDateOfBirth ? calculateAge(assessment.endDateOfBirth) < 0 ? 'unlimited' : 'years' : 'unlimited',
+            assessmentDeductedFromProgram: assessment.assessmentDeductedFromProgram
         }
     })
 
@@ -281,9 +285,10 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                 gender: selectedGenders.join(','),
                 startDateOfBirth: startDate,
                 endDateOfBirth: endDate,
-                numberOfSeats: parseInt(values.numberOfSeats),
+                numberOfSeats: 0,
                 coaches: selectedCoaches,
-                packagesData: createdPackages
+                packagesData: createdPackages,
+                assessmentDeductedFromProgram: values.assessmentDeductedFromProgram ? values.assessmentDeductedFromProgram : false
             })
 
             if (result.error) {
@@ -354,6 +359,23 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                                                         className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
                                                     />
                                                 </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={form.control}
+                                        name='assessmentDeductedFromProgram'
+                                        render={({ field }) => (
+                                            <FormItem className='flex gap-2 items-center justify-start text-center'>
+                                                <FormControl>
+                                                    <Checkbox
+                                                        checked={field.value}
+                                                        onCheckedChange={field.onChange}
+                                                    />
+                                                </FormControl>
+                                                <FormLabel className='!mt-0 font-semibold'>Do you want to deduct the price from the subscription?</FormLabel>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
@@ -505,7 +527,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                                                                     <SelectValue placeholder="Select unit" />
                                                                 </SelectTrigger>
                                                             </FormControl>
-                                                            <SelectContent>
+                                                            <SelectContent className='!bg-[#F1F2E9]'>
                                                                 <SelectItem value="months">Months</SelectItem>
                                                                 <SelectItem value="years">Years</SelectItem>
                                                             </SelectContent>
@@ -551,7 +573,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                                                                     <SelectValue placeholder="Select unit" />
                                                                 </SelectTrigger>
                                                             </FormControl>
-                                                            <SelectContent>
+                                                            <SelectContent className='!bg-[#F1F2E9]'>
                                                                 <SelectItem value="months">Months</SelectItem>
                                                                 <SelectItem value="years">Years</SelectItem>
                                                                 <SelectItem value="unlimited">Unlimited</SelectItem>
@@ -564,7 +586,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                                         </div>
                                     </div>
 
-                                    <FormField
+                                    {/* <FormField
                                         control={form.control}
                                         name='numberOfSeats'
                                         render={({ field }) => (
@@ -582,7 +604,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                                                 <FormMessage />
                                             </FormItem>
                                         )}
-                                    />
+                                    /> */}
 
                                     <div className="w-full max-w-screen-2xl overflow-x-auto">
                                         <div className="min-w-full grid grid-cols-[0.75fr,auto,auto,auto,auto,auto] gap-y-2 text-nowrap">
@@ -668,6 +690,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                 open={packagesOpen}
                 onOpenChange={setPackagesOpen}
                 setCreatedPackages={setCreatedPackages}
+                packagesLength={assessment.packages.length}
             />
 
             {editedPackage && (

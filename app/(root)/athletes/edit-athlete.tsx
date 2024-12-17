@@ -84,7 +84,8 @@ export default function EditAthlete({ athleteEdited }: Props) {
         defaultValues: {
             email: athleteEdited.email,
             phoneNumber: athleteEdited.phoneNumber || '',
-            name: athleteEdited.profile?.name || '',
+            firstName: athleteEdited.profile?.name.split(' ')[0] || '',
+            lastName: athleteEdited.profile?.name.split(' ')[1] || '',
             gender: athleteEdited.profile?.gender || '',
             birthday: athleteEdited.profile?.birthday ? new Date(athleteEdited.profile.birthday) : new Date(),
             image: athleteEdited.profile?.image || '',
@@ -177,6 +178,7 @@ export default function EditAthlete({ athleteEdited }: Props) {
 
             const result = await updateAthlete(athleteEdited.id, {
                 ...values,
+                name: values.firstName + ' ' + values.lastName,
                 image: imagePath || '',
                 certificate: certificatePath || ''
             })
@@ -318,6 +320,61 @@ export default function EditAthlete({ athleteEdited }: Props) {
                                             </FormItem>
                                         )}
                                     />
+                                    {/* Basic Information */}
+                                    <div className='flex w-full gap-2 items-start justify-center'>
+                                        <FormField
+                                            control={form.control}
+                                            name='firstName'
+                                            render={({ field }) => (
+                                                <FormItem className='flex-1'>
+                                                    <FormLabel>Athlete First Name</FormLabel>
+                                                    <FormControl>
+                                                        <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name='lastName'
+                                            render={({ field }) => (
+                                                <FormItem className='flex-1'>
+                                                    <FormLabel>Athlete Last Name</FormLabel>
+                                                    <FormControl>
+                                                        <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                    <FormField
+                                        control={form.control}
+                                        name='phoneNumber'
+                                        render={({ field }) => (
+                                            <FormItem className='flex-1'>
+                                                <FormLabel>Mobile Number</FormLabel>
+                                                <FormControl>
+                                                    <Input {...field} type="tel" className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name='email'
+                                        render={({ field }) => (
+                                            <FormItem className='flex-1'>
+                                                <FormLabel>Email</FormLabel>
+                                                <FormControl>
+                                                    <Input {...field} type="email" className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
                                     <FormField
                                         control={form.control}
                                         name='type'
@@ -336,7 +393,7 @@ export default function EditAthlete({ athleteEdited }: Props) {
                                                             <SelectValue placeholder="Select type" />
                                                         </SelectTrigger>
                                                     </FormControl>
-                                                    <SelectContent>
+                                                    <SelectContent className='!bg-[#F1F2E9]'>
                                                         <SelectItem value="primary">Athlete</SelectItem>
                                                         <SelectItem value="fellow">Guardian</SelectItem>
                                                     </SelectContent>
@@ -463,48 +520,7 @@ export default function EditAthlete({ athleteEdited }: Props) {
                                         </div>
                                     </>
 
-                                    {/* Basic Information */}
-                                    <div className='flex w-full gap-2 items-start justify-center'>
-                                        <FormField
-                                            control={form.control}
-                                            name='name'
-                                            render={({ field }) => (
-                                                <FormItem className='flex-1'>
-                                                    <FormLabel>Athlete Name</FormLabel>
-                                                    <FormControl>
-                                                        <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name='phoneNumber'
-                                            render={({ field }) => (
-                                                <FormItem className='flex-1'>
-                                                    <FormLabel>Mobile Number</FormLabel>
-                                                    <FormControl>
-                                                        <Input {...field} type="tel" className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                    </div>
-                                    <FormField
-                                        control={form.control}
-                                        name='email'
-                                        render={({ field }) => (
-                                            <FormItem className='flex-1'>
-                                                <FormLabel>Email</FormLabel>
-                                                <FormControl>
-                                                    <Input {...field} type="email" className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
+
 
                                     <div className="flex gap-4">
 
@@ -521,7 +537,7 @@ export default function EditAthlete({ athleteEdited }: Props) {
                                                                     <SelectValue placeholder="Select gender" />
                                                                 </SelectTrigger>
                                                             </FormControl>
-                                                            <SelectContent>
+                                                            <SelectContent className='!bg-[#F1F2E9]'>
                                                                 <SelectItem value="male">Male</SelectItem>
                                                                 <SelectItem value="female">Female</SelectItem>
                                                             </SelectContent>
@@ -568,7 +584,7 @@ export default function EditAthlete({ athleteEdited }: Props) {
                                                                 <SelectValue placeholder="Select nationality" />
                                                             </SelectTrigger>
                                                         </FormControl>
-                                                        <SelectContent>
+                                                        <SelectContent className='!bg-[#F1F2E9]'>
                                                             {nationalities.map((nationality) => (
                                                                 <SelectItem key={nationality} value={nationality}>
                                                                     {nationality}
@@ -592,7 +608,7 @@ export default function EditAthlete({ athleteEdited }: Props) {
                                                                 <SelectValue placeholder="Select country" />
                                                             </SelectTrigger>
                                                         </FormControl>
-                                                        <SelectContent>
+                                                        <SelectContent className='!bg-[#F1F2E9]'>
                                                             {/* {countries.map((country) => (
                                                                 <SelectItem key={country} value={country}>
                                                                     {country}

@@ -168,7 +168,7 @@ export default function EditNewPromoCode({ promoCodeEdited }: Props) {
                                                                     <SelectValue placeholder="Select gender" />
                                                                 </SelectTrigger>
                                                             </FormControl>
-                                                            <SelectContent>
+                                                            <SelectContent className='!bg-[#F1F2E9]'>
                                                                 <SelectItem value="fixed">
                                                                     AED
                                                                 </SelectItem>

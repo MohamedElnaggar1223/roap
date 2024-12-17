@@ -315,7 +315,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                                         <SelectValue placeholder="Select type" />
                                                     </SelectTrigger>
                                                 </FormControl>
-                                                <SelectContent>
+                                                <SelectContent className='!bg-[#F1F2E9]'>
                                                     <SelectItem value="Term">Term</SelectItem>
                                                     <SelectItem value="Monthly">Monthly</SelectItem>
                                                     <SelectItem value="Full Season">Full Season</SelectItem>
@@ -639,7 +639,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                                                     <SelectValue placeholder="Select day" />
                                                                 </SelectTrigger>
                                                             </FormControl>
-                                                            <SelectContent>
+                                                            <SelectContent className='!bg-[#F1F2E9]'>
                                                                 {["sun", "mon", "tue", "wed", "thu", "fri", "sat"].map((day) => (
                                                                     <SelectItem key={day} value={day}>
                                                                         {days[day as keyof typeof days]}

@@ -48,6 +48,8 @@ interface Assessment {
     endDateOfBirth: string | null;
     branchName: string;
     sportName: string;
+    firstPackagePrice: number | null;
+    assessmentDeductedFromProgram: boolean;
 }
 
 interface AssessmentsTableProps {
@@ -104,7 +106,7 @@ export function AssessmentsTable({ data, branches, sports }: AssessmentsTablePro
                                     <ChevronDown className="w-4 h-4" />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent className='max-h-48 overflow-auto'>
+                            <DropdownMenuContent className='max-h-48 overflow-auto bg-[#F1F2E9]'>
                                 <DropdownMenuItem onClick={() => setSelectedGender(null)}>All</DropdownMenuItem>
                                 {['male', 'female', 'adults', 'adults men', 'ladies only'].map(gender => (
                                     <DropdownMenuItem
@@ -131,7 +133,7 @@ export function AssessmentsTable({ data, branches, sports }: AssessmentsTablePro
                                     <ChevronDown className="w-4 h-4" />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent className='max-h-48 overflow-auto'>
+                            <DropdownMenuContent className='max-h-48 overflow-auto bg-[#F1F2E9]'>
                                 <DropdownMenuItem onClick={() => setSelectedBranch(null)}>All</DropdownMenuItem>
                                 {branches.map(branch => (
                                     <DropdownMenuItem
@@ -158,7 +160,7 @@ export function AssessmentsTable({ data, branches, sports }: AssessmentsTablePro
                                     <ChevronDown className="w-4 h-4" />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent className='max-h-48 overflow-auto'>
+                            <DropdownMenuContent className='max-h-48 overflow-auto bg-[#F1F2E9]'>
                                 <DropdownMenuItem onClick={() => setSelectedSport(null)}>All</DropdownMenuItem>
                                 {sports.map(sport => (
                                     <DropdownMenuItem
@@ -187,12 +189,13 @@ export function AssessmentsTable({ data, branches, sports }: AssessmentsTablePro
             </div>
 
             <div className="w-full max-w-screen-2xl overflow-x-auto">
-                <div className="min-w-full grid grid-cols-[auto,auto,auto,auto] gap-y-2 text-nowrap">
+                <div className="min-w-full grid grid-cols-[auto,auto,auto,auto,auto] gap-y-2 text-nowrap">
                     {/* Header */}
                     <div className="contents">
                         <div className="py-4 px-4">Location</div>
                         <div className="py-4 px-4">Sport</div>
-                        <div className="py-4 px-4">Packages</div>
+                        <div className="py-4 px-4">Price</div>
+                        <div className="py-4 px-4">Deductions</div>
                         <div className="py-4 px-4"></div>
                     </div>
 
@@ -210,7 +213,12 @@ export function AssessmentsTable({ data, branches, sports }: AssessmentsTablePro
                                     {assessment.sportName}
                                 </div>
                                 <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                    {assessment.packages?.length ?? 0}
+                                    {assessment.firstPackagePrice ?? 0} AED
+                                </div>
+                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                    <span className={assessment.assessmentDeductedFromProgram ? "text-main-green" : "text-red-600"}>
+                                        {assessment.assessmentDeductedFromProgram ? "Yes" : "No"}
+                                    </span>
                                 </div>
                                 <div className="py-4 px-4 bg-main-white rounded-r-[20px] flex items-center justify-end font-bold font-inter">
                                     <EditAssessment

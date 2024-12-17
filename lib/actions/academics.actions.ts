@@ -175,6 +175,7 @@ export async function getPaginatedAcademics(
 			name: sql<string>`t.name`,
 			description: sql<string>`t.description`,
 			locale: sql<string>`t.locale`,
+			createdAt: academics.createdAt,
 		})
 		.from(academics)
 		.leftJoin(users, eq(academics.userId, users.id))
@@ -198,12 +199,16 @@ export async function getPaginatedAcademics(
 		.limit(pageSize)
 		.offset(offset)
 
+	console.log("Data", data)
+
+	const orderedData = [...data.filter(a => a.createdAt !== null).sort((a, b) => new Date(a?.createdAt!) > new Date(b?.createdAt!) ? -1 : 1), ...data.filter(a => a.createdAt === null)]
+
 	const [{ count }] = await db
 		.select({ count: sql`count(*)`.mapWith(Number) })
 		.from(academics)
 
 	return {
-		data,
+		data: orderedData,
 		meta: {
 			page,
 			pageSize,
@@ -309,6 +314,7 @@ export async function createAcademy(data: z.infer<typeof academySignUpSchema>) {
 				userId: newUser.id,
 				status: 'pending',
 				onboarded: false,
+				createdAt: sql`now()`,
 			})
 			.returning({
 				id: academics.id
@@ -368,7 +374,7 @@ export const getCalendarSlots = async (startDate: Date, endDate: Date) => {
 		.innerJoin(profiles, eq(bookings.profileId, profiles.id))
 		.innerJoin(packages, eq(bookings.packageId, packages.id))
 		.innerJoin(programs, eq(packages.programId, programs.id))
-		.innerJoin(coaches, eq(bookings.coachId, coaches.id))
+		.leftJoin(coaches, eq(bookings.coachId, coaches.id))
 		.innerJoin(branches, eq(programs.branchId, branches.id))
 		.innerJoin(branchTranslations, eq(branches.id, branchTranslations.branchId))
 		.innerJoin(sports, eq(programs.sportId, sports.id))
@@ -424,7 +430,8 @@ export const getCalendarSlots = async (startDate: Date, endDate: Date) => {
 		color: '#F5F5F5',
 	}));
 
-	console.log("Blocks", transformedBlocks)
+
+	console.log("bookingsData", bookingsData)
 
 	return {
 		data: [...bookingsData, ...transformedBlocks],

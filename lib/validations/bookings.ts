@@ -49,6 +49,13 @@ export interface ProgramDetails {
     coaches: CoachDetails[];
 }
 
+export interface Schedule {
+    id: number;
+    day: string;
+    from: string;
+    to: string;
+}
+
 export interface PackageDetails {
     id: number;
     name: string;
@@ -56,6 +63,8 @@ export interface PackageDetails {
     entryFees: number | null;
     sessionPerWeek: number;
     sessionDuration: number | null;
+    schedules: Schedule[];
+    endDate: string | null;
 }
 
 export interface CoachDetails {
@@ -109,6 +118,8 @@ export interface TimeSlot {
     time: string;
     isAvailable: boolean;
     reason?: 'booked' | 'blocked';
+    from: string;
+    to: string;
 }
 
 // State Types

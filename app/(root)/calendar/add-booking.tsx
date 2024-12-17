@@ -8,7 +8,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { format } from "date-fns";
+import { format, isBefore, parseISO } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import {
     Popover,
@@ -29,9 +29,10 @@ import type {
     BookingDetailsProps,
     BookingConfirmationProps,
     TimeSlot,
-    BookingConfirmationData
+    BookingConfirmationData,
+    Schedule
 } from '@/lib/validations/bookings';
-import { searchAthletes, getProgramDetails, createBooking, getAvailableTimeSlots } from '@/lib/actions/bookings.actions';
+import { searchAthletes, getProgramDetails, createBooking } from '@/lib/actions/bookings.actions';
 import { getProgramsData } from '@/lib/actions/programs.actions';
 import Image from 'next/image';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -44,6 +45,44 @@ function calculateEndTime(startTime: string, durationMinutes: number): string {
 
     const endDate = new Date(startDate.getTime() + durationMinutes * 60000)
     return `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}:00`
+}
+
+function getAvailableDays(schedules: Schedule[]): string[] {
+    return schedules.map(schedule => schedule.day.toLowerCase());
+}
+
+// Helper function to check if a date matches package schedules
+function isDateAvailable(date: Date, schedules: Schedule[], packageEndDate: string): boolean {
+    const dayOfWeek = format(date, 'EEEE').toLowerCase();
+    const isValidDay = schedules.some(schedule =>
+        schedule.day.toLowerCase() === dayOfWeek
+    );
+
+    return isValidDay && isBefore(date, parseISO(packageEndDate));
+}
+
+// Helper function to get available time slots for a specific day
+function getAvailableTimeSlots(schedules: Schedule[], selectedDay: Date) {
+    const daySchedules = schedules.filter(
+        schedule => days[schedule.day.toLowerCase() as keyof typeof days] === format(selectedDay, 'EEEE').toLowerCase()
+    );
+
+    return daySchedules.map(schedule => ({
+        time: format(new Date(`2000-01-01T${schedule.from}`), 'h:mm a') + '-' + format(new Date(`2000-01-01T${schedule.to}`), 'h:mm a'),
+        isAvailable: true,
+        from: schedule.from,
+        to: schedule.to,
+    }));
+}
+
+const days = {
+    'sun': 'sunday',
+    'mon': 'monday',
+    'tue': 'tuesday',
+    'wed': 'wednesday',
+    'thu': 'thursday',
+    'fri': 'friday',
+    'sat': 'saturday'
 }
 
 const initialState: BookingState = {
@@ -248,20 +287,33 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingDetails, athlete
         fetchPrograms();
     }, []);
 
+    const disabledDays = (date: Date) => {
+        const schedules = selectedPackage?.schedules.map(schedule => ({ ...schedule, day: days[schedule.day.toLowerCase() as keyof typeof days] }));
+        if (!schedules || !selectedPackage?.schedules) return true;
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (isBefore(date, today)) return true;
+
+        return !isDateAvailable(
+            date,
+            schedules,
+            selectedPackage.endDate ?? ''
+        );
+    };
+
+
     useEffect(() => {
-        if (selectedProgram && date) {
-            const fetchTimeSlots = async () => {
-                const response = await getAvailableTimeSlots(
-                    format(date, 'yyyy-MM-dd'),
-                    selectedCoach?.id ?? null
-                );
-                if (response.data) {
-                    setAvailableTimeSlots(response.data);
-                }
-            };
-            fetchTimeSlots();
+        if (date && selectedPackage?.schedules) {
+            const slots = getAvailableTimeSlots(selectedPackage.schedules, date);
+            setAvailableTimeSlots(slots);
+
+            if (!slots.some(slot => slot.from === time)) {
+                setTime("");
+            }
         }
-    }, [selectedProgram, date, selectedCoach]);
+    }, [date, selectedPackage]);
 
     useEffect(() => {
         if (!selectedProgram) return
@@ -417,17 +469,22 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingDetails, athlete
                             {date ? format(date, "PPP") : "Pick a date"}
                         </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
+                    <PopoverContent className="w-auto p-0 !bg-[#F1F2E9]">
                         <Calendar
                             mode="single"
                             selected={date}
                             onSelect={(date) => date && setDate(date)}
+                            disabled={disabledDays}
                             initialFocus
                         />
                     </PopoverContent>
                 </Popover>
             </div>
 
+            <div className="space-y-2 flex flex-col">
+                <label className="text-sm font-medium">End Date</label>
+                <p>{selectedPackage?.endDate ? format(selectedPackage.endDate, "PPP") : "No end date"}</p>
+            </div>
             {/* Time Selection */}
             <div className="space-y-2 flex flex-col">
                 <label className="text-sm font-medium">Time</label>
@@ -441,10 +498,11 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingDetails, athlete
                     {availableTimeSlots.map(slot => (
                         <option
                             key={slot.time}
-                            value={slot.time}
+                            value={slot.from + " " + slot.to}
                             disabled={!slot.isAvailable}
                         >
-                            {format(new Date(`2000-01-01T${slot.time}`), 'h:mm a')}
+                            {/* {format(new Date(`2000-01-01T${slot.time}`), 'h:mm a')} */}
+                            {slot.time}
                             {!slot.isAvailable && ` (${slot.reason})`}
                         </option>
                     ))}
@@ -508,14 +566,10 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
                         <p className='font-semibold'>{format(bookingDetails.date, "PPP")} , {" "}
                             <span className='font-normal'>
                                 {
-                                    format(new Date(`2000-01-01T${bookingDetails.time}`), 'h:mm a')
+                                    format(new Date(`2000-01-01T${bookingDetails.time.split(' ')[0]}`), 'h:mm a')
                                 }
-                                {" "}
-                                -
-                                {" "}
-                                {
-                                    format(new Date(`2000-01-01T${calculateEndTime(bookingDetails.time, bookingDetails.package.sessionDuration || 60)}`), 'h:mm a')
-                                }
+                                {" - "}
+                                {format(new Date(`2000-01-01T${bookingDetails.time.split(' ')[1]}`), 'h:mm a')}
                             </span>
                         </p>
                     </div>

@@ -104,7 +104,7 @@ export default function CreateState({ countryOptions }: Props) {
                                                 <SelectValue placeholder="Select country" />
                                             </SelectTrigger>
                                         </FormControl>
-                                        <SelectContent>
+                                        <SelectContent className='!bg-[#F1F2E9]'>
                                             {countryOptions.map(country => (
                                                 <SelectItem key={country.value} value={country.value.toString()}>{country.label}</SelectItem>
                                             ))}

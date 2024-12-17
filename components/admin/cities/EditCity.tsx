@@ -256,7 +256,7 @@ export default function EditCityAttachment({ cityTranslations, cityId, stateOpti
                                                     <SelectValue placeholder="Select state" />
                                                 </SelectTrigger>
                                             </FormControl>
-                                            <SelectContent>
+                                            <SelectContent className='!bg-[#F1F2E9]'>
                                                 {stateOptions.map(state => (
                                                     <SelectItem key={state.value} value={state.value.toString()}>{state.label}</SelectItem>
                                                 ))}

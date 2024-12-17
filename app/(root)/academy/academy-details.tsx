@@ -26,6 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { updateAcademyDetails } from '@/lib/actions/academics.actions';
 import AddNewSport from './add-new-sport';
 import { useOnboarding } from '@/providers/onboarding-provider';
+import { cn } from '@/lib/utils';
 
 type Props = {
     academyDetails: {
@@ -79,9 +80,63 @@ export default function AcademyDetails({ academyDetails, sports }: Props) {
         academyDetails.gallery.map(url => ({
             preview: url,
             file: null,
-            type: url.toLowerCase().endsWith('.mp4') ? 'video' : 'image'
+            type: url?.toLowerCase().endsWith('.mp4') ? 'video' : 'image'
         }))
     );
+
+    const [isDraggingLogo, setIsDraggingLogo] = useState(false);
+    const [isDraggingGallery, setIsDraggingGallery] = useState(false);
+
+    const handleDragOver = (e: React.DragEvent, setDragging: (value: boolean) => void) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent, setDragging: (value: boolean) => void) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDragging(false);
+    };
+
+    const handleLogoDrop = async (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingLogo(false);
+
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) {
+            const preview = URL.createObjectURL(file);
+            setSelectedImage({
+                preview,
+                file
+            });
+        } else {
+            form.setError('logo', {
+                type: 'custom',
+                message: 'Only image files are allowed'
+            });
+        }
+    };
+
+    const handleGalleryDrop = async (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingGallery(false);
+
+        const files = Array.from(e.dataTransfer.files).filter(file =>
+            file.type.startsWith('image/') || file.type.startsWith('video/mp4')
+        );
+
+        if (files.length > 0) {
+            const newFiles = files.map(file => ({
+                preview: URL.createObjectURL(file),
+                file,
+                type: (file.type.startsWith('video/') ? 'video' : 'image') as 'image' | 'video'
+            }));
+            setSelectedGalleryImages(prev => [...prev, ...newFiles]);
+        }
+    };
 
     const form = useForm({
         resolver: zodResolver(academyDetailsSchema),
@@ -385,33 +440,43 @@ export default function AcademyDetails({ academyDetails, sports }: Props) {
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormControl>
-                                            <div className="flex flex-col gap-4 relative w-44">
-                                                {(field.value || selectedImage.preview) ? (
-                                                    <div className="relative w-44 h-44">
-                                                        <Image
-                                                            src={selectedImage.preview || '/images/placeholder.svg'}
-                                                            alt="Preview"
-                                                            fill
-                                                            className="rounded-[31px] object-cover"
-                                                        />
-                                                    </div>
-                                                ) : (
-                                                    <Image
-                                                        src='/images/placeholder.svg'
-                                                        alt='Placeholder'
-                                                        width={176}
-                                                        height={176}
-                                                        className='rounded-[31px] object-cover'
-                                                    />
+                                            <div
+                                                className={cn(
+                                                    "flex flex-col gap-4 items-center justify-center w-full border border-gray-500 p-3 rounded-lg transition-colors",
+                                                    isDraggingLogo && "border-main-green bg-main-green/10"
                                                 )}
-                                                <Input
-                                                    type="file"
-                                                    accept="image/*"
-                                                    onChange={(e) => handleImageChange(e)}
-                                                    hidden
-                                                    ref={inputRef}
-                                                    className='absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer z-[5]'
-                                                />
+                                                onDragOver={(e) => handleDragOver(e, setIsDraggingLogo)}
+                                                onDragLeave={(e) => handleDragLeave(e, setIsDraggingLogo)}
+                                                onDrop={handleLogoDrop}
+                                            >
+                                                <div className="flex flex-col gap-4 relative w-44">
+                                                    {(field.value || selectedImage.preview) ? (
+                                                        <div className="relative w-44 h-44">
+                                                            <Image
+                                                                src={selectedImage.preview || '/images/placeholder.svg'}
+                                                                alt="Preview"
+                                                                fill
+                                                                className="rounded-[31px] object-cover"
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <Image
+                                                            src='/images/placeholder.svg'
+                                                            alt='Placeholder'
+                                                            width={176}
+                                                            height={176}
+                                                            className='rounded-[31px] object-cover'
+                                                        />
+                                                    )}
+                                                    <Input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        onChange={(e) => handleImageChange(e)}
+                                                        hidden
+                                                        ref={inputRef}
+                                                        className='absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer z-[5]'
+                                                    />
+                                                </div>
                                             </div>
                                         </FormControl>
                                         <FormMessage />
@@ -422,24 +487,7 @@ export default function AcademyDetails({ academyDetails, sports }: Props) {
                     </div>
 
                 </div>
-                <FormField
-                    control={form.control}
-                    name="policy"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Policy</FormLabel>
-                            <FormControl>
-                                <TipTapEditor
-                                    value={field.value ?? ''}
-                                    onValueChange={field.onChange}
-                                    disabled={loading}
-                                    className="min-h-[400px] listDisplay !font-inter !antialiased"
-                                />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
+
                 <div className="flex flex-col gap-4 w-full">
                     <div className="flex w-full items-center justify-between">
 
@@ -468,7 +516,15 @@ export default function AcademyDetails({ academyDetails, sports }: Props) {
                             <FormItem>
                                 <FormControl>
                                     <div className="flex flex-col gap-4 w-full">
-                                        <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 border border-gray-500 p-3 rounded-lg">
+                                        <div
+                                            className={cn(
+                                                "grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 border border-gray-500 p-3 rounded-lg transition-colors",
+                                                isDraggingGallery && "border-main-green bg-main-green/10"
+                                            )}
+                                            onDragOver={(e) => handleDragOver(e, setIsDraggingGallery)}
+                                            onDragLeave={(e) => handleDragLeave(e, setIsDraggingGallery)}
+                                            onDrop={handleGalleryDrop}
+                                        >
                                             {selectedGalleryImages.map((image, index) => (
                                                 <div key={index} className="relative aspect-square">
                                                     {image.type === 'image' ? (
@@ -522,7 +578,25 @@ export default function AcademyDetails({ academyDetails, sports }: Props) {
                         )}
                     />
                 </div>
+                <FormField
+                    control={form.control}
+                    name="policy"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Policy</FormLabel>
+                            <FormControl>
+                                <TipTapEditor
+                                    value={field.value ?? ''}
+                                    onValueChange={field.onChange}
+                                    disabled={loading}
+                                    className="min-h-[400px] listDisplay !font-inter !antialiased"
+                                />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
             </form>
-        </Form>
+        </Form >
     )
 }
