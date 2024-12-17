@@ -26,6 +26,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react';
 import useSWR from 'swr';
 import Image from 'next/image';
+import { useOnboarding } from '@/providers/onboarding-provider';
 
 type Location = {
     id: number
@@ -44,6 +45,8 @@ type Props = {
 
 export default function EditLocation({ locationEdited, academySports }: Props) {
     const router = useRouter()
+
+    const { mutate } = useOnboarding()
 
     const [editOpen, setEditOpen] = useState(false)
 
@@ -98,6 +101,7 @@ export default function EditLocation({ locationEdited, academySports }: Props) {
         })
         setLoading(false)
         setEditOpen(false)
+        mutate()
         router.refresh()
     }
 

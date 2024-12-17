@@ -23,12 +23,13 @@ async function AcademyDetailsPage() {
     const finalAcademyDetails = {
         ...academyDetails,
         gallery: gallery as unknown as string[],
+        sports: academyDetails?.sports.filter(s => !isNaN(s)) ?? [],
         logo
     }
 
     return (
         <section className='flex flex-col gap-4 bg-[#F1F2E9] rounded-t-[20px] pt-8 px-5 mx-4 flex-1'>
-            <AcademyDetails academyDetails={finalAcademyDetails!} sports={sports!} />
+            <AcademyDetails academyDetails={finalAcademyDetails!} sports={sports!} key={JSON.stringify(finalAcademyDetails)} />
         </section>
     )
 }

@@ -1,7 +1,10 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useLayoutEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
+import useSWR from 'swr'
+import { getAcademyDetailsClient } from '@/lib/actions/academics.actions'
+import { academyOnBoarded } from '@/lib/actions/onboarding.actions'
 
 export type StepId = 'academy-details' | 'location' | 'coach' | 'program' | 'assessment'
 
@@ -72,6 +75,8 @@ interface OnboardingContextType {
     goToNextStep: () => void
     goToPreviousStep: () => void
     updateRequirements: (stepId: StepId, requirements: Partial<StepRequirements[StepId]>) => void
+    mutate: () => void
+    onboarded: boolean
 }
 
 const OnboardingContext = createContext<OnboardingContextType | undefined>(undefined)
@@ -109,10 +114,11 @@ const STEPS: Step[] = [
     },
 ]
 
-export function OnboardingProvider({ children }: { children: React.ReactNode }) {
+export function OnboardingProvider({ children, onboarded }: { children: React.ReactNode, onboarded: boolean }) {
     const router = useRouter()
     const pathname = usePathname()
     const [steps, setSteps] = useState<Step[]>(STEPS)
+    const { data: finalAcademyDetails, mutate } = useSWR(!onboarded ? 'OnBoardingDetails' : null, getAcademyDetailsClient)
     const [requirements, setRequirements] = useState<StepRequirements>({
         'academy-details': {
             name: false,
@@ -190,6 +196,98 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         return allRequirementsMet
     }
 
+    useEffect(() => {
+        console.log({
+            name: !!finalAcademyDetails?.name,
+            description: !!finalAcademyDetails?.description,
+            sports: !!(finalAcademyDetails?.sports?.length && finalAcademyDetails.sports.length > 0),
+            logo: !!finalAcademyDetails?.logo,
+            hasGallery: !!(finalAcademyDetails?.gallery?.length && finalAcademyDetails.gallery.length > 0),
+            hasPolicy: finalAcademyDetails?.policy!?.length > 0
+        })
+        updateRequirements('academy-details', {
+            name: !!finalAcademyDetails?.name,
+            description: !!finalAcademyDetails?.description,
+            sports: !!(finalAcademyDetails?.sports?.length && finalAcademyDetails.sports.length > 0),
+            logo: !!finalAcademyDetails?.logo,
+            hasGallery: !!(finalAcademyDetails?.gallery?.length && finalAcademyDetails.gallery.length > 0),
+            hasPolicy: finalAcademyDetails?.policy!?.length > 0
+        })
+        // updateRequirements('gallery', { hasGallery: (finalAcademyDetails?.gallery ?? [])?.length > 0 })
+        // updateRequirements('policy', { hasPolicy: !!finalAcademyDetails?.policy })
+        updateRequirements('coach', {
+            name: (finalAcademyDetails?.coaches ?? []).length > 0 && !!finalAcademyDetails?.coaches![0].name,
+            title: (finalAcademyDetails?.coaches ?? []).length > 0 && !!finalAcademyDetails?.coaches![0].title,
+            bio: (finalAcademyDetails?.coaches ?? []).length > 0 && !!finalAcademyDetails?.coaches![0].bio,
+            gender: (finalAcademyDetails?.coaches ?? []).length > 0 && !!finalAcademyDetails?.coaches![0].gender,
+            sports: (finalAcademyDetails?.coaches ?? []).length > 0 && finalAcademyDetails?.coaches![0].sports!?.length > 0,
+            languages: (finalAcademyDetails?.coaches ?? []).length > 0 && finalAcademyDetails?.coaches![0]?.languages!?.length > 0,
+        })
+        updateRequirements('location', {
+            name: (finalAcademyDetails?.locations ?? [])?.length > 0 && !!finalAcademyDetails?.locations![0].name,
+            branchId: (finalAcademyDetails?.locations ?? [])?.length > 0 && !!finalAcademyDetails?.locations![0].id,
+            url: (finalAcademyDetails?.locations ?? [])?.length > 0 && !!finalAcademyDetails?.locations![0].url,
+            sports: (finalAcademyDetails?.locations ?? [])?.length > 0 && (finalAcademyDetails?.locations![0].sports!?.length > 0),
+            facilities: (finalAcademyDetails?.locations ?? [])?.length > 0 && (finalAcademyDetails?.locations![0].facilities!?.length > 0),
+        })
+        // updateRequirements('program', { packages: ((finalAcademyDetails?.programs ?? []).length > 0 && finalAcademyDetails?.programs![0]?.packages.length > 0) })
+        updateRequirements('program', {
+            name: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].name,
+            description: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].description,
+            branchId: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].branchId,
+            sportId: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].sportId,
+            startDateOfBirth: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].startDateOfBirth,
+            endDateOfBirth: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].endDateOfBirth,
+            type: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].type,
+            packages: (finalAcademyDetails?.programs ?? []).length > 0 && (finalAcademyDetails?.programs![0].packages!?.length > 0),
+            numberOfSeats: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].numberOfSeats,
+            gender: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].gender,
+            color: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].color,
+        })
+        updateRequirements('assessment', {
+            description: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].description,
+            coaches: (finalAcademyDetails?.assessments ?? []).length > 0 && (finalAcademyDetails?.assessments![0].coaches!?.length > 0),
+            packages: (finalAcademyDetails?.assessments ?? []).length > 0 && (finalAcademyDetails?.assessments![0].packages!?.length > 0),
+            branchId: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].branchId,
+            sportId: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].sportId,
+            startDateOfBirth: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].startDateOfBirth,
+            endDateOfBirth: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].endDateOfBirth,
+            gender: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].gender,
+            numberOfSeats: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].numberOfSeats,
+        })
+        console.log({
+            description: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].description,
+            coaches: (finalAcademyDetails?.assessments ?? []).length > 0 && (finalAcademyDetails?.assessments![0].coaches!?.length > 0),
+            packages: (finalAcademyDetails?.assessments ?? []).length > 0 && (finalAcademyDetails?.assessments![0].packages!?.length > 0),
+            branchId: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].branchId,
+            sportId: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].sportId,
+            startDateOfBirth: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].startDateOfBirth,
+            endDateOfBirth: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].endDateOfBirth,
+            gender: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].gender,
+            numberOfSeats: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].numberOfSeats,
+        })
+
+        if (completedSteps === STEPS.length - 1) {
+            const finishOnboarding = async () => {
+                await academyOnBoarded()
+                router.refresh()
+            }
+
+            finishOnboarding()
+        }
+    }, [finalAcademyDetails])
+
+    // useEffect(() => {
+    //     if (completedSteps === STEPS.length - 1) {
+    //         const finishOnboarding = async () => {
+    //             await academyOnBoarded()
+    //             router.refresh()
+    //         }
+
+    //         finishOnboarding()
+    //     }
+    // }, [completedSteps])
+
     const markStepAsComplete = (stepId: StepId) => {
         setSteps(prevSteps =>
             prevSteps.map(step =>
@@ -244,7 +342,9 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         markStepAsComplete,
         goToNextStep,
         goToPreviousStep,
-        updateRequirements
+        updateRequirements,
+        onboarded,
+        mutate
     }
 
     return (

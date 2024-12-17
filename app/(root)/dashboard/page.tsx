@@ -1,7 +1,15 @@
 import { getDashboardStats } from '@/lib/actions/dashboard.actions'
 import { DashboardClient } from './dashboard'
+import { checkAcademyStatus } from '@/lib/actions/check-academy-status'
+import { redirect } from 'next/navigation'
 
 export default async function DashboardPage() {
+    const status = await checkAcademyStatus()
+
+    if (!status.isOnboarded) {
+        return redirect('/academy')
+    }
+
     const result = await getDashboardStats()
 
     if (result.error) {

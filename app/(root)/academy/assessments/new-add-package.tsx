@@ -26,6 +26,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useOnboarding } from '@/providers/onboarding-provider';
 
 const packageSchema = z.object({
     type: z.enum(["Term", "Monthly", "Full Season"]),
@@ -126,6 +127,9 @@ const months = [
 
 export default function AddPackage({ open, onOpenChange, programId, setCreatedPackages }: Props) {
     const router = useRouter()
+
+    const { mutate } = useOnboarding()
+
     const [loading, setLoading] = useState(false)
     const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
 
@@ -203,6 +207,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                 }
 
                 onOpenChange(false)
+                mutate()
                 router.refresh()
             }
             else if (setCreatedPackages) {

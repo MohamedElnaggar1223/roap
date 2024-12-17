@@ -18,6 +18,7 @@ import { useRouter } from 'next/navigation'
 import { deletePrograms } from '@/lib/actions/programs.actions'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import Image from 'next/image'
+import { useOnboarding } from '@/providers/onboarding-provider'
 
 interface Branch {
     id: number
@@ -65,6 +66,8 @@ interface ProgramsDataTableProps {
 
 export function ProgramsDataTable({ data, branches, sports, academySports }: ProgramsDataTableProps) {
     const router = useRouter()
+
+    const { mutate } = useOnboarding()
 
     const [selectedSport, setSelectedSport] = useState<string | null>(null)
     const [selectedGender, setSelectedGender] = useState<string | null>(null)
@@ -141,6 +144,7 @@ export function ProgramsDataTable({ data, branches, sports, academySports }: Pro
     const handleBulkDelete = async () => {
         setBulkDeleteLoading(true)
         await deletePrograms(selectedRows)
+        mutate()
         router.refresh()
         setBulkDeleteLoading(false)
         setBulkDeleteOpen(false)

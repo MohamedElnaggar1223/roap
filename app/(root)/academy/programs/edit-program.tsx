@@ -39,6 +39,7 @@ import EditPackage from './new-edit-package';
 import { TrashIcon } from 'lucide-react';
 import { getProgramPackages } from '@/lib/actions/packages.actions';
 import AutoGrowingTextarea from '@/components/ui/autogrowing-textarea';
+import { useOnboarding } from '@/providers/onboarding-provider';
 // import { calculateAge } from '../utils/calculateAge';
 
 const calculateAge = (birthDate: string): number => {
@@ -217,6 +218,8 @@ const calendarColors = [
 export default function EditProgram({ branches, sports, programEdited, academySports }: Props) {
     const router = useRouter()
 
+    const { mutate: mutateProgram } = useOnboarding()
+
     const [editProgramOpen, setEditProgramOpen] = useState(false)
     const { data: coachesData } = useSWR(editProgramOpen ? 'coaches' : null, getAllCoaches)
     const { data: packagesData, isLoading, isValidating, mutate } = useSWR(editProgramOpen ? 'packages' : null, (url: string | null) => getProgramPackages(url, programEdited.id), {
@@ -375,6 +378,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
             }
 
             setEditProgramOpen(false)
+            mutateProgram()
             router.refresh()
         } catch (error) {
             console.error('Error creating program:', error)
@@ -543,12 +547,30 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                                     {'female'}
                                                                 </p>
                                                                 <p
-                                                                    key={'mix'}
-                                                                    onClick={() => handleSelectGender('mix')}
+                                                                    key={'adults'}
+                                                                    onClick={() => handleSelectGender('adults')}
                                                                     className="p-2 flex items-center justify-start gap-2 text-left cursor-pointer hover:bg-[#fafafa] rounded-lg"
                                                                 >
-                                                                    {selectedGenders.includes('mix') && <X className="size-3" fill='#1f441f' />}
-                                                                    {'mix'}
+                                                                    {selectedGenders.includes('adults') && <X className="size-3" fill='#1f441f' />}
+                                                                    {'adults'}
+                                                                </p>
+
+                                                                <p
+                                                                    key={'adults men'}
+                                                                    onClick={() => handleSelectGender('adults men')}
+                                                                    className="p-2 flex items-center justify-start gap-2 text-left cursor-pointer hover:bg-[#fafafa] rounded-lg"
+                                                                >
+                                                                    {selectedGenders.includes('adults men') && <X className="size-3" fill='#1f441f' />}
+                                                                    {'adults men'}
+                                                                </p>
+
+                                                                <p
+                                                                    key={'ladies only'}
+                                                                    onClick={() => handleSelectGender('ladies only')}
+                                                                    className="p-2 flex items-center justify-start gap-2 text-left cursor-pointer hover:bg-[#fafafa] rounded-lg"
+                                                                >
+                                                                    {selectedGenders.includes('ladies only') && <X className="size-3" fill='#1f441f' />}
+                                                                    {'ladies only'}
                                                                 </p>
                                                             </div>
                                                         </div>

@@ -35,6 +35,7 @@ import { formatDateForDB } from '@/lib/utils'
 import useSWR from 'swr'
 import { getProgramPackages } from '@/lib/actions/packages.actions'
 import { getAllCoaches } from '@/lib/actions/coaches.actions'
+import { useOnboarding } from '@/providers/onboarding-provider'
 
 const calculateAge = (birthDate: string): number => {
     const today = new Date();
@@ -132,6 +133,9 @@ interface Props {
 
 export default function EditAssessment({ assessment, sports, branches }: Props) {
     const router = useRouter()
+
+    const { mutate: mutateAssessment } = useOnboarding()
+
     const { data: packagesData, isLoading, isValidating, mutate } = useSWR(
         'assessment-packages',
         () => getProgramPackages('packages', assessment.id),
@@ -298,6 +302,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
             }
 
             setDialogOpen(false)
+            mutateAssessment()
             router.refresh()
         } catch (error) {
             console.error('Error updating assessment:', error)
@@ -388,7 +393,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                                                 </PopoverTrigger>
                                                 <PopoverContent className="w-56 p-0" align="start">
                                                     <div className="p-2">
-                                                        {['male', 'female', 'mix'].map(gender => (
+                                                        {['male', 'female', 'adults', 'adults men', 'ladies only'].map(gender => (
                                                             <p
                                                                 key={gender}
                                                                 onClick={() => handleSelectGender(gender)}

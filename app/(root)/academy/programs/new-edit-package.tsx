@@ -27,6 +27,7 @@ import { Textarea } from '@/components/ui/textarea';
 import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useOnboarding } from '@/providers/onboarding-provider';
 
 const packageSchema = z.object({
     type: z.enum(["Term", "Monthly", "Full Season"]),
@@ -135,6 +136,9 @@ const months = [
 
 export default function EditPackage({ packageEdited, open, onOpenChange, mutate, setEditedPackage, setCreatedPackages, index }: Props) {
     const router = useRouter()
+
+    const { mutate: mutatePackage } = useOnboarding()
+
     const [loading, setLoading] = useState(false)
     const [selectedMonths, setSelectedMonths] = useState<number[]>(() => {
         const startMonth = new Date(packageEdited.startDate).getMonth() + 1;
@@ -246,6 +250,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                 })
 
                 onOpenChange(false)
+                mutatePackage()
                 router.refresh()
             }
             else if (setCreatedPackages) {

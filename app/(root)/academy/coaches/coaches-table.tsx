@@ -18,6 +18,7 @@ import EditCoach from './edit-coach'
 import { useRouter } from 'next/navigation'
 import { deleteCoaches } from '@/lib/actions/coaches.actions'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { useOnboarding } from '@/providers/onboarding-provider'
 
 interface Coach {
     id: number
@@ -55,6 +56,8 @@ interface CoachesDataTableProps {
 
 export function CoachesDataTable({ data, sports, languages, academySports }: CoachesDataTableProps) {
     const router = useRouter()
+
+    const { mutate } = useOnboarding()
 
     const [selectedSport, setSelectedSport] = useState<string | null>(null)
     const [filteredData, setFilteredData] = useState<Coach[]>(data)
@@ -97,6 +100,7 @@ export function CoachesDataTable({ data, sports, languages, academySports }: Coa
     const handleBulkDelete = async () => {
         setBulkDeleteLoading(true)
         await deleteCoaches(selectedRows)
+        mutate()
         router.refresh()
         setBulkDeleteLoading(false)
         setBulkDeleteOpen(false)

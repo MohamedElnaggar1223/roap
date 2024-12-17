@@ -38,6 +38,7 @@ import AddPackage from './new-add-package';
 import EditPackage from './new-edit-package';
 import { TrashIcon } from 'lucide-react';
 import AutoGrowingTextarea from '@/components/ui/autogrowing-textarea';
+import { useOnboarding } from '@/providers/onboarding-provider';
 
 const addProgramSchema = z.object({
     name: z.string().min(1, "Name is required"),
@@ -184,6 +185,8 @@ const calendarColors = [
 export default function AddNewProgram({ branches, sports, academySports }: Props) {
     const router = useRouter()
 
+    const { mutate } = useOnboarding()
+
     const [addNewProgramOpen, setAddNewProgramOpen] = useState(false)
     const { data: coachesData } = useSWR(addNewProgramOpen ? 'coaches' : null, getAllCoaches)
 
@@ -321,6 +324,7 @@ export default function AddNewProgram({ branches, sports, academySports }: Props
             }
 
             setAddNewProgramOpen(false)
+            mutate()
             router.refresh()
         } catch (error) {
             console.error('Error creating program:', error)
@@ -485,12 +489,30 @@ export default function AddNewProgram({ branches, sports, academySports }: Props
                                                                     {'female'}
                                                                 </p>
                                                                 <p
-                                                                    key={'mix'}
-                                                                    onClick={() => handleSelectGender('mix')}
+                                                                    key={'adults'}
+                                                                    onClick={() => handleSelectGender('adults')}
                                                                     className="p-2 flex items-center justify-start gap-2 text-left cursor-pointer hover:bg-[#fafafa] rounded-lg"
                                                                 >
-                                                                    {selectedGenders.includes('mix') && <X className="size-3" fill='#1f441f' />}
-                                                                    {'mix'}
+                                                                    {selectedGenders.includes('adults') && <X className="size-3" fill='#1f441f' />}
+                                                                    {'adults'}
+                                                                </p>
+
+                                                                <p
+                                                                    key={'adults men'}
+                                                                    onClick={() => handleSelectGender('adults men')}
+                                                                    className="p-2 flex items-center justify-start gap-2 text-left cursor-pointer hover:bg-[#fafafa] rounded-lg"
+                                                                >
+                                                                    {selectedGenders.includes('adults men') && <X className="size-3" fill='#1f441f' />}
+                                                                    {'adults men'}
+                                                                </p>
+
+                                                                <p
+                                                                    key={'ladies only'}
+                                                                    onClick={() => handleSelectGender('ladies only')}
+                                                                    className="p-2 flex items-center justify-start gap-2 text-left cursor-pointer hover:bg-[#fafafa] rounded-lg"
+                                                                >
+                                                                    {selectedGenders.includes('ladies only') && <X className="size-3" fill='#1f441f' />}
+                                                                    {'ladies only'}
                                                                 </p>
                                                             </div>
                                                         </div>

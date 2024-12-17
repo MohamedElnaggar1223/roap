@@ -31,6 +31,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { getImageUrl, uploadImageToSupabase } from '@/lib/supabase-images';
 import Image from 'next/image';
+import { useOnboarding } from '@/providers/onboarding-provider';
 
 type Props = {
     sports: {
@@ -54,6 +55,8 @@ type FileState = {
 
 export default function AddNewCoach({ sports, languages, academySports }: Props) {
     const router = useRouter()
+
+    const { mutate } = useOnboarding()
 
     const inputRef = useRef<HTMLInputElement>(null)
 
@@ -127,6 +130,7 @@ export default function AddNewCoach({ sports, languages, academySports }: Props)
             }
 
             setAddNewCoachOpen(false)
+            mutate()
             router.refresh()
         } catch (error) {
             console.error('Error creating coach:', error)

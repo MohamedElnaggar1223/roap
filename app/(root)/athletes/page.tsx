@@ -1,8 +1,16 @@
 import { getAthletes } from '@/lib/actions/athletes.actions'
 import { AthletesDataTable } from './athletes-table'
 import { getImageUrl } from '@/lib/supabase-images'
+import { checkAcademyStatus } from '@/lib/actions/check-academy-status'
+import { redirect } from 'next/navigation'
 
 export default async function AthletesPage() {
+    const status = await checkAcademyStatus()
+
+    if (!status.isOnboarded) {
+        return redirect('/academy')
+    }
+
     const { data: athletes, error } = await getAthletes()
 
     console.log(athletes, error)

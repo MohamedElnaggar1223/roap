@@ -25,6 +25,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { updateAcademyDetails } from '@/lib/actions/academics.actions';
 import AddNewSport from './add-new-sport';
+import { useOnboarding } from '@/providers/onboarding-provider';
 
 type Props = {
     academyDetails: {
@@ -63,6 +64,7 @@ export default function AcademyDetails({ academyDetails, sports }: Props) {
 
     const router = useRouter()
     const { toast } = useToast()
+    const { mutate } = useOnboarding()
 
     const inputRef = useRef<HTMLInputElement>(null)
 
@@ -85,7 +87,7 @@ export default function AcademyDetails({ academyDetails, sports }: Props) {
         resolver: zodResolver(academyDetailsSchema),
         defaultValues: {
             policy: academyDetails.policy ?? '',
-            entryFees: academyDetails.entryFees ?? 0,
+            entryFees: 0,
             extra: academyDetails.extra ?? '',
             name: academyDetails.name ?? '',
             logo: academyDetails.logo ?? '',
@@ -179,6 +181,7 @@ export default function AcademyDetails({ academyDetails, sports }: Props) {
                 description: "Academy details updated successfully",
             })
 
+            mutate()
             router.refresh()
         } catch (error) {
             console.error('Error updating academy details:', error)
@@ -248,6 +251,18 @@ export default function AcademyDetails({ academyDetails, sports }: Props) {
         });
     };
 
+    console.log(
+        form.formState.errors.description,
+        form.formState.errors.entryFees,
+        form.formState.errors.extra,
+        form.formState.errors.gallery,
+        form.formState.errors.logo,
+        form.formState.errors.name,
+        form.formState.errors.policy,
+    )
+
+    console.log(form.getValues('entryFees'))
+
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full'>
@@ -263,6 +278,19 @@ export default function AcademyDetails({ academyDetails, sports }: Props) {
                     name="name"
                     render={({ field }) => (
                         <FormItem>
+                            <FormLabel>Academy Name</FormLabel>
+                            <FormControl>
+                                <Input disabled={loading} {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="entryFees"
+                    render={({ field }) => (
+                        <FormItem className='hidden absolute'>
                             <FormLabel>Academy Name</FormLabel>
                             <FormControl>
                                 <Input disabled={loading} {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />

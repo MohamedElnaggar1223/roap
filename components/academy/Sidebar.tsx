@@ -11,15 +11,16 @@ import {
     SidebarMenuButton,
     SidebarRail,
 } from "@/components/ui/sidebar"
-import { Loader2, LogOut } from "lucide-react"
+import { Loader2, LogOut } from 'lucide-react'
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
-import { Dialog, DialogContent, DialogTitle } from "../ui/dialog-no-close";
-import { signOut } from 'next-auth/react';
+import { Dialog, DialogContent, DialogTitle } from "../ui/dialog-no-close"
+import { signOut } from 'next-auth/react'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
-export function AcademySidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AcademySidebar({ onboarded, ...props }: React.ComponentProps<typeof Sidebar> & { onboarded: boolean }) {
     const pathname = usePathname()
 
     const [loading, setLoading] = React.useState(false)
@@ -28,6 +29,26 @@ export function AcademySidebar({ ...props }: React.ComponentProps<typeof Sidebar
         setLoading(true)
         await signOut({ redirect: true, redirectTo: '/' })
         setLoading(false)
+    }
+
+    const DisabledLinkWrapper = ({ children, href }: { children: React.ReactNode, href: string }) => {
+        if (onboarded) {
+            return <Link href={href} className="h-10 rounded-[12px] overflow-hidden">{children}</Link>
+        }
+        return (
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <div className="h-10 rounded-[12px] overflow-hidden cursor-not-allowed">
+                            {children}
+                        </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Finish onboarding first</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+        )
     }
 
     return (
@@ -50,30 +71,30 @@ export function AcademySidebar({ ...props }: React.ComponentProps<typeof Sidebar
                                 <span>Academy</span>
                             </SidebarMenuButton>
                         </Link>
-                        <Link href='/' className='h-10 rounded-[12px] overflow-hidden'>
-                            <SidebarMenuButton className={cn('h-full text-sm', pathname === '/' && 'bg-[#F1F2E9]')} tooltip='Dashboard'>
+                        <DisabledLinkWrapper href="/">
+                            <SidebarMenuButton disabled={!onboarded} className={cn('h-full text-sm', pathname === '/' && 'bg-[#F1F2E9]')} tooltip='Dashboard'>
                                 <Image src='/images/dashboard.svg' width={20} height={20} alt='dashboard' />
                                 <span>Dashboard</span>
                             </SidebarMenuButton>
-                        </Link>
-                        <Link href='/calendar' className='h-10 rounded-[12px] overflow-hidden'>
-                            <SidebarMenuButton className={cn('h-full text-sm', pathname?.includes('/calendar') && 'bg-[#F1F2E9]')} tooltip='Calendar'>
+                        </DisabledLinkWrapper>
+                        <DisabledLinkWrapper href="/calendar">
+                            <SidebarMenuButton disabled={!onboarded} className={cn('h-full text-sm', pathname?.includes('/calendar') && 'bg-[#F1F2E9]')} tooltip='Calendar'>
                                 <Image src='/images/calendar.svg' width={20} height={20} alt='calendar' />
                                 <span>Calendar</span>
                             </SidebarMenuButton>
-                        </Link>
-                        <Link href='/athletes' className='h-10 rounded-[12px] overflow-hidden'>
-                            <SidebarMenuButton className={cn('h-full text-sm', pathname?.includes('/athletes') && 'bg-[#F1F2E9]')} tooltip='Athletes'>
+                        </DisabledLinkWrapper>
+                        <DisabledLinkWrapper href="/athletes">
+                            <SidebarMenuButton disabled={!onboarded} className={cn('h-full text-sm', pathname?.includes('/athletes') && 'bg-[#F1F2E9]')} tooltip='Athletes'>
                                 <Image src='/images/athletes.svg' width={20} height={20} alt='athletes' />
                                 <span>Athletes</span>
                             </SidebarMenuButton>
-                        </Link>
-                        <Link href='/payment' className='h-10 rounded-[12px] overflow-hidden'>
-                            <SidebarMenuButton className={cn('h-full text-sm', pathname?.includes('/payment') && 'bg-[#F1F2E9]')} tooltip='Payments'>
+                        </DisabledLinkWrapper>
+                        <DisabledLinkWrapper href="/payment">
+                            <SidebarMenuButton disabled={!onboarded} className={cn('h-full text-sm', pathname?.includes('/payment') && 'bg-[#F1F2E9]')} tooltip='Payments'>
                                 <Image src='/images/payment.svg' width={20} height={20} alt='payment' />
                                 <span>Payments</span>
                             </SidebarMenuButton>
-                        </Link>
+                        </DisabledLinkWrapper>
                     </SidebarGroup>
                 </SidebarContent>
                 <SidebarFooter className='bg-[#E0E4D9]'>
@@ -93,3 +114,4 @@ export function AcademySidebar({ ...props }: React.ComponentProps<typeof Sidebar
         </>
     )
 }
+

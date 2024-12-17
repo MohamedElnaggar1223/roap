@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from '@/components/ui/textarea';
 import { getImageUrl, uploadImageToSupabase } from '@/lib/supabase-images';
+import { useOnboarding } from '@/providers/onboarding-provider';
 
 type Coach = {
     id: number
@@ -69,6 +70,8 @@ type FileState = {
 
 export default function EditCoach({ coachEdited, sports, languages, academySports }: Props) {
     const router = useRouter()
+
+    const { mutate } = useOnboarding()
 
     const inputRef = useRef<HTMLInputElement>(null)
 
@@ -127,6 +130,7 @@ export default function EditCoach({ coachEdited, sports, languages, academySport
 
         setLoading(false)
         setEditOpen(false)
+        mutate()
         router.refresh()
     }
 

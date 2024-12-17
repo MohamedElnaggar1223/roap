@@ -27,6 +27,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
+import { useOnboarding } from '@/providers/onboarding-provider';
 
 type Props = {
     sports: {
@@ -41,11 +42,14 @@ type Props = {
 export default function AddNewLocation({ sports, academySports }: Props) {
     const router = useRouter()
 
+    const { mutate } = useOnboarding()
 
     const [addNewSportOpen, setAddNewSportOpen] = useState(false)
 
-    const { data: sportsData } = useSWR(addNewSportOpen ? 'sports' : null, getAllSports)
-    const { data: amenitiesData } = useSWR(addNewSportOpen ? 'amenities' : null, getAllFacilities)
+    const { data: sportsData, isLoading: sportsLoading } = useSWR(addNewSportOpen ? 'sports' : null, getAllSports)
+    const { data: amenitiesData, isLoading: amenitiesLoading } = useSWR(addNewSportOpen ? 'amenities' : null, getAllFacilities)
+
+    console.log(JSON.stringify(sportsData))
 
     const [selectedSports, setSelectedSports] = useState<number[]>([])
     const [selectedAmenities, setSelectedAmenities] = useState<number[]>([])
@@ -117,6 +121,7 @@ export default function AddNewLocation({ sports, academySports }: Props) {
             }
 
             setAddNewSportOpen(false)
+            mutate()
             router.refresh()
         } catch (error) {
             console.error('Error creating location:', error)
@@ -231,13 +236,13 @@ export default function AddNewLocation({ sports, academySports }: Props) {
                                                         variant="default"
                                                         className="flex items-center gap-1 hover:bg-[#E0E4D9] pr-0.5 bg-[#E0E4D9] rounded-3xl text-main-green font-semibold font-inter text-sm"
                                                     >
-                                                        <span className="text-xs">{sportsData?.find(s => s.id === sport)?.name}</span>
+                                                        <span className="text-xs">{sportsLoading ? 'Loading...' : (Array.isArray(sportsData) && sportsData?.find(s => s.id === sport)?.name)}</span>
                                                         <button
                                                             onClick={() => handleSelectSport(sport)}
                                                             className="ml-1 rounded-full p-0.5 hover:bg-secondary-foreground/20"
                                                         >
                                                             <X className="size-3" fill='#1f441f' />
-                                                            <span className="sr-only">Remove {sportsData?.find(s => s.id === sport)?.name}</span>
+                                                            <span className="sr-only">Remove {sportsLoading ? 'Loading...' : (Array.isArray(sportsData) && sportsData?.find(s => s.id === sport)?.name)}</span>
                                                         </button>
                                                     </Badge>
                                                 ))}
@@ -271,7 +276,7 @@ export default function AddNewLocation({ sports, academySports }: Props) {
                                                                     className="p-2 flex items-center justify-start gap-2 text-left cursor-pointer hover:bg-[#fafafa] rounded-lg"
                                                                 >
                                                                     {selectedSports.includes(sport.id) && <X className="size-3" fill='#1f441f' />}
-                                                                    {sportsData?.find(s => s.id === sport.id)?.name}
+                                                                    {sportsLoading ? 'Loading...' : (Array.isArray(sportsData) && sportsData?.find(s => s.id === sport.id)?.name)}
                                                                 </p>
                                                             ))}
                                                         </div>
@@ -290,13 +295,13 @@ export default function AddNewLocation({ sports, academySports }: Props) {
                                                         variant="default"
                                                         className="flex items-center gap-1 hover:bg-[#E0E4D9] pr-0.5 bg-[#E0E4D9] rounded-3xl text-main-green font-semibold font-inter text-sm"
                                                     >
-                                                        <span className="text-xs">{amenitiesData?.find(s => s.id === amenitie)?.name}</span>
+                                                        <span className="text-xs">{amenitiesLoading ? 'Loading...' : amenitiesData?.find(s => s.id === amenitie)?.name}</span>
                                                         <button
                                                             onClick={() => handleSelectAmenities(amenitie)}
                                                             className="ml-1 rounded-full p-0.5 hover:bg-secondary-foreground/20"
                                                         >
                                                             <X className="size-3" fill='#1f441f' />
-                                                            <span className="sr-only">Remove {amenitiesData?.find(s => s.id === amenitie)?.name}</span>
+                                                            <span className="sr-only">Remove {amenitiesLoading ? 'Loading...' : amenitiesData?.find(s => s.id === amenitie)?.name}</span>
                                                         </button>
                                                     </Badge>
                                                 ))}
@@ -323,7 +328,7 @@ export default function AddNewLocation({ sports, academySports }: Props) {
                                                         }}
                                                     >
                                                         <div className="p-2">
-                                                            {amenitiesData?.map(amenitie => (
+                                                            {amenitiesLoading ? 'Loading...' : amenitiesData?.map(amenitie => (
                                                                 <p
                                                                     key={amenitie.id}
                                                                     onClick={() => handleSelectAmenities(amenitie.id)}

@@ -39,6 +39,7 @@ type Event = {
 	packageId: number | null
 	coachId: number | null
 	color: string | null
+	gender: string | null
 }
 
 type GroupedEvent = {
@@ -146,15 +147,15 @@ export default function Calendar() {
 	const [calendarView, setCalendarView] = useState<CalendarView>('week')
 	const [selectedLocation, setSelectedLocation] = useState<string | null>(null)
 	const [selectedSport, setSelectedSport] = useState<string | null>(null)
-	const [selectedPackage, setSelectedPackage] = useState<string | null>(null)
-	const [selectedCoach, setSelectedCoach] = useState<string | null>(null)
+	const [selectedProgram, setSelectedProgram] = useState<string | null>(null)
+	const [selectedGender, setSelectedGender] = useState<string | null>(null)
 	const [selectedGroupedEvent, setSelectedGroupedEvent] = useState<GroupedEvent | null>(null)
 	const [refetch, setRefetch] = useState(false)
 
 	const locations = Array.from(new Set(events.map(e => e.branchName).filter(Boolean)))
 	const sports = Array.from(new Set(events.map(e => e.sportName).filter(Boolean)))
-	const packages = Array.from(new Set(events.map(e => e.packageName).filter(Boolean)))
-	const coaches = Array.from(new Set(events.map(e => e.coachName).filter(Boolean)))
+	const programs = Array.from(new Set(events.map(e => e.programName).filter(Boolean)))
+	const genders = Array.from(new Set(events.map(e => e.gender?.split(',')).flat().filter(Boolean)))
 
 	const dateRange = useMemo(() => {
 		switch (calendarView) {
@@ -218,15 +219,15 @@ export default function Calendar() {
 		if (selectedSport) {
 			filtered = filtered.filter(event => event.sportName === selectedSport)
 		}
-		if (selectedPackage) {
-			filtered = filtered.filter(event => event.packageName === selectedPackage)
+		if (selectedProgram) {
+			filtered = filtered.filter(event => event.programName === selectedProgram)
 		}
-		if (selectedCoach) {
-			filtered = filtered.filter(event => event.coachName === selectedCoach)
+		if (selectedGender) {
+			filtered = filtered.filter(event => event.gender === selectedGender) // Assuming there's a gender field in events
 		}
 
 		setFilteredEvents(filtered)
-	}, [events, selectedLocation, selectedSport, selectedPackage, selectedCoach])
+	}, [events, selectedLocation, selectedSport, selectedProgram, selectedGender])
 
 	const getEventStyle = (event: Event) => {
 		switch (event.programName) {
@@ -342,22 +343,22 @@ export default function Calendar() {
 										src='/images/sports.svg'
 										width={16}
 										height={16}
-										alt='Sports'
+										alt='Programs'
 									/>
-									{selectedPackage || 'Packages'}
+									{selectedProgram || 'Programs'}
 									<ChevronDown className="w-4 h-4" />
 								</Button>
 							</DropdownMenuTrigger>
 							<DropdownMenuContent>
-								<DropdownMenuItem onClick={() => setSelectedPackage(null)}>
-									All Packages
+								<DropdownMenuItem onClick={() => setSelectedProgram(null)}>
+									All Programs
 								</DropdownMenuItem>
-								{packages.map(pkg => (
+								{programs.map(program => (
 									<DropdownMenuItem
-										key={pkg}
-										onClick={() => setSelectedPackage(pkg)}
+										key={program}
+										onClick={() => setSelectedProgram(program)}
 									>
-										{pkg}
+										{program}
 									</DropdownMenuItem>
 								))}
 							</DropdownMenuContent>
@@ -371,22 +372,22 @@ export default function Calendar() {
 										src='/images/sports.svg'
 										width={16}
 										height={16}
-										alt='Sports'
+										alt='Gender'
 									/>
-									{selectedCoach || 'Coaches'}
+									{selectedGender || 'Gender'}
 									<ChevronDown className="w-4 h-4" />
 								</Button>
 							</DropdownMenuTrigger>
 							<DropdownMenuContent>
-								<DropdownMenuItem onClick={() => setSelectedCoach(null)}>
-									All Coaches
+								<DropdownMenuItem onClick={() => setSelectedGender(null)}>
+									All Genders
 								</DropdownMenuItem>
-								{coaches.map(coach => (
+								{genders.map(gender => (
 									<DropdownMenuItem
-										key={coach}
-										onClick={() => setSelectedCoach(coach)}
+										key={gender}
+										onClick={() => setSelectedGender(gender ?? '')}
 									>
-										{coach}
+										{gender?.slice(0, 1).toUpperCase()}{gender?.slice(1)}
 									</DropdownMenuItem>
 								))}
 							</DropdownMenuContent>

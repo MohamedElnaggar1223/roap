@@ -4,11 +4,26 @@ import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbS
 import { Separator } from "../ui/separator";
 import { SidebarInset, SidebarTrigger } from "../ui/sidebar";
 import React from "react";
-import { ChevronRight, Home } from "lucide-react";
+import { Check, ChevronRight, Home, X } from "lucide-react";
 import NotificationsComponent from "./Notifications";
+import { useOnboarding } from "@/providers/onboarding-provider";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover"
 
 export default function AcademyHeader({ academyId, children }: Readonly<{ academyId: number, children: React.ReactNode }>) {
 	const pathname = usePathname();
+
+	const {
+		currentStep,
+		steps,
+		completedSteps,
+		totalSteps,
+		isStepComplete,
+		onboarded
+	} = useOnboarding()
 
 	const generateBreadcrumbs = () => {
 		const paths = pathname?.replace('/', '').split('/').filter(Boolean);
@@ -77,6 +92,37 @@ export default function AcademyHeader({ academyId, children }: Readonly<{ academ
 						</Breadcrumb>
 					)}
 				</div>
+				{!onboarded && <div className="flex flex-col items-center gap-1">
+					<Popover>
+						<PopoverTrigger asChild>
+							<button className="flex items-center gap-2 px-3 py-1 rounded-lg hover:bg-gray-50">
+								<span className="text-sm text-gray-500">
+									{completedSteps} of {totalSteps} completed
+								</span>
+							</button>
+						</PopoverTrigger>
+						<PopoverContent className="w-64" align="center">
+							<div className="flex flex-col gap-2">
+								{steps.map((step) => (
+									<div
+										key={step.id}
+										className={`flex items-center justify-between p-2 rounded-lg ${currentStep.id === step.id ? 'bg-[#E0E4D9]' : ''
+											}`}
+									>
+										<span className="text-sm font-medium">{step.title}</span>
+										<div className="flex items-center justify-center w-6 h-6 rounded-full">
+											{isStepComplete(step.id) ? (
+												<Check className="h-4 w-4 text-green-500" />
+											) : (
+												<X className="h-4 w-4 text-red-500" />
+											)}
+										</div>
+									</div>
+								))}
+							</div>
+						</PopoverContent>
+					</Popover>
+				</div>}
 				<NotificationsComponent academicId={academyId} />
 			</header>
 			{children}

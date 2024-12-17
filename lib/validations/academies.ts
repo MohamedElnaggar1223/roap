@@ -5,7 +5,7 @@ export const academyDetailsSchema = z.object({
     description: z.string().min(1),
     logo: z.string().optional(),
     gallery: z.array(z.string()),
-    entryFees: z.number(),
-    extra: z.string().min(1),
+    entryFees: z.number().optional(),
+    extra: z.string().optional(),
     policy: z.string().min(1),
 })

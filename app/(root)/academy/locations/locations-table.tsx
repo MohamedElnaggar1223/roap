@@ -18,6 +18,7 @@ import EditLocation from './edit-location'
 import { useRouter } from 'next/navigation'
 import { deleteLocations } from '@/lib/actions/locations.actions'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { useOnboarding } from '@/providers/onboarding-provider'
 
 interface Location {
     id: number
@@ -54,6 +55,7 @@ export function LocationsDataTable({ data, sports, academySports }: LocationsDat
     const [selectedRows, setSelectedRows] = useState<number[]>([])
     const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false)
     const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+    const { mutate } = useOnboarding()
 
     const handleSelectLocation = (id: number) => {
         setSelectedLocations(prev =>
@@ -95,6 +97,7 @@ export function LocationsDataTable({ data, sports, academySports }: LocationsDat
     const handleBulkDelete = async () => {
         setBulkDeleteLoading(true)
         await deleteLocations(selectedRows)
+        mutate()
         router.refresh()
         setBulkDeleteLoading(false)
         setBulkDeleteOpen(false)
@@ -160,7 +163,7 @@ export function LocationsDataTable({ data, sports, academySports }: LocationsDat
             </div>
 
             <div className="w-full max-w-screen-2xl overflow-x-auto">
-                <div className="min-w-full grid grid-cols-[auto,0.75fr,auto,auto,auto,auto,auto,auto] gap-y-2 text-nowrap">
+                <div className="min-w-full grid grid-cols-[auto,0.75fr,auto,auto,auto,auto,auto] gap-y-2 text-nowrap">
                     {/* Header */}
                     <div className="contents">
                         <div className="py-4 px-4 flex items-center justify-center">
@@ -171,7 +174,6 @@ export function LocationsDataTable({ data, sports, academySports }: LocationsDat
                             />
                         </div>
                         <div className="py-4 px-4">Name</div>
-                        <div className="py-4 px-4">Name in Google Map</div>
                         <div className="py-4 px-4">Amenities</div>
                         <div className="py-4 px-4">Sports</div>
                         <div className="py-4 px-4">Rate</div>
@@ -192,7 +194,6 @@ export function LocationsDataTable({ data, sports, academySports }: LocationsDat
                                     />
                                 </div>
                                 <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{location.name}</div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{location.nameInGoogleMap}</div>
                                 <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{location.amenities?.length ?? 0}</div>
                                 <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{location.sports?.length}</div>
                                 <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{location.rate}</div>

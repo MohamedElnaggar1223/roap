@@ -12,6 +12,11 @@ import { academySignUpSchema } from '../validations/auth';
 import { auth } from '@/auth';
 import { academyDetailsSchema } from '../validations/academies';
 import { getImageUrl } from '../supabase-images';
+import { getCoaches } from './coaches.actions';
+import { getLocations } from './locations.actions';
+import { getPrograms } from './programs.actions';
+import { getAssessments } from './assessments.actions';
+import { getAllSpokenLanguages } from './spoken-languages.actions';
 
 export const getAcademyDetails = async () => {
 	const session = await auth()
@@ -95,6 +100,49 @@ export const getAcademyDetails = async () => {
 		console.error('Error fetching academy details:', error)
 		return { error: `Failed to fetch academy details: ${error}` }
 	}
+}
+
+export const getAcademyDetailsClient = async (url: string | null) => {
+	if (!url) return
+
+	const [
+		{ data: academyDetails, error: academyDetailsError },
+		{ data: coaches, error: coachesError },
+		{ data: locations, error: locationsError },
+		{ data: assessments, error: assessmentsError },
+		{ data: programs, error: programsError },
+		sports,
+		languages
+	] = await Promise.all([
+		getAcademyDetails(),
+		getCoaches(),
+		getLocations(),
+		getAssessments(),
+		getPrograms(),
+		getAllSports('sports'),
+		getAllSpokenLanguages()
+	])
+
+	const [logo, gallery] = await Promise.all([
+		getImageUrl(academyDetails?.logo!),
+		Promise.all(academyDetails?.gallery?.map(async (image) => {
+			const imageUrl = await getImageUrl(image)
+			return imageUrl
+		})!)
+	])
+
+	const finalAcademyDetails = {
+		...academyDetails,
+		locations,
+		assessments,
+		programs,
+		coaches,
+		sports: academyDetails?.sports.filter(s => !isNaN(s)) ?? [],
+		logo,
+		gallery: gallery as unknown as string[]
+	}
+
+	return finalAcademyDetails
 }
 
 export async function getPaginatedAcademics(
@@ -313,6 +361,7 @@ export const getCalendarSlots = async (startDate: Date, endDate: Date) => {
 			packageId: packages.id,
 			coachId: coaches.id,
 			color: programs.color,
+			gender: programs.gender
 		})
 		.from(bookingSessions)
 		.innerJoin(bookings, eq(bookingSessions.bookingId, bookings.id))
@@ -344,6 +393,7 @@ export const getCalendarSlots = async (startDate: Date, endDate: Date) => {
 			coachName: coaches.name,
 			packageId: packages.id,
 			coachId: coaches.id,
+			gender: programs.gender
 		})
 		.from(blocks)
 		.leftJoin(blockBranches, eq(blocks.id, blockBranches.blockId))
@@ -354,6 +404,7 @@ export const getCalendarSlots = async (startDate: Date, endDate: Date) => {
 		.leftJoin(sportTranslations, eq(sports.id, sportTranslations.sportId))
 		.leftJoin(blockPackages, eq(blocks.id, blockPackages.blockId))
 		.leftJoin(packages, eq(blockPackages.packageId, packages.id))
+		.leftJoin(programs, eq(packages.programId, programs.id))
 		.leftJoin(blockCoaches, eq(blocks.id, blockCoaches.blockId))
 		.leftJoin(coaches, eq(blockCoaches.coachId, coaches.id))
 		.where(
@@ -370,7 +421,7 @@ export const getCalendarSlots = async (startDate: Date, endDate: Date) => {
 		programName: 'block',
 		studentName: null,
 		studentBirthday: null,
-		color: '#F5F5F5', // Light gray background for blocked times
+		color: '#F5F5F5',
 	}));
 
 	console.log("Blocks", transformedBlocks)
