@@ -44,6 +44,8 @@ export type Athlete = {
     firstGuardianRelationship: string | null
     secondGuardianName: string | null
     secondGuardianRelationship: string | null
+    firstGuardianPhone: string | null
+    secondGuardianPhone: string | null
     user: User
     profile: Profile
     bookings: Booking[]
@@ -63,6 +65,8 @@ export const getAthletesAction = async (academicId: number) => {
                     firstGuardianRelationship: academicAthletic.firstGuardianRelationship,
                     secondGuardianName: academicAthletic.secondGuardianName,
                     secondGuardianRelationship: academicAthletic.secondGuardianRelationship,
+                    firstGuardianPhone: academicAthletic.firstGuardianPhone,
+                    secondGuardianPhone: academicAthletic.secondGuardianPhone,
                     user: {
                         email: users.email,
                         phoneNumber: users.phoneNumber,
@@ -128,6 +132,8 @@ export const getAthletesAction = async (academicId: number) => {
                         firstGuardianRelationship: row.firstGuardianRelationship,
                         secondGuardianName: row.secondGuardianName,
                         secondGuardianRelationship: row.secondGuardianRelationship,
+                        firstGuardianPhone: row.firstGuardianPhone,
+                        secondGuardianPhone: row.secondGuardianPhone,
                         user: row.user ?? { email: null, phoneNumber: null },
                         profile: row.profile ?? { name: null, gender: null, birthday: null, image: null, country: null, nationality: null, city: null, streetAddress: null },
                         bookings: []

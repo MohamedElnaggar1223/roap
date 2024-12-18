@@ -32,6 +32,8 @@ export default async function AthletesPage() {
             firstGuardianRelationship: athlete.firstGuardianRelationship,
             secondGuardianName: athlete.secondGuardianName,
             secondGuardianRelationship: athlete.secondGuardianRelationship,
+            firstGuardianPhone: athlete.firstGuardianPhone,
+            secondGuardianPhone: athlete.secondGuardianPhone,
             bookings: athlete.bookings,
             profile: {
                 ...athlete.profile,

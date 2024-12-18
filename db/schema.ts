@@ -832,6 +832,29 @@ export const notifications = pgTable("notifications", {
     }
 });
 
+export const entryFeesHistory = pgTable("entry_fees_history", {
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    profileId: bigint("profile_id", { mode: "number" }).notNull(),
+    sportId: bigint("sport_id", { mode: "number" }).notNull(),
+    programId: bigint("program_id", { mode: "number" }).notNull(), // To know which season
+    paidAt: timestamp("paid_at", { mode: 'string' }).notNull(),
+    createdAt: timestamp("created_at", { mode: 'string' }),
+    updatedAt: timestamp("updated_at", { mode: 'string' }),
+}, (table) => ({
+    entryFeesHistoryProfileIdForeign: foreignKey({
+        columns: [table.profileId],
+        foreignColumns: [profiles.id],
+    }),
+    entryFeesHistorySportIdForeign: foreignKey({
+        columns: [table.sportId],
+        foreignColumns: [sports.id],
+    }),
+    entryFeesHistoryProgramIdForeign: foreignKey({
+        columns: [table.programId],
+        foreignColumns: [programs.id],
+    })
+}));
+
 export const schedules = pgTable("schedules", {
     // You can use { mode: "bigint" } if numbers are exceeding js number limitations
     id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "schedules_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
@@ -869,6 +892,8 @@ export const bookings = pgTable("bookings", {
     academyPolicy: boolean("academy_policy").default(false).notNull(),
     roapPolicy: boolean("roap_policy").default(false).notNull(),
     packagePrice: doublePrecision("package_price").default(0).notNull(),
+    assessmentDeductionId: bigint("assessment_deduction_id", { mode: "number" }), // Optional, references assessment booking ID if this booking had an assessment fee deducted
+    entryFeesPaid: boolean("entry_fees_paid").default(false).notNull(),
 }, (table) => {
     return {
         bookingsCoachIdForeign: foreignKey({
@@ -1121,6 +1146,21 @@ export const packageDiscountRelations = relations(packageDiscount, ({ one }) => 
     discount: one(discounts, {
         fields: [packageDiscount.discountId],
         references: [discounts.id]
+    })
+}));
+
+export const entryFeesHistoryRelations = relations(entryFeesHistory, ({ one }) => ({
+    profile: one(profiles, {
+        fields: [entryFeesHistory.profileId],
+        references: [profiles.id],
+    }),
+    sport: one(sports, {
+        fields: [entryFeesHistory.sportId],
+        references: [sports.id],
+    }),
+    program: one(programs, {
+        fields: [entryFeesHistory.programId],
+        references: [programs.id],
     })
 }));
 
@@ -1448,6 +1488,10 @@ export const bookingsRelations = relations(bookings, ({ one, many }) => ({
         references: [profiles.id]
     }),
     bookingSessions: many(bookingSessions),
+    assessmentBooking: one(bookings, {
+        fields: [bookings.assessmentDeductionId],
+        references: [bookings.id]
+    })
 }));
 
 export const bookingSessionsRelations = relations(bookingSessions, ({ one }) => ({

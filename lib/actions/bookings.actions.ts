@@ -1,8 +1,8 @@
 'use server'
 import { auth } from "@/auth"
 import { db } from "@/db"
-import { blockCoaches, blocks, bookings, bookingSessions, branchTranslations, coaches, packages, profiles, programs, sportTranslations, users } from "@/db/schema"
-import { and, eq, inArray, sql } from "drizzle-orm"
+import { academicAthletic, blockCoaches, blocks, bookings, bookingSessions, branchTranslations, coaches, entryFeesHistory, packageDiscount, packages, profiles, programs, sports, sportTranslations, users } from "@/db/schema"
+import { and, eq, inArray, or, sql } from "drizzle-orm"
 import { revalidateTag } from "next/cache"
 import { revalidatePath } from 'next/cache'
 import { createBookingSchema } from '../validations/bookings'
@@ -13,7 +13,6 @@ import type {
     TimeSlotResponse,
     ValidationResult,
     SearchedAthlete,
-    CreateBookingInput,
     TimeSlot
 } from '../validations/bookings'
 import { formatDateForDB } from "../utils"
@@ -65,7 +64,14 @@ export async function searchAthletes(query: string): Promise<SearchAthletesRespo
                 users,
                 eq(profiles.userId, users.id)
             )
-            .where(sql`${users.phoneNumber} ILIKE ${`%${query}%`}`)
+            .innerJoin(
+                academicAthletic,
+                eq(academicAthletic.userId, users.id)
+            )
+            .where(or(
+                sql`${users.phoneNumber} ILIKE ${`%${query}%`}`,
+                sql`${academicAthletic.firstGuardianPhone} ILIKE ${`%${query}%`}`
+            ))
             .limit(5)
 
         const finalAthletes = await Promise.all(athletes.map(async (athlete) => {
@@ -82,6 +88,13 @@ export async function searchAthletes(query: string): Promise<SearchAthletesRespo
             }
         }
     }
+}
+
+function determinePackageType(name: string) {
+    if (name.startsWith('Assessment')) return 'assessment';
+    if (name.startsWith('Monthly')) return 'monthly';
+    if (name.startsWith('Term')) return 'term';
+    return 'full_season';
 }
 
 
@@ -164,91 +177,363 @@ export async function getProgramDetails(programId: number): Promise<ProgramDetai
     }
 }
 
+type CreateBookingInput = {
+    profileId: number;
+    packageId: number;
+    coachId?: number;
+    date: string;
+    time: string; // Format: "HH:mm HH:mm"
+};
+
+export async function calculateSessionsAndPrice(
+    packageDetails: any,
+    selectedDate: Date,
+    schedules: any[],
+    bookingTime: string
+) {
+    const packageName = packageDetails.name.toLowerCase();
+    const isAssessment = packageName.startsWith('assessment');
+    const isMonthly = packageName.startsWith('monthly');
+
+    const sessions = [];
+    let totalPrice = Number(packageDetails.price);
+    let deductions = 0;
+
+    const [startTime, endTime] = bookingTime.split(' ');
+
+    if (isAssessment) {
+        sessions.push({
+            date: selectedDate,
+            from: startTime,
+            to: endTime,
+            status: 'pending'
+        });
+    } else if (isMonthly) {
+        // For monthly packages, only generate sessions until end of current month
+        const endDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
+
+        // Get all possible sessions for this month
+        const allSessions = generateSessionsFromSchedules(
+            schedules,
+            new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1), // Start of month
+            endDate
+        );
+
+        // Calculate price per session for the month
+        const pricePerSession = totalPrice / allSessions.length;
+
+        // Find missed sessions
+        const missedSessions = allSessions.filter(
+            session => session.date < selectedDate
+        );
+
+        deductions = missedSessions.length * pricePerSession;
+        sessions.push(...allSessions.filter(
+            session => session.date >= selectedDate
+        ));
+    } else {
+        // For term and full season packages
+        const packageStartDate = new Date(packageDetails.startDate);
+        const endDate = new Date(packageDetails.endDate);
+
+        // Get all possible sessions from start to end
+        const allSessions = generateSessionsFromSchedules(
+            schedules,
+            packageStartDate,
+            endDate
+        );
+
+        // Calculate price per session
+        const pricePerSession = totalPrice / allSessions.length;
+
+        // Calculate missed sessions
+        const missedSessions = allSessions.filter(
+            session => session.date < selectedDate
+        );
+
+        deductions = missedSessions.length * pricePerSession;
+        sessions.push(...allSessions.filter(
+            session => session.date >= selectedDate
+        ));
+    }
+
+    return {
+        sessions,
+        totalPrice,
+        deductions,
+        finalPrice: totalPrice - deductions
+    };
+}
+
+export const getSportIdFromName = async (sportName: string) => {
+    const sport = await db
+        .select({
+            id: sports.id,
+            name: sql<string>`t.name`,
+        })
+        .from(sports)
+        .innerJoin(
+            sql`(
+                        SELECT ct.sport_id, ct.name, ct.locale
+                        FROM ${sportTranslations} ct
+                        WHERE ct.locale = 'en'
+                        UNION
+                        SELECT ct2.sport_id, ct2.name, ct2.locale
+                        FROM ${sportTranslations} ct2
+                        INNER JOIN (
+                            SELECT sport_id, MIN(locale) as first_locale
+                            FROM ${sportTranslations}
+                            WHERE sport_id NOT IN (
+                                SELECT sport_id 
+                                FROM ${sportTranslations} 
+                                WHERE locale = 'en'
+                            )
+                            GROUP BY sport_id
+                        ) first_trans ON ct2.sport_id = first_trans.sport_id 
+                        AND ct2.locale = first_trans.first_locale
+                    ) t`,
+            sql`t.sport_id = ${sports.id}`
+        )
+        .where(sql`LOWER(t.name) = ${sportName.toLowerCase()}`)
+        .limit(1)
+
+    return sport[0]?.id;
+}
+
+export async function checkEntryFees(
+    profileId: number,
+    sportId: number,
+    programId: number,
+    packageDetails: any
+): Promise<{ shouldPay: boolean; amount: number }> {
+    const currentDate = new Date();
+    const entryFeesStartDate = packageDetails.entryFeesStartDate ? new Date(packageDetails.entryFeesStartDate) : null;
+    const entryFeesEndDate = packageDetails.entryFeesEndDate ? new Date(packageDetails.entryFeesEndDate) : null;
+
+    // If there are entry fees dates defined and we're not within the range, no entry fees should be charged
+    if (entryFeesStartDate && currentDate < entryFeesStartDate) {
+        return { shouldPay: false, amount: 0 };
+    }
+    if (entryFeesEndDate && currentDate > entryFeesEndDate) {
+        return { shouldPay: false, amount: 0 };
+    }
+    // Check if entry fees already paid for this season
+    const existingFees = await db.query.entryFeesHistory.findFirst({
+        where: and(
+            eq(entryFeesHistory.profileId, profileId),
+            eq(entryFeesHistory.sportId, sportId),
+            eq(entryFeesHistory.programId, programId)
+        )
+    });
+
+    if (existingFees) {
+        return { shouldPay: false, amount: 0 };
+    }
+
+    // Check if there's an assessment that can be deducted
+    if (packageDetails.program.assessmentDeductedFromProgram) {
+        const assessmentBooking = await db.query.bookings.findFirst({
+            where: and(
+                eq(bookings.profileId, profileId),
+                eq(bookings.status, 'success'),
+            ),
+            with: {
+                package: {
+                    with: {
+                        program: {
+                            with: {
+                                sport: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        if (assessmentBooking?.package?.program?.sport?.id === sportId &&
+            assessmentBooking.package.name.toLowerCase().startsWith('assessment')) {
+            return {
+                shouldPay: true,
+                amount: packageDetails.entryFees - Number(assessmentBooking.price)
+            };
+        }
+    }
+
+    return {
+        shouldPay: true,
+        amount: Number(packageDetails.entryFees || 0)
+    };
+}
+
+export const getPriceAfterActiveDiscounts = async (validatedInput: CreateBookingInput, totalPrice: number, deductions: number) => {
+    const activeDiscounts = await db.query.packageDiscount.findMany({
+        where: eq(packageDiscount.packageId, validatedInput.packageId),
+        with: {
+            discount: true
+        }
+    });
+
+    // Apply discounts
+    let discountedPrice = totalPrice - deductions;
+    for (const { discount } of activeDiscounts) {
+        if (discount.type === 'percentage') {
+            discountedPrice *= (1 - discount.value / 100);
+        } else {
+            discountedPrice -= discount.value;
+        }
+    }
+
+    return discountedPrice;
+}
+
 export async function createBooking(input: CreateBookingInput): Promise<CreateBookingResponse> {
     try {
         // Validate input
-        const validatedInput = createBookingSchema.parse(input)
+        const validatedInput = createBookingSchema.parse(input);
 
         // Validate session
-        const session = await auth()
+        const session = await auth();
         if (!session?.user) {
-            return {
-                error: {
-                    message: 'Unauthorized'
-                }
-            }
+            return { error: { message: 'Unauthorized' } };
         }
 
-        // Validate booking data
-        const validation = await validateBooking(validatedInput)
-        if (!validation.isValid) {
-            return {
-                error: {
-                    message: 'Invalid booking data',
-                    field: Object.keys(validation.errors)[0]
-                }
-            }
-        }
-
-        // Get package details
+        // Get package details with related data
         const packageDetails = await db.query.packages.findFirst({
             where: eq(packages.id, validatedInput.packageId),
             with: {
-                program: true
+                program: {
+                    with: {
+                        sport: true
+                    }
+                },
+                schedules: true
             }
-        })
+        });
 
         if (!packageDetails) {
-            return {
-                error: {
-                    message: 'Package not found',
-                    field: 'packageId'
-                }
-            }
+            return { error: { message: 'Package not found', field: 'packageId' } };
         }
 
-        // Calculate total price
-        const totalPrice = Number(packageDetails.price) + (packageDetails.entryFees ? Number(packageDetails.entryFees) : 0)
+        if (!packageDetails.program?.sport) {
+            return { error: { message: 'Invalid package configuration', field: 'packageId' } };
+        }
+
+        // Calculate sessions and initial price
+        const selectedDate = new Date(validatedInput.date);
+        const { sessions, totalPrice, deductions } = await calculateSessionsAndPrice(
+            packageDetails,
+            selectedDate,
+            packageDetails.schedules,
+            validatedInput.time
+        );
+
+        // Check entry fees
+        const { shouldPay: shouldPayEntryFees, amount: entryFeesAmount } =
+            await checkEntryFees(
+                validatedInput.profileId,
+                packageDetails.program.sport.id,
+                packageDetails.program.id,
+                packageDetails
+            );
+
+        // Get active discounts
+        const discountedPrice = await getPriceAfterActiveDiscounts(validatedInput, totalPrice, deductions);
 
         // Create booking in a transaction
         const [newBooking] = await db.transaction(async (tx) => {
+            // Create booking
             const [booking] = await tx.insert(bookings).values({
                 profileId: validatedInput.profileId,
                 packageId: validatedInput.packageId,
                 coachId: validatedInput.coachId || null,
-                price: totalPrice,
+                price: discountedPrice + (shouldPayEntryFees ? entryFeesAmount : 0),
                 packagePrice: packageDetails.price,
                 status: 'success',
                 academyPolicy: false,
                 roapPolicy: false,
+                entryFeesPaid: shouldPayEntryFees,
                 createdAt: sql`now()`,
                 updatedAt: sql`now()`
-            }).returning()
+            }).returning();
 
-            await tx.insert(bookingSessions).values({
-                bookingId: booking.id,
-                date: formatDateForDB(new Date(validatedInput.date)),
-                from: validatedInput.time.split(' ')[0],
-                to: validatedInput.time.split(' ')[1],
-                status: 'pending',
-                createdAt: sql`now()`,
-                updatedAt: sql`now()`
-            })
+            console.log("sessions", sessions)
 
-            return [booking]
-        })
+            // Create booking sessions
+            await tx.insert(bookingSessions).values(
+                sessions.map(session => ({
+                    bookingId: booking.id,
+                    date: formatDateForDB(session.date),
+                    from: session.from,
+                    to: session.to,
+                    status: 'pending',
+                    createdAt: sql`now()`,
+                    updatedAt: sql`now()`
+                }))
+            );
 
-        revalidatePath('/calendar')
-        return { data: newBooking }
+            // Record entry fees payment if needed
+            if (shouldPayEntryFees && packageDetails.program?.sport) {
+                await tx.insert(entryFeesHistory).values({
+                    profileId: validatedInput.profileId,
+                    sportId: packageDetails.program.sport.id,
+                    programId: packageDetails.program.id,
+                    paidAt: sql`now()`,
+                    createdAt: sql`now()`,
+                    updatedAt: sql`now()`
+                });
+            }
+
+            return [booking];
+        });
+
+        revalidatePath('/calendar');
+        return { data: newBooking };
 
     } catch (error) {
-        console.error('Error creating booking:', error)
+        console.error('Error creating booking:', error);
         return {
             error: {
                 message: error instanceof Error ? error.message : 'Failed to create booking'
             }
-        }
+        };
     }
+}
+
+const days = {
+    'sun': 'Sunday',
+    'mon': 'Monday',
+    'tue': 'Tuesday',
+    'wed': 'Wednesday',
+    'thu': 'Thursday',
+    'fri': 'Friday',
+    'sat': 'Saturday'
+}
+
+function generateSessionsFromSchedules(
+    schedules: any[],
+    startDate: Date,
+    endDate: Date
+): Array<{ date: Date; from: string; to: string }> {
+    const sessions = [];
+    const currentDate = new Date(startDate);
+
+    while (currentDate <= endDate) {
+        const daySchedule = schedules.find(
+            s => days[s.day.toLowerCase() as keyof typeof days].toLowerCase() === currentDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+        );
+
+        if (daySchedule) {
+            sessions.push({
+                date: new Date(currentDate),
+                from: daySchedule.from,
+                to: daySchedule.to
+            });
+        }
+
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    return sessions;
 }
 
 // export async function getAvailableTimeSlots(

@@ -543,8 +543,8 @@ export default function Calendar() {
 																groupedEvent.time.split('-')[1]
 															)}
 														</div>
-														<div className="hidden sm:block font-normal text-sm text-[#1F441F] font-inter">
-															{groupedEvent.programName === 'block' ? '' : `${groupedEvent.coachName}, ${groupedEvent.count}`}
+														<div className="hidden sm:block font-normal text-sm text-[#1F441F] font-inter text-ellipsis">
+															{groupedEvent.programName === 'block' ? '' : `${(groupedEvent.events[0].studentName?.length ?? 0) > 12 ? groupedEvent.events[0].studentName?.slice(0, 12) + '...' : groupedEvent.events[0].studentName}, ${groupedEvent.count}`}
 														</div>
 													</div>
 												))}

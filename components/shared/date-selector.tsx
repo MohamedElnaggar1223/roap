@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { format, setYear, setMonth, setDate } from 'date-fns'
+import { format, setYear, setMonth, setDate, getDaysInMonth } from 'date-fns'
 import { FormControl } from "@/components/ui/form"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
@@ -17,7 +17,8 @@ export function DateSelector({ field }: DateSelectorProps) {
 
     const years = Array.from({ length: 105 }, (_, i) => (new Date().getFullYear()) + 5 - i)
     const months = Array.from({ length: 12 }, (_, i) => i)
-    const days = Array.from({ length: 31 }, (_, i) => i + 1)
+    const daysInMonth = getDaysInMonth(selectedDate)
+    const days = Array.from({ length: daysInMonth }, (_, i) => i + 1)
 
     useEffect(() => {
         if (field.value) {
@@ -33,10 +34,16 @@ export function DateSelector({ field }: DateSelectorProps) {
                 newDate = setDate(selectedDate, value)
                 break
             case 'month':
-                newDate = setMonth(selectedDate, value)
+                // When changing months, ensure the day is valid for the new month
+                const daysInNewMonth = getDaysInMonth(setMonth(selectedDate, value))
+                const newDay = Math.min(selectedDate.getDate(), daysInNewMonth)
+                newDate = setDate(setMonth(selectedDate, value), newDay)
                 break
             case 'year':
-                newDate = setYear(selectedDate, value)
+                // When changing years, handle February 29th in leap years
+                const daysInNewYear = getDaysInMonth(setYear(selectedDate, value))
+                const adjustedDay = Math.min(selectedDate.getDate(), daysInNewYear)
+                newDate = setDate(setYear(selectedDate, value), adjustedDay)
                 break
             default:
                 newDate = selectedDate
@@ -56,7 +63,7 @@ export function DateSelector({ field }: DateSelectorProps) {
                     <SelectTrigger className="w-[80px]">
                         <SelectValue placeholder="Day" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className='bg-[#F1F2E9]'>
                         {days.map((day) => (
                             <SelectItem key={day} value={day.toString()}>
                                 {day}
@@ -86,7 +93,7 @@ export function DateSelector({ field }: DateSelectorProps) {
                     <SelectTrigger className="w-[90px]">
                         <SelectValue placeholder="Year" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className='bg-[#F1F2E9]'>
                         {years.map((year) => (
                             <SelectItem key={year} value={year.toString()}>
                                 {year}
@@ -98,4 +105,3 @@ export function DateSelector({ field }: DateSelectorProps) {
         </FormControl>
     )
 }
-

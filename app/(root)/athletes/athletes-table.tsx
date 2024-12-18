@@ -28,6 +28,8 @@ interface Athlete {
     firstGuardianRelationship: string | null
     secondGuardianName: string | null
     secondGuardianRelationship: string | null
+    firstGuardianPhone: string | null
+    secondGuardianPhone: string | null
     bookings: Booking[]
     profile?: {
         name: string
@@ -69,7 +71,9 @@ export function AthletesDataTable({ data }: AthletesDataTableProps) {
                 athlete.email.toLowerCase().includes(lowercasedValue) ||
                 athlete.phoneNumber?.toLowerCase().includes(lowercasedValue) ||
                 athlete.firstGuardianName?.toLowerCase().includes(lowercasedValue) ||
-                athlete.secondGuardianName?.toLowerCase().includes(lowercasedValue)
+                athlete.secondGuardianName?.toLowerCase().includes(lowercasedValue) ||
+                athlete.firstGuardianPhone?.toLowerCase().includes(lowercasedValue) ||
+                athlete.secondGuardianPhone?.toLowerCase().includes(lowercasedValue)
             )
             setFilteredData(filtered)
         }

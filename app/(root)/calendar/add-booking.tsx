@@ -32,7 +32,7 @@ import type {
     BookingConfirmationData,
     Schedule
 } from '@/lib/validations/bookings';
-import { searchAthletes, getProgramDetails, createBooking } from '@/lib/actions/bookings.actions';
+import { searchAthletes, getProgramDetails, createBooking, checkEntryFees, getSportIdFromName, calculateSessionsAndPrice, getPriceAfterActiveDiscounts } from '@/lib/actions/bookings.actions';
 import { getProgramsData } from '@/lib/actions/programs.actions';
 import Image from 'next/image';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -485,6 +485,10 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingDetails, athlete
                 <label className="text-sm font-medium">End Date</label>
                 <p>{selectedPackage?.endDate ? format(selectedPackage.endDate, "PPP") : "No end date"}</p>
             </div>
+            <div className="space-y-2 flex flex-col">
+                <label className="text-sm font-medium">Sessions</label>
+                <div>{selectedPackage?.schedules.map(s => <p className='font-semibold' key={s.id}>{days[s.day.toLowerCase() as keyof typeof days].slice(0, 1).toUpperCase() + days[s.day.toLowerCase() as keyof typeof days].slice(1)} {format(new Date(`2000-01-01T${s.from}`), 'h:mm a')} - {format(new Date(`2000-01-01T${s.to}`), 'h:mm a')}</p>)}</div>
+            </div>
             {/* Time Selection */}
             <div className="space-y-2 flex flex-col">
                 <label className="text-sm font-medium">Time</label>
@@ -518,9 +522,50 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
     onConfirm
 }) => {
     const [loading, setLoading] = useState(false);
+    const [entryFeesDetails, setEntryFeesDetails] = useState<{ shouldPay: boolean; amount: number }>({ shouldPay: false, amount: 0 });
+    const [sessionsAndPrice, setSessionsAndPrice] = useState<{ sessions: { date: Date; from: string; to: string; }[]; totalPrice: number; deductions: number; }>();
+    const [discountedPrice, setDiscountedPrice] = useState<number>(0);
 
-    const total = (bookingDetails.package.price || 0) +
-        (bookingDetails.package.entryFees || 0);
+    useEffect(() => {
+        const checkFees = async () => {
+            const sportId = await getSportIdFromName(bookingDetails.program.sport);
+            console.log("Sport ID", sportId)
+
+            if (!sportId) return;
+
+
+            const [result, sessionsAndPrice] = await Promise.all(
+                [
+                    checkEntryFees(
+                        bookingDetails.athlete.id,
+                        sportId,
+                        bookingDetails.program.id,
+                        bookingDetails.package
+                    ),
+                    calculateSessionsAndPrice(
+                        bookingDetails.package,
+                        bookingDetails.date,
+                        bookingDetails.package.schedules,
+                        bookingDetails.time
+                    )
+                ]
+            );
+
+            const discountedPrice = await getPriceAfterActiveDiscounts(
+                { ...bookingDetails, profileId: bookingDetails.athlete.id, packageId: bookingDetails.package.id, coachId: bookingDetails.coach?.id, date: bookingDetails.date.toISOString(), time: bookingDetails.time },
+                sessionsAndPrice.totalPrice,
+                sessionsAndPrice.deductions
+            );
+            setEntryFeesDetails(result);
+            setSessionsAndPrice(sessionsAndPrice);
+            setDiscountedPrice(discountedPrice);
+        };
+
+        checkFees();
+    }, [bookingDetails]);
+
+    const total = bookingDetails.package.price +
+        (entryFeesDetails.shouldPay ? entryFeesDetails.amount : 0);
 
     return (
         <div className="space-y-6">
@@ -578,11 +623,14 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
 
             <div className="space-y-4 bg-[#E0E4D9] p-4 rounded-[12px] font-inter">
                 <div className="flex justify-between">
-                    <div className='min-w-[140px] text-sm'>{bookingDetails.package.sessionPerWeek} Session(s)</div>
+                    <div className='min-w-[140px] text-sm'>{sessionsAndPrice?.sessions.length} Session(s)</div>
                     <div className='flex-1 text-sm'>{bookingDetails.package.price} AED</div>
+                    {(sessionsAndPrice?.deductions ?? 0) > 0 && (
+                        <div className='flex-1 text-sm'>-{((bookingDetails.package.price ?? 0) - discountedPrice).toFixed(2)} AED</div>
+                    )}
                 </div>
 
-                {(bookingDetails?.package?.entryFees ?? 0) > 0 && (
+                {(bookingDetails?.package?.entryFees ?? 0) > 0 && entryFeesDetails.shouldPay && (
                     <div className="flex justify-between">
                         <div className='min-w-[140px] text-sm'>Entry Fees</div>
                         <div className='flex-1 text-sm'>{bookingDetails.package.entryFees} AED</div>
@@ -591,7 +639,7 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
 
                 <div className="flex justify-between items-center font-medium text-lg">
                     <div className='min-w-[140px] text-sm font-semibold'>Total</div>
-                    <div className='font-semibold flex-1'>{total} AED</div>
+                    <div className='font-semibold flex-1'>{(discountedPrice).toFixed(2)} AED</div>
                 </div>
             </div>
 
