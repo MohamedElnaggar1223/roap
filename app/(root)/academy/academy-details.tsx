@@ -432,7 +432,11 @@ export default function AcademyDetails({ academyDetails, sports }: Props) {
                         </div>
                     </div>
                     <div className="flex flex-col gap-4 w-full flex-1">
-                        <p className='text-xs'>Logo</p>
+                        <p className='text-xs'>
+                            Logo
+                            {" "}
+                            <span className='text-[10px] text-red-500'>jpeg, png, svg, webp</span>
+                        </p>
                         <div className="flex w-full items-center justify-center gap-4 border border-gray-500 p-3 rounded-lg">
                             <FormField
                                 control={form.control}
@@ -491,7 +495,11 @@ export default function AcademyDetails({ academyDetails, sports }: Props) {
                 <div className="flex flex-col gap-4 w-full">
                     <div className="flex w-full items-center justify-between">
 
-                        <p className='text-xs'>Gallery</p>
+                        <p className='text-xs'>
+                            Gallery
+                            {" "}
+                            <span className='text-[10px] text-red-500'>jpeg, png, svg, webp, mp4</span>
+                        </p>
                         <Button
                             variant="default"
                             disabled={loading}
