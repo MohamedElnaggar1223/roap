@@ -160,8 +160,8 @@ export async function createLocation(data: {
                     isDefault: data.isDefault ? true : false,
                     slug,
                     academicId: academy.id,
-                    latitude: data.latitude,
-                    longitude: data.longitude,
+                    latitude: data.latitude ?? '',
+                    longitude: data.longitude ?? '',
                 })
                 .returning({
                     id: branches.id,

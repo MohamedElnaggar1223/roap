@@ -831,7 +831,7 @@ export default function AddNewProgram({ branches, sports, academySports }: Props
                                     </div>
 
                                     <div className="w-full max-w-screen-2xl overflow-x-auto mx-auto">
-                                        <div className="min-w-full grid grid-cols-[0.75fr,auto,auto,auto,auto,auto] gap-y-2 text-nowrap">
+                                        <div className="min-w-full grid grid-cols-[auto,0.75fr,auto,auto,auto,auto,auto] gap-y-2 text-nowrap">
                                             {/* Header */}
                                             <div className="contents">
                                                 <div />
@@ -839,14 +839,19 @@ export default function AddNewProgram({ branches, sports, academySports }: Props
                                                 <div />
                                                 <div />
                                                 <div />
+                                                <div />
                                                 <div className="py-4 flex items-center justify-center">
-                                                    <button type='button' onClick={() => setPackagesOpen(true)} className='flex text-main-yellow text-nowrap items-center justify-center gap-2 rounded-3xl px-4 py-2 bg-main-green text-sm'>
+                                                    <Button
+                                                        onClick={() => setPackagesOpen(true)}
+                                                        className='flex text-main-yellow text-nowrap items-center justify-center gap-2 rounded-3xl px-4 py-2 bg-main-green text-sm'
+                                                    >
                                                         Add New Package
-                                                    </button>
+                                                    </Button>
                                                 </div>
                                             </div>
                                             <div className="contents">
-                                                <div className="py-4 px-4 rounded-l-[20px] bg-[#E0E4D9]">Name</div>
+                                                <div className="py-4 px-4 rounded-l-[20px] bg-[#E0E4D9]" />
+                                                <div className="py-4 px-4 bg-[#E0E4D9]">Name</div>
                                                 <div className="py-4 px-4 bg-[#E0E4D9]">Price</div>
                                                 <div className="py-4 px-4 bg-[#E0E4D9]">Start Date</div>
                                                 <div className="py-4 px-4 bg-[#E0E4D9]">End Date</div>
@@ -855,46 +860,52 @@ export default function AddNewProgram({ branches, sports, academySports }: Props
                                             </div>
 
                                             {/* Rows */}
-                                            {createdPackages
-                                                .map((packageData, index) => packageData.id ? (
-                                                    <Fragment key={index}>
-                                                        <div className="py-4 px-4 bg-main-white rounded-l-[20px] flex items-center justify-start font-bold font-inter">{packageData.name}</div>
-                                                        <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{packageData.price}</div>
-                                                        <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{packageData.startDate.toLocaleDateString()}</div>
-                                                        <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{packageData.endDate.toLocaleDateString()}</div>
-                                                        <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{packageData.schedules.length}</div>
-                                                        <div className="py-4 px-4 bg-main-white gap-4 rounded-r-[20px] flex items-center justify-end font-bold font-inter">
-                                                            <Button type='button' variant="ghost" size="icon" onClick={() => { setEditPackageOpen(true); setEditedPackage({ editedPackage: packageData }) }}>
-                                                                <Image
-                                                                    src='/images/edit.svg'
-                                                                    alt='Edit'
-                                                                    width={20}
-                                                                    height={20}
-                                                                />
-                                                            </Button>
-                                                            <TrashIcon className="h-4 w-4 cursor-pointer" onClick={() => setCreatedPackages(createdPackages.filter((_, i) => i !== index))} />
-                                                        </div>
-                                                    </Fragment>
-                                                ) : (
-                                                    <Fragment key={index}>
-                                                        <div className="py-4 px-4 bg-main-white rounded-l-[20px] flex items-center justify-start font-bold font-inter">{packageData.name}</div>
-                                                        <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{packageData.price}</div>
-                                                        <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{packageData.startDate.toLocaleDateString()}</div>
-                                                        <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{packageData.endDate.toLocaleDateString()}</div>
-                                                        <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{packageData.schedules.length}</div>
-                                                        <div className="py-4 px-4 bg-main-white gap-4 rounded-r-[20px] flex items-center justify-end font-bold font-inter">
-                                                            <Button type='button' variant="ghost" size="icon" onClick={() => { setEditPackageOpen(true); setEditedPackage({ editedPackage: packageData, index }) }}>
-                                                                <Image
-                                                                    src='/images/edit.svg'
-                                                                    alt='Edit'
-                                                                    width={20}
-                                                                    height={20}
-                                                                />
-                                                            </Button>
-                                                            <TrashIcon className="h-4 w-4 cursor-pointer" onClick={() => setCreatedPackages(createdPackages.filter((_, i) => i !== index))} />
-                                                        </div>
-                                                    </Fragment>
-                                                ))}
+                                            {createdPackages.map((packageData, index) => (
+                                                <Fragment key={index}>
+                                                    <div className="py-4 px-2 bg-main-white flex items-center justify-center">
+                                                        {!packageData.id && (
+                                                            <div className="w-3 h-3 rounded-full bg-yellow-400" title="Not Saved" />
+                                                        )}
+                                                    </div>
+                                                    <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                                        {packageData.name}
+                                                    </div>
+                                                    <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                                        {packageData.price}
+                                                    </div>
+                                                    <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                                        {packageData.startDate.toLocaleDateString()}
+                                                    </div>
+                                                    <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                                        {packageData.endDate.toLocaleDateString()}
+                                                    </div>
+                                                    <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                                        {packageData.schedules.length}
+                                                    </div>
+                                                    <div className="py-4 px-4 bg-main-white gap-4 rounded-r-[20px] flex items-center justify-end font-bold font-inter">
+                                                        <Button
+                                                            type='button'
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => {
+                                                                setEditPackageOpen(true);
+                                                                setEditedPackage({ editedPackage: packageData, index: packageData.id ? undefined : index })
+                                                            }}
+                                                        >
+                                                            <Image
+                                                                src='/images/edit.svg'
+                                                                alt='Edit'
+                                                                width={20}
+                                                                height={20}
+                                                            />
+                                                        </Button>
+                                                        <TrashIcon
+                                                            className="h-4 w-4 cursor-pointer"
+                                                            onClick={() => setCreatedPackages(createdPackages.filter((_, i) => i !== index))}
+                                                        />
+                                                    </div>
+                                                </Fragment>
+                                            ))}
                                         </div>
                                     </div>
                                 </div>

@@ -109,7 +109,7 @@ export default function EditNewPromoCode({ promoCodeEdited }: Props) {
                 />
             </Button>
             <Dialog open={editNewPromoCodeOpen} onOpenChange={setEditNewPromoCodeOpen}>
-                <DialogContent className='bg-main-white min-w-[760px]'>
+                <DialogContent className='bg-main-white min-w-[820px]'>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full'>
                             <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>

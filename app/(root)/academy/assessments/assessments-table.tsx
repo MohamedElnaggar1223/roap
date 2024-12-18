@@ -56,9 +56,10 @@ interface AssessmentsTableProps {
     data: Assessment[]
     branches: Branch[]
     sports: Sport[]
+    academySports?: { id: number }[]
 }
 
-export function AssessmentsTable({ data, branches, sports }: AssessmentsTableProps) {
+export function AssessmentsTable({ data, branches, sports, academySports }: AssessmentsTableProps) {
     const router = useRouter()
 
     const [selectedSport, setSelectedSport] = useState<string | null>(null)
@@ -162,12 +163,12 @@ export function AssessmentsTable({ data, branches, sports }: AssessmentsTablePro
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className='max-h-48 overflow-auto bg-[#F1F2E9]'>
                                 <DropdownMenuItem onClick={() => setSelectedSport(null)}>All</DropdownMenuItem>
-                                {sports.map(sport => (
+                                {academySports?.map(sport => (
                                     <DropdownMenuItem
                                         key={sport.id}
                                         onClick={() => setSelectedSport(sport.id.toString())}
                                     >
-                                        {sport.name}
+                                        {sports.find(s => s.id === sport.id)?.name}
                                     </DropdownMenuItem>
                                 ))}
                             </DropdownMenuContent>

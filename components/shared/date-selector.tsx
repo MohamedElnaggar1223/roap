@@ -15,7 +15,7 @@ interface DateSelectorProps {
 export function DateSelector({ field }: DateSelectorProps) {
     const [selectedDate, setSelectedDate] = useState<Date>(field.value || new Date())
 
-    const years = Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i)
+    const years = Array.from({ length: 105 }, (_, i) => (new Date().getFullYear()) + 5 - i)
     const months = Array.from({ length: 12 }, (_, i) => i)
     const days = Array.from({ length: 31 }, (_, i) => i + 1)
 

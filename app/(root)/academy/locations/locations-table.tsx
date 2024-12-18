@@ -123,14 +123,14 @@ export function LocationsDataTable({ data, sports, academySports }: LocationsDat
                                     <ChevronDown className="w-4 h-4" />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent className='bg-[#F1F2E9]'>
+                            <DropdownMenuContent className='max-h-48 overflow-auto bg-[#F1F2E9]'>
                                 <DropdownMenuItem onClick={() => setSelectedSport(null)}>All</DropdownMenuItem>
-                                {sports.map(sport => (
+                                {academySports?.map(sport => (
                                     <DropdownMenuItem
                                         key={sport.id}
                                         onClick={() => setSelectedSport(sport.id.toString())}
                                     >
-                                        {sport.name}
+                                        {sports.find(s => s.id === sport.id)?.name}
                                     </DropdownMenuItem>
                                 ))}
                             </DropdownMenuContent>
