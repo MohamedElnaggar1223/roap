@@ -155,7 +155,7 @@ export default function AddNewLocation({ sports, academySports }: Props) {
                 New Location
             </button>
             <Dialog open={addNewSportOpen} onOpenChange={setAddNewSportOpen}>
-                <DialogContent className='bg-main-white min-w-[560px]'>
+                <DialogContent className='bg-main-white min-w-[760px]'>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full'>
                             <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>

@@ -102,7 +102,7 @@ export function AssessmentsTable({ data, branches, sports }: AssessmentsTablePro
                                         height={16}
                                         alt='Sports'
                                     />
-                                    {selectedGender ? selectedGender : 'Gender'}
+                                    {selectedGender ? selectedGender : 'For'}
                                     <ChevronDown className="w-4 h-4" />
                                 </Button>
                             </DropdownMenuTrigger>

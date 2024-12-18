@@ -138,14 +138,14 @@ export function CoachesDataTable({ data, sports, languages, academySports }: Coa
                                     <ChevronDown className="w-4 h-4" />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent className='bg-[#F1F2E9]'>
+                            <DropdownMenuContent className='max-h-48 overflow-auto bg-[#F1F2E9]'>
                                 <DropdownMenuItem onClick={() => setSelectedSport(null)}>All</DropdownMenuItem>
-                                {sports.map(sport => (
+                                {academySports?.map(sport => (
                                     <DropdownMenuItem
                                         key={sport.id}
                                         onClick={() => setSelectedSport(sport.id.toString())}
                                     >
-                                        {sport.name}
+                                        {sports.find(s => s.id === sport.id)?.name}
                                     </DropdownMenuItem>
                                 ))}
                             </DropdownMenuContent>
@@ -177,7 +177,7 @@ export function CoachesDataTable({ data, sports, languages, academySports }: Coa
             </div>
 
             <div className="w-full max-w-screen-2xl overflow-x-auto">
-                <div className="min-w-full grid grid-cols-[auto,auto,0.5fr,auto,auto,auto,auto,auto,auto] gap-y-2 text-nowrap">
+                <div className="min-w-full grid grid-cols-[auto,auto,0.5fr,auto,auto,auto,auto,auto] gap-y-2 text-nowrap">
                     {/* Header */}
                     <div className="contents">
                         <div className="py-4 px-4 flex items-center justify-center">
@@ -193,7 +193,6 @@ export function CoachesDataTable({ data, sports, languages, academySports }: Coa
                         <div className="py-4 px-4">Gender</div>
                         <div className="py-4 px-4">Sports</div>
                         <div className="py-4 px-4">Languages</div>
-                        <div className="py-4 px-4">Packages</div>
                         <div className="py-4 px-4"></div>
                     </div>
 
@@ -234,9 +233,6 @@ export function CoachesDataTable({ data, sports, languages, academySports }: Coa
                                 </div>
                                 <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
                                     {coach.languages?.length ?? 0}
-                                </div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                    {coach.packages?.length ?? 0}
                                 </div>
                                 <div className="py-4 px-4 bg-main-white rounded-r-[20px] flex items-center justify-end">
                                     <EditCoach

@@ -170,33 +170,23 @@ export function ProgramsDataTable({ data, branches, sports, academySports }: Pro
                                         height={16}
                                         alt='Sports'
                                     />
-                                    {selectedGender ? selectedGender : 'Gender'}
+                                    {selectedGender ? selectedGender : 'For'}
                                     <ChevronDown className="w-4 h-4" />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className='max-h-48 overflow-auto bg-[#F1F2E9]'>
                                 <DropdownMenuItem onClick={() => setSelectedGender(null)}>All</DropdownMenuItem>
-                                <DropdownMenuItem
-                                    key={'male'}
-                                    onClick={() => setSelectedGender('male')}
-                                >
-                                    Male
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    key={'female'}
-                                    onClick={() => setSelectedGender('female')}
-                                >
-                                    Female
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    key={'mix'}
-                                    onClick={() => setSelectedGender('mix')}
-                                >
-                                    Mix
-                                </DropdownMenuItem>
+                                {['male', 'female', 'adults', 'adults men', 'ladies only'].map(gender => (
+                                    <DropdownMenuItem
+                                        key={gender}
+                                        onClick={() => setSelectedGender(gender)}
+                                    >
+                                        {gender}
+                                    </DropdownMenuItem>
+                                ))}
                             </DropdownMenuContent>
                         </DropdownMenu>
-                        <DropdownMenu>
+                        {/* <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
                                     <Image
@@ -220,7 +210,7 @@ export function ProgramsDataTable({ data, branches, sports, academySports }: Pro
                                     </DropdownMenuItem>
                                 ))}
                             </DropdownMenuContent>
-                        </DropdownMenu>
+                        </DropdownMenu> */}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
@@ -261,12 +251,12 @@ export function ProgramsDataTable({ data, branches, sports, academySports }: Pro
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className='max-h-48 overflow-auto bg-[#F1F2E9]'>
                                 <DropdownMenuItem onClick={() => setSelectedSport(null)}>All</DropdownMenuItem>
-                                {sports.map(sport => (
+                                {academySports?.map(sport => (
                                     <DropdownMenuItem
                                         key={sport.id}
                                         onClick={() => setSelectedSport(sport.id.toString())}
                                     >
-                                        {sport.name}
+                                        {sports.find(s => s.id === sport.id)?.name}
                                     </DropdownMenuItem>
                                 ))}
                             </DropdownMenuContent>

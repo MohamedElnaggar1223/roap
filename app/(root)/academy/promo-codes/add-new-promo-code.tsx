@@ -26,6 +26,7 @@ import {
     SelectValue,
     SelectLabel
 } from "@/components/ui/select"
+import { DateSelector } from '@/components/shared/date-selector';
 
 
 export default function AddNewPromoCode() {
@@ -90,7 +91,7 @@ export default function AddNewPromoCode() {
                 New Promo Code
             </button>
             <Dialog open={addNewPromoCodeOpen} onOpenChange={setAddNewPromoCodeOpen}>
-                <DialogContent className='bg-main-white min-w-[560px]'>
+                <DialogContent className='bg-main-white min-w-[760px]'>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full'>
                             <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>
@@ -173,13 +174,7 @@ export default function AddNewPromoCode() {
                                                 <FormItem className='flex-1'>
                                                     <FormLabel>Start Date</FormLabel>
                                                     <FormControl>
-                                                        <Input
-                                                            type="date"
-                                                            {...field}
-                                                            value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
-                                                            onChange={(e) => field.onChange(new Date(e.target.value))}
-                                                            className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
-                                                        />
+                                                        <DateSelector field={field} />
                                                     </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
@@ -192,13 +187,7 @@ export default function AddNewPromoCode() {
                                                 <FormItem className='flex-1'>
                                                     <FormLabel>End Date</FormLabel>
                                                     <FormControl>
-                                                        <Input
-                                                            type="date"
-                                                            {...field}
-                                                            value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
-                                                            onChange={(e) => field.onChange(new Date(e.target.value))}
-                                                            className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
-                                                        />
+                                                        <DateSelector field={field} />
                                                     </FormControl>
                                                     <FormMessage />
                                                 </FormItem>

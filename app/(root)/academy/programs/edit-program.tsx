@@ -40,7 +40,9 @@ import { TrashIcon } from 'lucide-react';
 import { getProgramPackages } from '@/lib/actions/packages.actions';
 import AutoGrowingTextarea from '@/components/ui/autogrowing-textarea';
 import { useOnboarding } from '@/providers/onboarding-provider';
-// import { calculateAge } from '../utils/calculateAge';
+import AddDiscount from './add-discount';
+import EditDiscount from './edit-discount';
+import { getProgramDiscounts } from '@/lib/actions/discounts.actions';
 
 const calculateAge = (birthDate: string): number => {
     const today = new Date();
@@ -67,6 +69,15 @@ const calculateAge = (birthDate: string): number => {
 
     return (totalMonths / 12);
 };
+
+interface Discount {
+    type: 'fixed' | 'percentage'
+    value: number
+    startDate: Date
+    endDate: Date
+    packageIds: number[]
+    id?: number
+}
 
 const addProgramSchema = z.object({
     name: z.string().min(1, "Name is required"),
@@ -225,6 +236,9 @@ export default function EditProgram({ branches, sports, programEdited, academySp
     const { data: packagesData, isLoading, isValidating, mutate } = useSWR(editProgramOpen ? 'packages' : null, (url: string | null) => getProgramPackages(url, programEdited.id), {
         refreshWhenHidden: true
     })
+    const { data: discountsData, isLoading: discountsLoading, isValidating: discountsValidating, mutate: mutateDiscounts } = useSWR(editProgramOpen ? 'discounts' : null, (url: string | null) => getProgramDiscounts(url, programEdited.id), {
+        refreshWhenHidden: true
+    })
 
     const [selectedCoaches, setSelectedCoaches] = useState<number[]>(programEdited.coaches.map(coach => parseInt(coach)))
     const [selectedGenders, setSelectedGenders] = useState<string[]>(programEdited.gender?.split(',') ?? [])
@@ -235,12 +249,20 @@ export default function EditProgram({ branches, sports, programEdited, academySp
     const [gendersOpen, setGendersOpen] = useState(false);
     const [editPackageOpen, setEditPackageOpen] = useState(false);
     const [editedPackage, setEditedPackage] = useState<{ editedPackage: Package, index?: number } | null>(null);
-
+    const [discountsOpen, setDiscountsOpen] = useState(false);
+    const [createdDiscounts, setCreatedDiscounts] = useState<Discount[]>([]);
+    const [editDiscountOpen, setEditDiscountOpen] = useState(false);
+    const [editedDiscount, setEditedDiscount] = useState<{ editedDiscount: Discount, index?: number } | null>(null);
 
     useEffect(() => {
         if (isLoading || isValidating) return
         setCreatedPackages(packagesData?.data?.map(packageData => ({ ...packageData, startDate: new Date(packageData.startDate), endDate: new Date(packageData.endDate), entryFeesExplanation: packageData.entryFeesExplanation ?? undefined, entryFeesAppliedUntil: packageData.entryFeesAppliedUntil ? packageData.entryFeesAppliedUntil : undefined })) ?? [])
     }, [isLoading, isValidating, packagesData])
+
+    useEffect(() => {
+        if (discountsLoading || discountsValidating) return
+        setCreatedDiscounts(discountsData?.data ?? [])
+    }, [discountsLoading, discountsValidating, discountsData])
 
     const form = useForm<z.infer<typeof addProgramSchema>>({
         resolver: zodResolver(addProgramSchema),
@@ -358,6 +380,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                 coaches: selectedCoaches,
                 packagesData: createdPackages,
                 color: values.color,
+                discountsData: createdDiscounts
             })
 
 
@@ -488,7 +511,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                         />
 
                                         <div className="flex flex-col gap-4 flex-1">
-                                            <p className='text-xs'>Genders</p>
+                                            <p className='text-xs'>For</p>
                                             <div className="flex w-full flex-col gap-4 border border-gray-500 p-3 rounded-lg">
                                                 <div className="flex flex-wrap gap-2">
                                                     {selectedGenders.map((gender) => (
@@ -805,6 +828,73 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                         )}
                                     />
 
+                                    <div className="w-full max-w-screen-2xl overflow-x-auto mx-auto">
+                                        <div className="min-w-full grid grid-cols-[0.75fr,auto,auto,auto,auto] gap-y-2 text-nowrap">
+                                            {/* Header */}
+                                            <div className="contents">
+                                                <div />
+                                                <div />
+                                                <div />
+                                                <div />
+                                                <div className="py-4 flex items-center justify-center">
+                                                    <button
+                                                        type='button'
+                                                        onClick={() => setDiscountsOpen(true)}
+                                                        className='flex text-main-yellow text-nowrap items-center justify-center gap-2 rounded-3xl px-4 py-2 bg-main-green text-sm'
+                                                    >
+                                                        Add New Discount
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div className="contents">
+                                                <div className="py-4 px-4 rounded-l-[20px] bg-[#E0E4D9]">Value</div>
+                                                <div className="py-4 px-4 bg-[#E0E4D9]">Start Date</div>
+                                                <div className="py-4 px-4 bg-[#E0E4D9]">End Date</div>
+                                                <div className="py-4 px-4 bg-[#E0E4D9]">Packages</div>
+                                                <div className="py-4 px-4 rounded-r-[20px] bg-[#E0E4D9]"></div>
+                                            </div>
+
+                                            {/* Rows */}
+                                            {createdDiscounts.map((discount, index) => (
+                                                <Fragment key={index}>
+                                                    <div className="py-4 px-4 bg-main-white rounded-l-[20px] flex items-center justify-start font-bold font-inter">
+                                                        {discount.type === 'percentage' ? `${discount.value}%` : `${discount.value} AED`}
+                                                    </div>
+                                                    <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                                        {discount.startDate.toLocaleDateString()}
+                                                    </div>
+                                                    <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                                        {discount.endDate.toLocaleDateString()}
+                                                    </div>
+                                                    <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                                        {discount.packageIds.length}
+                                                    </div>
+                                                    <div className="py-4 px-4 bg-main-white gap-4 rounded-r-[20px] flex items-center justify-end font-bold font-inter">
+                                                        <Button
+                                                            type='button'
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => {
+                                                                setEditedDiscount({ editedDiscount: discount, index });
+                                                                setEditDiscountOpen(true);
+                                                            }}
+                                                        >
+                                                            <Image
+                                                                src='/images/edit.svg'
+                                                                alt='Edit'
+                                                                width={20}
+                                                                height={20}
+                                                            />
+                                                        </Button>
+                                                        <TrashIcon
+                                                            className="h-4 w-4 cursor-pointer"
+                                                            onClick={() => setCreatedDiscounts(createdDiscounts.filter((_, i) => i !== index))}
+                                                        />
+                                                    </div>
+                                                </Fragment>
+                                            ))}
+                                        </div>
+                                    </div>
 
                                     <div className="w-full max-w-screen-2xl overflow-x-auto mx-auto">
                                         <div className="min-w-full grid grid-cols-[0.75fr,auto,auto,auto,auto,auto] gap-y-2 text-nowrap">
@@ -879,6 +969,23 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                     </Form>
                 </DialogContent>
             </Dialog>
+            <AddDiscount
+                onOpenChange={setDiscountsOpen}
+                open={discountsOpen}
+                setCreatedDiscounts={setCreatedDiscounts}
+                packages={createdPackages.filter(p => p.id)}
+            />
+            {editedDiscount && (
+                <EditDiscount
+                    onOpenChange={setEditDiscountOpen}
+                    open={editDiscountOpen}
+                    setEditedDiscount={setEditedDiscount}
+                    discountEdited={editedDiscount.editedDiscount}
+                    index={editedDiscount.index}
+                    setCreatedDiscounts={setCreatedDiscounts}
+                    packages={createdPackages.filter(p => p.id)}
+                />
+            )}
             <AddPackage onOpenChange={setPackagesOpen} open={packagesOpen} setCreatedPackages={setCreatedPackages} />
             {editedPackage?.editedPackage.id ? <EditPackage setEditedPackage={setEditedPackage} mutate={mutate} open={editPackageOpen} onOpenChange={setEditPackageOpen} packageEdited={editedPackage?.editedPackage} /> : editedPackage?.editedPackage ? <EditPackage setEditedPackage={setEditedPackage} mutate={mutate} packageEdited={editedPackage?.editedPackage} open={editPackageOpen} onOpenChange={setEditPackageOpen} setCreatedPackages={setCreatedPackages} /> : null}
         </>

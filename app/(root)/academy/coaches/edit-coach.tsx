@@ -32,6 +32,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { getImageUrl, uploadImageToSupabase } from '@/lib/supabase-images';
 import { useOnboarding } from '@/providers/onboarding-provider';
+import { DateSelector } from '@/components/shared/date-selector';
 
 type Coach = {
     id: number
@@ -325,13 +326,7 @@ export default function EditCoach({ coachEdited, sports, languages, academySport
                                                 <FormItem className='flex-1'>
                                                     <FormLabel>Date of Birth</FormLabel>
                                                     <FormControl>
-                                                        <Input
-                                                            type="date"
-                                                            {...field}
-                                                            value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
-                                                            onChange={(e) => field.onChange(new Date(e.target.value))}
-                                                            className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
-                                                        />
+                                                        <DateSelector field={field} />
                                                     </FormControl>
                                                     <FormMessage />
                                                 </FormItem>

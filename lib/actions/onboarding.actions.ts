@@ -51,7 +51,7 @@ export const createOnboardingLocation = async (data: OnboardingLocationData) => 
         return await db.transaction(async (tx) => {
             // Create branch (always default for onboarding)
             const slug = slugify(data.name)
-            const existingBranch = await tx.query.branches.findFirst({
+            /*const existingBranch = await tx.query.branches.findFirst({
                 where: (branches, { eq }) => eq(branches.slug, slug)
             })
 
@@ -60,7 +60,7 @@ export const createOnboardingLocation = async (data: OnboardingLocationData) => 
                     error: 'A location with this name already exists',
                     field: 'name'
                 }
-            }
+            }*/
             const [branch] = await tx
                 .insert(branches)
                 .values({

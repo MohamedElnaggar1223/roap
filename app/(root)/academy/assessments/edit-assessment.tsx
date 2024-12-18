@@ -382,7 +382,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                                     />
 
                                     <div className="flex flex-col gap-4 flex-1">
-                                        <p className='text-xs'>Genders</p>
+                                        <p className='text-xs'>For</p>
                                         <div className="flex w-full flex-col gap-4 border border-gray-500 p-3 rounded-lg">
                                             <div className="flex flex-wrap gap-2">
                                                 {selectedGenders.map((gender) => (

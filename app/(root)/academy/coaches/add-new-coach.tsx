@@ -32,6 +32,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { getImageUrl, uploadImageToSupabase } from '@/lib/supabase-images';
 import Image from 'next/image';
 import { useOnboarding } from '@/providers/onboarding-provider';
+import { DateSelector } from '@/components/shared/date-selector';
 
 type Props = {
     sports: {
@@ -202,7 +203,7 @@ export default function AddNewCoach({ sports, languages, academySports }: Props)
                 New Coach
             </button>
             <Dialog open={addNewCoachOpen} onOpenChange={setAddNewCoachOpen}>
-                <DialogContent className='bg-main-white min-w-[560px]'>
+                <DialogContent className='bg-main-white min-w-[760px]'>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full'>
                             <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>
@@ -334,13 +335,7 @@ export default function AddNewCoach({ sports, languages, academySports }: Props)
                                                 <FormItem className='flex-1'>
                                                     <FormLabel>Date of Birth</FormLabel>
                                                     <FormControl>
-                                                        <Input
-                                                            type="date"
-                                                            {...field}
-                                                            value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
-                                                            onChange={(e) => field.onChange(new Date(e.target.value))}
-                                                            className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
-                                                        />
+                                                        <DateSelector field={field} />
                                                     </FormControl>
                                                     <FormMessage />
                                                 </FormItem>

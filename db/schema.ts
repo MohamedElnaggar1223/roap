@@ -437,7 +437,7 @@ export const branches = pgTable("branches", {
     nameInGoogleMap: varchar("name_in_google_map", { length: 255 }).default(sql`NULL`),
 }, (table) => {
     return {
-        slugUnique: uniqueIndex("branches_slug_unique").using("btree", table.slug.asc().nullsLast().op("text_ops")),
+        // slugUnique: uniqueIndex("branches_slug_unique").using("btree", table.slug.asc().nullsLast().op("text_ops")),
         branchesAcademicIdForeign: foreignKey({
             columns: [table.academicId],
             foreignColumns: [academics.id],
@@ -604,6 +604,32 @@ export const media = pgTable("media", {
     }
 });
 
+export const discounts = pgTable("discounts", {
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({
+        name: "discounts_id_seq",
+        startWith: 1000,
+        increment: 1,
+        minValue: 1,
+        maxValue: 9223372036854775807,
+        cache: 1
+    }),
+    type: discountType("type").notNull(),
+    value: doublePrecision().notNull(),
+    startDate: timestamp("start_date", { mode: 'string' }).notNull(),
+    endDate: timestamp("end_date", { mode: 'string' }).notNull(),
+    programId: bigint("program_id", { mode: "number" }).notNull(),
+    createdAt: timestamp("created_at", { mode: 'string' }),
+    updatedAt: timestamp("updated_at", { mode: 'string' }),
+}, (table) => {
+    return {
+        discountsProgramIdForeign: foreignKey({
+            columns: [table.programId],
+            foreignColumns: [programs.id],
+            name: "discounts_program_id_foreign"
+        }).onDelete("cascade"),
+    }
+});
+
 export const programs = pgTable("programs", {
     // You can use { mode: "bigint" } if numbers are exceeding js number limitations
     id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "programs_id_seq", startWith: 2000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
@@ -758,6 +784,35 @@ export const packages = pgTable("packages", {
             foreignColumns: [programs.id],
             name: "packages_program_id_foreign"
         }).onDelete("cascade"),
+    }
+});
+
+export const packageDiscount = pgTable("package_discount", {
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({
+        name: "package_discount_id_seq",
+        startWith: 1000,
+        increment: 1,
+        minValue: 1,
+        maxValue: 9223372036854775807,
+        cache: 1
+    }),
+    packageId: bigint("package_id", { mode: "number" }).notNull(),
+    discountId: bigint("discount_id", { mode: "number" }).notNull(),
+    createdAt: timestamp("created_at", { mode: 'string' }),
+    updatedAt: timestamp("updated_at", { mode: 'string' }),
+}, (table) => {
+    return {
+        packageDiscountPackageIdForeign: foreignKey({
+            columns: [table.packageId],
+            foreignColumns: [packages.id],
+            name: "package_discount_package_id_foreign"
+        }).onDelete("cascade"),
+        packageDiscountDiscountIdForeign: foreignKey({
+            columns: [table.discountId],
+            foreignColumns: [discounts.id],
+            name: "package_discount_discount_id_foreign"
+        }).onDelete("cascade"),
+        packageDiscountUnique: unique("package_discount_unique").on(table.packageId, table.discountId),
     }
 });
 
@@ -1050,6 +1105,25 @@ export const payments = pgTable("payments", {
     }
 });
 
+export const discountsRelations = relations(discounts, ({ one, many }) => ({
+    program: one(programs, {
+        fields: [discounts.programId],
+        references: [programs.id]
+    }),
+    packageDiscounts: many(packageDiscount)
+}));
+
+export const packageDiscountRelations = relations(packageDiscount, ({ one }) => ({
+    package: one(packages, {
+        fields: [packageDiscount.packageId],
+        references: [packages.id]
+    }),
+    discount: one(discounts, {
+        fields: [packageDiscount.discountId],
+        references: [discounts.id]
+    })
+}));
+
 export const profilesRelations = relations(profiles, ({ one, many }) => ({
     user: one(users, {
         fields: [profiles.userId],
@@ -1250,6 +1324,7 @@ export const packagesRelations = relations(packages, ({ one, many }) => ({
     schedules: many(schedules),
     bookings: many(bookings),
     coachPackages: many(coachPackage),
+    packageDiscounts: many(packageDiscount)
 }));
 
 export const branchTranslationsRelations = relations(branchTranslations, ({ one }) => ({
@@ -1314,6 +1389,7 @@ export const programsRelations = relations(programs, ({ one, many }) => ({
     }),
     packages: many(packages),
     coachPrograms: many(coachProgram),
+    discounts: many(discounts),
 }));
 
 export const coachesRelations = relations(coaches, ({ one, many }) => ({

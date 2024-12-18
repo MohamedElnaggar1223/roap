@@ -134,7 +134,7 @@ export async function createLocation(data: {
             if (!academy) return { error: 'Academy not found' }
 
             const slug = slugify(data.name)
-            const existingBranch = await tx.query.branches.findFirst({
+            /*const existingBranch = await tx.query.branches.findFirst({
                 where: (branches, { eq }) => eq(branches.slug, slug)
             })
 
@@ -143,7 +143,7 @@ export async function createLocation(data: {
                     error: 'A location with this name already exists',
                     field: 'name'
                 }
-            }
+            }*/
 
             if (data.isDefault) {
                 await db
@@ -202,7 +202,7 @@ export async function createLocation(data: {
             ])
 
 
-            return { data: branch }
+            return { data: branch, error: null, field: null }
         })
     } catch (error) {
         console.error('Error creating location:', error)

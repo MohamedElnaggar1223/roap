@@ -39,6 +39,8 @@ import EditPackage from './new-edit-package';
 import { TrashIcon } from 'lucide-react';
 import AutoGrowingTextarea from '@/components/ui/autogrowing-textarea';
 import { useOnboarding } from '@/providers/onboarding-provider';
+import AddDiscount from './add-discount';
+import EditDiscount from './edit-discount';
 
 const addProgramSchema = z.object({
     name: z.string().min(1, "Name is required"),
@@ -53,6 +55,15 @@ const addProgramSchema = z.object({
     type: z.enum(["TEAM", "PRIVATE"]),
     color: z.string().min(1, "Color is required"),
 })
+
+interface Discount {
+    type: 'fixed' | 'percentage'
+    value: number
+    startDate: Date
+    endDate: Date
+    packageIds: number[]
+    id?: number
+}
 
 interface Branch {
     id: number
@@ -199,6 +210,10 @@ export default function AddNewProgram({ branches, sports, academySports }: Props
     const [gendersOpen, setGendersOpen] = useState(false);
     const [editPackageOpen, setEditPackageOpen] = useState(false);
     const [editedPackage, setEditedPackage] = useState<{ editedPackage: Package, index?: number } | null>(null);
+    const [discountsOpen, setDiscountsOpen] = useState(false);
+    const [createdDiscounts, setCreatedDiscounts] = useState<Discount[]>([]);
+    const [editDiscountOpen, setEditDiscountOpen] = useState(false);
+    const [editedDiscount, setEditedDiscount] = useState<{ editedDiscount: Discount, index?: number } | null>(null);
 
     const dateToAge = (date: Date) => {
         const today = new Date()
@@ -305,7 +320,8 @@ export default function AddNewProgram({ branches, sports, academySports }: Props
                 type: values.type,
                 coaches: selectedCoaches,
                 packagesData: createdPackages,
-                color: values.color
+                color: values.color,
+                discountsData: createdDiscounts
             })
 
             if (result.error) {
@@ -430,7 +446,7 @@ export default function AddNewProgram({ branches, sports, academySports }: Props
                                         />
 
                                         <div className="flex flex-col gap-4 flex-1">
-                                            <p className='text-xs'>Genders</p>
+                                            <p className='text-xs'>For</p>
                                             <div className="flex w-full flex-col gap-4 border border-gray-500 p-3 rounded-lg">
                                                 <div className="flex flex-wrap gap-2">
                                                     {selectedGenders.map((gender) => (
@@ -747,6 +763,74 @@ export default function AddNewProgram({ branches, sports, academySports }: Props
                                     />
 
                                     <div className="w-full max-w-screen-2xl overflow-x-auto mx-auto">
+                                        <div className="min-w-full grid grid-cols-[0.75fr,auto,auto,auto,auto] gap-y-2 text-nowrap">
+                                            {/* Header */}
+                                            <div className="contents">
+                                                <div />
+                                                <div />
+                                                <div />
+                                                <div />
+                                                <div className="py-4 flex items-center justify-center">
+                                                    <button
+                                                        type='button'
+                                                        onClick={() => setDiscountsOpen(true)}
+                                                        className='flex text-main-yellow text-nowrap items-center justify-center gap-2 rounded-3xl px-4 py-2 bg-main-green text-sm'
+                                                    >
+                                                        Add New Discount
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div className="contents">
+                                                <div className="py-4 px-4 rounded-l-[20px] bg-[#E0E4D9]">Value</div>
+                                                <div className="py-4 px-4 bg-[#E0E4D9]">Start Date</div>
+                                                <div className="py-4 px-4 bg-[#E0E4D9]">End Date</div>
+                                                <div className="py-4 px-4 bg-[#E0E4D9]">Packages</div>
+                                                <div className="py-4 px-4 rounded-r-[20px] bg-[#E0E4D9]"></div>
+                                            </div>
+
+                                            {/* Rows */}
+                                            {createdDiscounts.map((discount, index) => (
+                                                <Fragment key={index}>
+                                                    <div className="py-4 px-4 bg-main-white rounded-l-[20px] flex items-center justify-start font-bold font-inter">
+                                                        {discount.type === 'percentage' ? `${discount.value}%` : `${discount.value} AED`}
+                                                    </div>
+                                                    <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                                        {discount.startDate.toLocaleDateString()}
+                                                    </div>
+                                                    <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                                        {discount.endDate.toLocaleDateString()}
+                                                    </div>
+                                                    <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                                        {discount.packageIds.length}
+                                                    </div>
+                                                    <div className="py-4 px-4 bg-main-white gap-4 rounded-r-[20px] flex items-center justify-end font-bold font-inter">
+                                                        <Button
+                                                            type='button'
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => {
+                                                                setEditedDiscount({ editedDiscount: discount, index });
+                                                                setEditDiscountOpen(true);
+                                                            }}
+                                                        >
+                                                            <Image
+                                                                src='/images/edit.svg'
+                                                                alt='Edit'
+                                                                width={20}
+                                                                height={20}
+                                                            />
+                                                        </Button>
+                                                        <TrashIcon
+                                                            className="h-4 w-4 cursor-pointer"
+                                                            onClick={() => setCreatedDiscounts(createdDiscounts.filter((_, i) => i !== index))}
+                                                        />
+                                                    </div>
+                                                </Fragment>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="w-full max-w-screen-2xl overflow-x-auto mx-auto">
                                         <div className="min-w-full grid grid-cols-[0.75fr,auto,auto,auto,auto,auto] gap-y-2 text-nowrap">
                                             {/* Header */}
                                             <div className="contents">
@@ -819,6 +903,23 @@ export default function AddNewProgram({ branches, sports, academySports }: Props
                     </Form>
                 </DialogContent>
             </Dialog>
+            <AddDiscount
+                onOpenChange={setDiscountsOpen}
+                open={discountsOpen}
+                setCreatedDiscounts={setCreatedDiscounts}
+                packages={createdPackages.filter(p => p.id)}
+            />
+            {editedDiscount && (
+                <EditDiscount
+                    onOpenChange={setEditDiscountOpen}
+                    open={editDiscountOpen}
+                    setEditedDiscount={setEditedDiscount}
+                    discountEdited={editedDiscount.editedDiscount}
+                    index={editedDiscount.index}
+                    setCreatedDiscounts={setCreatedDiscounts}
+                    packages={createdPackages.filter(p => p.id)}
+                />
+            )}
             <AddPackage onOpenChange={setPackagesOpen} open={packagesOpen} setCreatedPackages={setCreatedPackages} />
             {editedPackage?.editedPackage.id ? <EditPackage setEditedPackage={setEditedPackage} open={editPackageOpen} onOpenChange={setEditPackageOpen} packageEdited={editedPackage?.editedPackage} /> : editedPackage?.editedPackage ? <EditPackage setEditedPackage={setEditedPackage} index={editedPackage?.index} packageEdited={editedPackage?.editedPackage} open={editPackageOpen} onOpenChange={setEditPackageOpen} setCreatedPackages={setCreatedPackages} /> : null}
         </>

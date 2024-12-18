@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from '@/db'
-import { programs, branches, branchTranslations, sports, sportTranslations, coachProgram, packages, schedules, coaches } from '@/db/schema'
+import { programs, branches, branchTranslations, sports, sportTranslations, coachProgram, packages, schedules, coaches, discounts, packageDiscount } from '@/db/schema'
 import { auth } from '@/auth'
 import { and, eq, sql, inArray, asc, not } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
@@ -234,6 +234,7 @@ export async function createProgram(data: {
     coaches: number[]
     packagesData: Package[]
     color: string
+    discountsData: ProgramDiscountData[]
 }) {
     const session = await auth()
 
@@ -319,6 +320,35 @@ export async function createProgram(data: {
                                     }))
                                 )
                         }
+                    })) : Promise.resolve(),
+                data.discountsData.length > 0 ?
+                    Promise.all(data.discountsData.map(async (discountData) => {
+                        const [newDiscount] = await tx
+                            .insert(discounts)
+                            .values({
+                                programId: program.id,
+                                type: discountData.type,
+                                value: discountData.value,
+                                startDate: formatDateForDB(discountData.startDate),
+                                endDate: formatDateForDB(discountData.endDate),
+                                createdAt: sql`now()`,
+                                updatedAt: sql`now()`,
+                            })
+                            .returning({
+                                id: discounts.id
+                            })
+
+                        if (discountData.packageIds.length > 0) {
+                            await tx.insert(packageDiscount)
+                                .values(
+                                    discountData.packageIds.map(packageId => ({
+                                        packageId,
+                                        discountId: newDiscount.id,
+                                        createdAt: sql`now()`,
+                                        updatedAt: sql`now()`,
+                                    }))
+                                )
+                        }
                     })) : Promise.resolve()
             ])
 
@@ -331,6 +361,15 @@ export async function createProgram(data: {
     finally {
         revalidatePath('/academy/programs')
     }
+}
+
+interface ProgramDiscountData {
+    id?: number
+    type: 'fixed' | 'percentage'
+    value: number
+    startDate: Date
+    endDate: Date
+    packageIds: number[]
 }
 
 export async function updateProgram(id: number, data: {
@@ -346,6 +385,7 @@ export async function updateProgram(id: number, data: {
     coaches: number[]
     color: string
     packagesData: Package[]
+    discountsData: ProgramDiscountData[]
 }) {
     const session = await auth()
 
@@ -372,7 +412,7 @@ export async function updateProgram(id: number, data: {
                 })
                 .where(eq(programs.id, id))
 
-            const [currentCoaches, currentPackages] = await Promise.all([
+            const [currentCoaches, currentPackages, currentDiscounts] = await Promise.all([
                 tx
                     .select({ coachId: coachProgram.coachId })
                     .from(coachProgram)
@@ -380,7 +420,11 @@ export async function updateProgram(id: number, data: {
                 tx
                     .select({ packageId: packages.id })
                     .from(packages)
-                    .where(eq(packages.programId, id))
+                    .where(eq(packages.programId, id)),
+                tx
+                    .select({ discountId: discounts.id })
+                    .from(discounts)
+                    .where(eq(discounts.programId, id))
             ])
 
             const currentCoachIds = currentCoaches.map(c => c.coachId)
@@ -391,6 +435,11 @@ export async function updateProgram(id: number, data: {
             const packagesToAdd = data.packagesData.filter(p => !p.id || !currentPackageIds.includes(p?.id))
             const packagesToRemove = currentPackageIds.filter(p => !data.packagesData.map(pd => pd.id).filter(pid => pid).includes(p))
             const packagesToUpdate = data.packagesData.filter(p => p.id && currentPackageIds.includes(p.id))
+
+            const currentDiscountIds = currentDiscounts.map(d => d.discountId)
+            const discountsToAdd = data.discountsData.filter(d => !d.id || !currentDiscountIds.includes(d.id))
+            const discountsToRemove = currentDiscountIds.filter(d => !data.discountsData.map(dd => dd.id).filter(did => did).includes(d))
+            const discountsToUpdate = data.discountsData.filter(d => d.id && currentDiscountIds.includes(d.id))
 
             await Promise.all([
                 coachesToRemove.length > 0 ?
@@ -487,6 +536,78 @@ export async function updateProgram(id: number, data: {
                                             from: schedule.from,
                                             to: schedule.to,
                                             memo: schedule.memo,
+                                            createdAt: sql`now()`,
+                                            updatedAt: sql`now()`,
+                                        }))
+                                    )
+                            }
+                        })
+                    })) : Promise.resolve(),
+                discountsToRemove.length > 0 ?
+                    tx.delete(discounts)
+                        .where(and(
+                            eq(discounts.programId, id),
+                            inArray(discounts.id, discountsToRemove)
+                        )) : Promise.resolve(),
+
+                // Handle new discounts
+                discountsToAdd.length > 0 ?
+                    Promise.all(discountsToAdd.map(async (discountData) => {
+                        const [newDiscount] = await tx
+                            .insert(discounts)
+                            .values({
+                                programId: id,
+                                type: discountData.type,
+                                value: discountData.value,
+                                startDate: formatDateForDB(discountData.startDate),
+                                endDate: formatDateForDB(discountData.endDate),
+                                createdAt: sql`now()`,
+                                updatedAt: sql`now()`,
+                            })
+                            .returning({
+                                id: discounts.id
+                            })
+
+                        if (discountData.packageIds.length > 0) {
+                            await tx.insert(packageDiscount)
+                                .values(
+                                    discountData.packageIds.map(packageId => ({
+                                        packageId,
+                                        discountId: newDiscount.id,
+                                        createdAt: sql`now()`,
+                                        updatedAt: sql`now()`,
+                                    }))
+                                )
+                        }
+                    })) : Promise.resolve(),
+
+                // Handle discount updates
+                discountsToUpdate.length > 0 ?
+                    Promise.all(discountsToUpdate.map(async (discountData) => {
+                        await tx.transaction(async (innerTx) => {
+                            await innerTx
+                                .update(discounts)
+                                .set({
+                                    type: discountData.type,
+                                    value: discountData.value,
+                                    startDate: formatDateForDB(discountData.startDate),
+                                    endDate: formatDateForDB(discountData.endDate),
+                                    updatedAt: sql`now()`,
+                                })
+                                .where(eq(discounts.id, discountData.id!))
+
+                            // Update package associations
+                            await innerTx
+                                .delete(packageDiscount)
+                                .where(eq(packageDiscount.discountId, discountData.id!))
+
+                            if (discountData.packageIds.length > 0) {
+                                await innerTx
+                                    .insert(packageDiscount)
+                                    .values(
+                                        discountData.packageIds.map(packageId => ({
+                                            packageId,
+                                            discountId: discountData.id!,
                                             createdAt: sql`now()`,
                                             updatedAt: sql`now()`,
                                         }))

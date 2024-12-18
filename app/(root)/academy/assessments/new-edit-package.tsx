@@ -350,7 +350,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className='bg-main-white min-w-[560px]'>
+            <DialogContent className='bg-main-white min-w-[760px]'>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full'>
                         <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>
@@ -377,8 +377,8 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent className='!bg-[#F1F2E9]'>
-                                                    <SelectItem value="Term">Term</SelectItem>
                                                     <SelectItem value="Monthly">Monthly</SelectItem>
+                                                    <SelectItem value="Term">Term</SelectItem>
                                                     <SelectItem value="Full Season">Full Season</SelectItem>
                                                 </SelectContent>
                                             </Select>
@@ -466,24 +466,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                             render={({ field }) => (
                                                 <FormItem className="flex-1">
                                                     <FormLabel>Start Date</FormLabel>
-                                                    <Popover>
-                                                        <PopoverTrigger asChild>
-                                                            <FormControl>
-                                                                <Button variant={"outline"} className='w-full h-14 bg-transparent hover:bg-transparent'>
-                                                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                                                </Button>
-                                                            </FormControl>
-                                                        </PopoverTrigger>
-                                                        <PopoverContent className="w-auto p-0" align="start">
-                                                            <Calendar
-                                                                mode="single"
-                                                                selected={field.value}
-                                                                onSelect={field.onChange}
-                                                                initialFocus
-                                                            />
-                                                        </PopoverContent>
-                                                    </Popover>
+                                                    <DateSelector field={field} />
                                                     <FormMessage />
                                                 </FormItem>
                                             )}
@@ -495,24 +478,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                             render={({ field }) => (
                                                 <FormItem className="flex-1">
                                                     <FormLabel>End Date</FormLabel>
-                                                    <Popover>
-                                                        <PopoverTrigger asChild>
-                                                            <FormControl>
-                                                                <Button variant={"outline"} className='w-full h-14 bg-transparent hover:bg-transparent'>
-                                                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                                                </Button>
-                                                            </FormControl>
-                                                        </PopoverTrigger>
-                                                        <PopoverContent className="w-auto p-0" align="start">
-                                                            <Calendar
-                                                                mode="single"
-                                                                selected={field.value}
-                                                                onSelect={field.onChange}
-                                                                initialFocus
-                                                            />
-                                                        </PopoverContent>
-                                                    </Popover>
+                                                    <DateSelector field={field} />
                                                     <FormMessage />
                                                 </FormItem>
                                             )}
@@ -607,24 +573,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                             render={({ field }) => (
                                                 <FormItem className="flex-1">
                                                     <FormLabel>Entry Fees Start Date</FormLabel>
-                                                    <Popover>
-                                                        <PopoverTrigger asChild>
-                                                            <FormControl>
-                                                                <Button variant={"outline"} className='w-full h-14 bg-transparent hover:bg-transparent'>
-                                                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                                                </Button>
-                                                            </FormControl>
-                                                        </PopoverTrigger>
-                                                        <PopoverContent className="w-auto p-0" align="start">
-                                                            <Calendar
-                                                                mode="single"
-                                                                selected={field.value}
-                                                                onSelect={field.onChange}
-                                                                initialFocus
-                                                            />
-                                                        </PopoverContent>
-                                                    </Popover>
+                                                    <DateSelector field={field} />
                                                     <FormMessage />
                                                 </FormItem>
                                             )}
@@ -636,24 +585,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                             render={({ field }) => (
                                                 <FormItem className="flex-1">
                                                     <FormLabel>Entry Fees End Date</FormLabel>
-                                                    <Popover>
-                                                        <PopoverTrigger asChild>
-                                                            <FormControl>
-                                                                <Button variant={"outline"} className='w-full h-14 bg-transparent hover:bg-transparent'>
-                                                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                                                </Button>
-                                                            </FormControl>
-                                                        </PopoverTrigger>
-                                                        <PopoverContent className="w-auto p-0" align="start">
-                                                            <Calendar
-                                                                mode="single"
-                                                                selected={field.value}
-                                                                onSelect={field.onChange}
-                                                                initialFocus
-                                                            />
-                                                        </PopoverContent>
-                                                    </Popover>
+                                                    <DateSelector field={field} />
                                                     <FormMessage />
                                                 </FormItem>
                                             )}
