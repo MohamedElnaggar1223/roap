@@ -176,45 +176,42 @@ export default function EditDiscount({
                                 <div className="flex gap-4">
                                     <FormField
                                         control={form.control}
-                                        name="type"
-                                        render={({ field }) => (
-                                            <FormItem className='flex-1'>
-                                                <FormLabel>Type</FormLabel>
-                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                    <FormControl>
-                                                        <SelectTrigger className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'>
-                                                            <SelectValue placeholder="Select type" />
-                                                        </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent className='!bg-[#F1F2E9]'>
-                                                        <SelectItem value="fixed">Fixed Amount</SelectItem>
-                                                        <SelectItem value="percentage">Percentage</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-
-                                    <FormField
-                                        control={form.control}
                                         name="value"
                                         render={({ field }) => (
                                             <FormItem className='flex-1'>
                                                 <FormLabel>Value</FormLabel>
                                                 <FormControl>
                                                     <div className="flex items-center">
-                                                        <span className="px-2 py-3.5 text-sm bg-transparent border border-r-0 border-gray-500 rounded-l-[10px]">
-                                                            {form.watch('type') === 'fixed' ? 'AED' : '%'}
-                                                        </span>
                                                         <Input
                                                             {...field}
                                                             type="number"
                                                             min="0"
                                                             max={form.watch('type') === 'percentage' ? "100" : undefined}
                                                             step="0.01"
-                                                            className='px-2 py-6 rounded-l-none rounded-r-[10px] border border-gray-500 font-inter'
+                                                            className='px-2 py-6 rounded-r-none rounded-l-[10px] border border-gray-500 font-inter'
                                                         />
+                                                        <span className="px-2 py-1.5 text-sm bg-transparent border border-l-0 border-gray-500 rounded-r-[10px]">
+                                                            <FormField
+                                                                control={form.control}
+                                                                name="type"
+                                                                render={({ field }) => (
+                                                                    <FormItem className='w-fit'>
+                                                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                                            <FormControl>
+                                                                                <SelectTrigger className='font-inter'>
+                                                                                    <SelectValue placeholder="Select type" />
+                                                                                </SelectTrigger>
+                                                                            </FormControl>
+                                                                            <SelectContent className='!bg-[#F1F2E9]'>
+                                                                                <SelectItem value="fixed">AED</SelectItem>
+                                                                                <SelectItem value="percentage">%</SelectItem>
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                        <FormMessage />
+                                                                    </FormItem>
+                                                                )}
+                                                            />
+                                                        </span>
                                                     </div>
                                                 </FormControl>
                                                 <FormMessage />
