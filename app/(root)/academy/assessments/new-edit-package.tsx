@@ -28,6 +28,7 @@ import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useOnboarding } from '@/providers/onboarding-provider';
+import { DateSelector } from '@/components/shared/date-selector';
 
 const packageSchema = z.object({
     type: z.enum(["Term", "Monthly", "Full Season"]),
