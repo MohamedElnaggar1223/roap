@@ -89,12 +89,12 @@ export function AcademySidebar({ onboarded, ...props }: React.ComponentProps<typ
                                 <span>Athletes</span>
                             </SidebarMenuButton>
                         </DisabledLinkWrapper>
-                        <DisabledLinkWrapper href="/payment">
+                        {/* <DisabledLinkWrapper href="/payment">
                             <SidebarMenuButton disabled={!onboarded} className={cn('h-full text-sm', pathname?.includes('/payment') && 'bg-[#F1F2E9]')} tooltip='Payments'>
                                 <Image src='/images/payment.svg' width={20} height={20} alt='payment' />
                                 <span>Payments</span>
                             </SidebarMenuButton>
-                        </DisabledLinkWrapper>
+                        </DisabledLinkWrapper> */}
                     </SidebarGroup>
                 </SidebarContent>
                 <SidebarFooter className='bg-[#E0E4D9]'>

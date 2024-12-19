@@ -12,7 +12,7 @@ export async function createBlock(input: z.infer<typeof createBlockSchema>) {
         // Validate session and permissions
         const session = await auth()
         if (!session?.user || session.user.role !== 'academic') {
-            return { error: 'You are not authorized to perform this action' }
+            return { error: 'You are not authorized to perform this action', field: null, data: [] }
         }
 
         // Get the academic ID for the current user

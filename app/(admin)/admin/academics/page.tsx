@@ -33,6 +33,7 @@ import { useRouter } from 'next/navigation'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
+import { startImpersonation, stopImpersonation } from '@/lib/actions/impersonations.actions'
 
 type Academic = {
 	id: number
@@ -52,12 +53,13 @@ type PaginationMeta = {
 	totalPages: number
 }
 
-const AcademicsTable = ({ academics, selectedRows, onSelectRow, onSelectAll, statusFilter }: {
+const AcademicsTable = ({ academics, selectedRows, onSelectRow, onSelectAll, handleChange }: {
 	academics: Academic[]
 	selectedRows: number[]
 	onSelectRow: (id: number) => void
 	onSelectAll: () => void
 	statusFilter: string
+	handleChange: (academyId: string) => Promise<void>
 }) => {
 	const router = useRouter()
 	const [acceptAcademicLoading, setAcceptAcademicLoading] = useState<number | null>(null)
@@ -121,7 +123,7 @@ const AcademicsTable = ({ academics, selectedRows, onSelectRow, onSelectAll, sta
 										<Edit className="h-4 w-4" />
 										Edit
 									</Button>
-									<Button variant="outline" className="flex items-center gap-2">
+									<Button onClick={() => handleChange(academic.userId?.toString()!)} variant="outline" className="flex items-center gap-2">
 										<Eye className="h-4 w-4" />
 										View
 									</Button>
@@ -194,6 +196,8 @@ export default function AcademicsContainer() {
 	const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
 	const [statusFilter, setStatusFilter] = useState<string>('all')
 	const [activeTab, setActiveTab] = useState('all')
+	const [loading, setLoading] = useState(false)
+	const router = useRouter()
 
 	const fetchAcademics = (page: number, pageSize: number) => {
 		startTransition(async () => {
@@ -245,6 +249,22 @@ export default function AcademicsContainer() {
 		return true
 	})
 
+	const handleChange = async (academyId: string) => {
+		try {
+			setLoading(true)
+			if (academyId === 'stop') {
+				await stopImpersonation()
+			} else {
+				await startImpersonation(parseInt(academyId))
+			}
+			router.push('/dashboard')
+		} catch (error) {
+			console.error('Failed to switch academy:', error)
+		} finally {
+			setLoading(false)
+		}
+	}
+
 	return (
 		<div className="flex flex-col w-full items-center justify-center h-full gap-6">
 			<div className="flex max-w-7xl items-center justify-between gap-2 w-full">
@@ -292,6 +312,7 @@ export default function AcademicsContainer() {
 							onSelectRow={handleRowSelect}
 							onSelectAll={handleSelectAll}
 							statusFilter={statusFilter}
+							handleChange={handleChange}
 						/>
 					</TabsContent>
 					<TabsContent value="onboarded" className="mt-6">
@@ -301,6 +322,7 @@ export default function AcademicsContainer() {
 							onSelectRow={handleRowSelect}
 							onSelectAll={handleSelectAll}
 							statusFilter={statusFilter}
+							handleChange={handleChange}
 						/>
 					</TabsContent>
 				</Tabs>

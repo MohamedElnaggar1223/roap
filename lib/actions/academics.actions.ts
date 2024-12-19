@@ -17,12 +17,58 @@ import { getLocations } from './locations.actions';
 import { getPrograms } from './programs.actions';
 import { getAssessments } from './assessments.actions';
 import { getAllSpokenLanguages } from './spoken-languages.actions';
+import { cookies } from 'next/headers';
 
 export const getAcademyDetails = async () => {
 	const session = await auth()
 
-	if (!session?.user || session.user.role !== 'academic') {
-		return { error: 'You are not authorized to perform this action' }
+	if (!session?.user) {
+		return {
+			error: 'You are not authorized to perform this action', field: null, data: {
+				sports: [],
+				gallery: [],
+				id: 0,
+				slug: '',
+				policy: '',
+				entryFees: 0,
+				extra: '',
+				logo: '',
+				name: '',
+				description: '',
+				locale: '',
+				s: undefined
+			}
+		}
+	}
+
+	const cookieStore = await cookies()
+	const impersonatedId = session.user.role === 'admin'
+		? cookieStore.get('impersonatedAcademyId')?.value
+		: null
+
+	// Build the where condition based on user role and impersonation
+	const academicId = session.user.role === 'admin' && impersonatedId
+		? parseInt(impersonatedId)
+		: parseInt(session.user.id)
+
+	// If not admin and not academic, return error
+	if (session.user.role !== 'admin' && session.user.role !== 'academic') {
+		return {
+			error: 'You are not authorized to perform this action', field: null, data: {
+				sports: [],
+				gallery: [],
+				id: 0,
+				slug: '',
+				policy: '',
+				entryFees: 0,
+				extra: '',
+				logo: '',
+				name: '',
+				description: '',
+				locale: '',
+				s: undefined
+			}
+		}
 	}
 
 	try {
@@ -71,7 +117,7 @@ export const getAcademyDetails = async () => {
 					// eq(media.referableType, 'App\\Models\\Academic')
 				)
 			)
-			.where(eq(academics.userId, parseInt(session.user.id)))
+			.where(eq(academics.userId, academicId))
 			.groupBy(
 				academics.id,
 				academics.slug,
@@ -84,8 +130,26 @@ export const getAcademyDetails = async () => {
 				sql`t.locale`
 			)
 
+		console.log(academicId)
+		console.log(data)
+
 		if (!data || data.length === 0) {
-			return { error: 'Academy not found' }
+			return {
+				error: 'Academy not found', field: null, data: {
+					sports: [],
+					gallery: [],
+					id: 0,
+					slug: '',
+					policy: '',
+					entryFees: 0,
+					extra: '',
+					logo: '',
+					name: '',
+					description: '',
+					locale: '',
+					s: undefined
+				}
+			}
 		}
 
 		return {
@@ -93,12 +157,29 @@ export const getAcademyDetails = async () => {
 				...data[0],
 				sports: data[0].sports.filter(Boolean).map(Number),
 				gallery: data[0].gallery || []
-			}
+			},
+			error: null,
+			field: null
 		}
 
 	} catch (error) {
 		console.error('Error fetching academy details:', error)
-		return { error: `Failed to fetch academy details: ${error}` }
+		return {
+			error: `Failed to fetch academy details: ${error}`, field: null, data: {
+				sports: [],
+				gallery: [],
+				id: 0,
+				slug: '',
+				policy: '',
+				entryFees: 0,
+				extra: '',
+				logo: '',
+				name: '',
+				description: '',
+				locale: '',
+				s: undefined
+			}
+		}
 	}
 }
 
@@ -347,6 +428,38 @@ export const getCalendarSlots = async (startDate: Date, endDate: Date) => {
 	if (startDate.getTime() === endDate.getTime()) return { error: 'Start and end dates cannot be the same', data: [] }
 	if (startDate > endDate) return { error: 'Start date cannot be greater than end date', data: [] }
 
+	const session = await auth()
+
+	if (!session?.user) {
+		return { error: 'You are not authorized to perform this action', data: [] }
+	}
+
+	const cookieStore = await cookies()
+	const impersonatedId = session.user.role === 'admin'
+		? cookieStore.get('impersonatedAcademyId')?.value
+		: null
+
+	// Build the where condition based on user role and impersonation
+	const academicId = session.user.role === 'admin' && impersonatedId
+		? parseInt(impersonatedId)
+		: parseInt(session.user.id)
+
+	// If not admin and not academic, return error
+	if (session.user.role !== 'admin' && session.user.role !== 'academic') {
+		return { error: 'You are not authorized to perform this action', data: [] }
+	}
+
+	const academy = await db.query.academics.findFirst({
+		where: (academics, { eq }) => eq(academics.userId, academicId),
+		columns: {
+			id: true,
+		}
+	})
+
+	if (!academy) {
+		return { error: 'Academy not found', data: [] }
+	}
+
 	const formattedStartDate = startDate.toISOString().split('T')[0]
 	const formattedEndDate = endDate.toISOString().split('T')[0]
 
@@ -383,7 +496,8 @@ export const getCalendarSlots = async (startDate: Date, endDate: Date) => {
 		.where(
 			and(
 				sql`DATE(${bookingSessions.date}) >= DATE(${formattedStartDate})`,
-				sql`DATE(${bookingSessions.date}) <= DATE(${formattedEndDate})`
+				sql`DATE(${bookingSessions.date}) <= DATE(${formattedEndDate})`,
+				eq(programs.academicId, academy.id)
 			)
 		);
 
@@ -443,10 +557,27 @@ export const getCalendarSlots = async (startDate: Date, endDate: Date) => {
 export const getAcademicsSports = async () => {
 	const session = await auth()
 
-	if (!session?.user || session.user.role !== 'academic') return { error: 'You are not authorized to perform this action' }
+	if (!session?.user) {
+		return { error: 'You are not authorized to perform this action', field: null, data: [] }
+	}
+
+	const cookieStore = await cookies()
+	const impersonatedId = session.user.role === 'admin'
+		? cookieStore.get('impersonatedAcademyId')?.value
+		: null
+
+	// Build the where condition based on user role and impersonation
+	const academicId = session.user.role === 'admin' && impersonatedId
+		? parseInt(impersonatedId)
+		: parseInt(session.user.id)
+
+	// If not admin and not academic, return error
+	if (session.user.role !== 'admin' && session.user.role !== 'academic') {
+		return { error: 'You are not authorized to perform this action', field: null, data: [] }
+	}
 
 	const academy = await db.query.academics.findFirst({
-		where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
+		where: (academics, { eq }) => eq(academics.userId, academicId),
 		columns: {
 			id: true,
 		}
@@ -530,15 +661,33 @@ export const getAllSports = async (url: string | null) => {
 export const addSports = async (sportsIds: number[]) => {
 	const session = await auth()
 
-	if (!session?.user || session.user.role !== 'academic') return { error: 'You are not authorized to perform this action' }
+	if (!session?.user) {
+		return { error: 'You are not authorized to perform this action', field: null, data: [] }
+	}
+
+	const cookieStore = await cookies()
+	const impersonatedId = session.user.role === 'admin'
+		? cookieStore.get('impersonatedAcademyId')?.value
+		: null
+
+	// Build the where condition based on user role and impersonation
+	const academicId = session.user.role === 'admin' && impersonatedId
+		? parseInt(impersonatedId)
+		: parseInt(session.user.id)
+
+	// If not admin and not academic, return error
+	if (session.user.role !== 'admin' && session.user.role !== 'academic') {
+		return { error: 'You are not authorized to perform this action', field: null, data: [] }
+	}
+
+	const academy = await db.query.academics.findFirst({
+		where: (academics, { eq }) => eq(academics.userId, academicId),
+		columns: {
+			id: true,
+		}
+	})
 
 	try {
-		const academy = await db.query.academics.findFirst({
-			where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
-			columns: {
-				id: true,
-			}
-		})
 
 		if (!academy) return { error: 'Academy not found' }
 
@@ -560,10 +709,27 @@ export const addSports = async (sportsIds: number[]) => {
 export const deleteSport = async (id: number) => {
 	const session = await auth()
 
-	if (!session?.user || session.user.role !== 'academic') return { error: 'You are not authorized to perform this action' }
+	if (!session?.user) {
+		return { error: 'You are not authorized to perform this action', field: null, data: [] }
+	}
+
+	const cookieStore = await cookies()
+	const impersonatedId = session.user.role === 'admin'
+		? cookieStore.get('impersonatedAcademyId')?.value
+		: null
+
+	// Build the where condition based on user role and impersonation
+	const academicId = session.user.role === 'admin' && impersonatedId
+		? parseInt(impersonatedId)
+		: parseInt(session.user.id)
+
+	// If not admin and not academic, return error
+	if (session.user.role !== 'admin' && session.user.role !== 'academic') {
+		return { error: 'You are not authorized to perform this action', field: null, data: [] }
+	}
 
 	const academy = await db.query.academics.findFirst({
-		where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
+		where: (academics, { eq }) => eq(academics.userId, academicId),
 		columns: {
 			id: true,
 		}
@@ -584,15 +750,27 @@ export async function updateAcademyDetails(data: UpdateAcademyDetailsInput) {
 	try {
 		const session = await auth()
 
-		if (!session?.user || session.user.role !== 'academic') {
-			return {
-				error: 'You are not authorized to perform this action',
-				field: 'root'
-			}
+		if (!session?.user) {
+			return { error: 'You are not authorized to perform this action', field: null, data: [] }
+		}
+
+		const cookieStore = await cookies()
+		const impersonatedId = session.user.role === 'admin'
+			? cookieStore.get('impersonatedAcademyId')?.value
+			: null
+
+		// Build the where condition based on user role and impersonation
+		const academicId = session.user.role === 'admin' && impersonatedId
+			? parseInt(impersonatedId)
+			: parseInt(session.user.id)
+
+		// If not admin and not academic, return error
+		if (session.user.role !== 'admin' && session.user.role !== 'academic') {
+			return { error: 'You are not authorized to perform this action', field: null, data: [] }
 		}
 
 		const academy = await db.query.academics.findFirst({
-			where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
+			where: (academics, { eq }) => eq(academics.userId, academicId),
 			columns: {
 				id: true,
 			}
@@ -722,10 +900,27 @@ export async function updateAcademyDetails(data: UpdateAcademyDetailsInput) {
 export const getAcademySports = async () => {
 	const session = await auth()
 
-	if (!session?.user || session.user.role !== 'academic') return { error: 'You are not authorized to perform this action' }
+	if (!session?.user) {
+		return { error: 'You are not authorized to perform this action', field: null, data: [] }
+	}
+
+	const cookieStore = await cookies()
+	const impersonatedId = session.user.role === 'admin'
+		? cookieStore.get('impersonatedAcademyId')?.value
+		: null
+
+	// Build the where condition based on user role and impersonation
+	const academicId = session.user.role === 'admin' && impersonatedId
+		? parseInt(impersonatedId)
+		: parseInt(session.user.id)
+
+	// If not admin and not academic, return error
+	if (session.user.role !== 'admin' && session.user.role !== 'academic') {
+		return { error: 'You are not authorized to perform this action', field: null, data: [] }
+	}
 
 	const academy = await db.query.academics.findFirst({
-		where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
+		where: (academics, { eq }) => eq(academics.userId, academicId),
 		columns: {
 			id: true,
 		}

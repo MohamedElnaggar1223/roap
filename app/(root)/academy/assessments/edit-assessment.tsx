@@ -75,7 +75,7 @@ const editAssessmentSchema = z.object({
 })
 
 interface Package {
-    type: "Term" | "Monthly" | "Full Season"
+    type: "Term" | "Monthly" | "Full Season" | 'Assessment' | 'Assessment'
     termNumber?: number
     name: string
     price: number
@@ -431,7 +431,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-col gap-4 w-full">
+                                    <div className="absolute hidden flex-col gap-4 w-full">
                                         <p className='text-xs'>Coaches</p>
                                         <div className="flex w-full flex-col gap-4 border border-gray-500 p-3 rounded-lg">
                                             <div className="flex flex-wrap gap-2">

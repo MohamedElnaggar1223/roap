@@ -6,6 +6,7 @@ import { auth } from '@/auth'
 import { and, asc, eq, inArray, sql } from 'drizzle-orm'
 import { formatDateForDB } from '../utils'
 import { revalidatePath } from 'next/cache'
+import { cookies } from 'next/headers'
 
 interface Schedule {
     id: number
@@ -19,8 +20,23 @@ export async function getProgramPackages(url: string | null, programId: number) 
     if (!url) return { data: null, error: null }
     const session = await auth()
 
-    if (!session?.user || session.user.role !== 'academic') {
-        return { error: 'Unauthorized', data: null }
+    if (!session?.user) {
+        return { error: 'You are not authorized to perform this action', field: null, data: [] }
+    }
+
+    const cookieStore = await cookies()
+    const impersonatedId = session.user.role === 'admin'
+        ? cookieStore.get('impersonatedAcademyId')?.value
+        : null
+
+    // Build the where condition based on user role and impersonation
+    const academicId = session.user.role === 'admin' && impersonatedId
+        ? parseInt(impersonatedId)
+        : parseInt(session.user.id)
+
+    // If not admin and not academic, return error
+    if (session.user.role !== 'admin' && session.user.role !== 'academic') {
+        return { error: 'You are not authorized to perform this action', field: null, data: [] }
     }
 
     const packagesWithSchedules = await db

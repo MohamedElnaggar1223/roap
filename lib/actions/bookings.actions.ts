@@ -17,16 +17,33 @@ import type {
 } from '../validations/bookings'
 import { formatDateForDB } from "../utils"
 import { getImageUrl } from "../supabase-images"
+import { cookies } from "next/headers"
+import { format } from "date-fns"
 
 export async function deleteBookings(ids: number[]) {
     const session = await auth()
 
-    if (!session?.user || session.user.role !== 'academic') {
-        return { error: 'Unauthorized' }
+    if (!session?.user) {
+        return { error: 'You are not authorized to perform this action', field: null, data: [] }
+    }
+
+    const cookieStore = await cookies()
+    const impersonatedId = session.user.role === 'admin'
+        ? cookieStore.get('impersonatedAcademyId')?.value
+        : null
+
+    // Build the where condition based on user role and impersonation
+    const academicId = session.user.role === 'admin' && impersonatedId
+        ? parseInt(impersonatedId)
+        : parseInt(session.user.id)
+
+    // If not admin and not academic, return error
+    if (session.user.role !== 'admin' && session.user.role !== 'academic') {
+        return { error: 'You are not authorized to perform this action', field: null, data: [] }
     }
 
     const academic = await db.query.academics.findFirst({
-        where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
+        where: (academics, { eq }) => eq(academics.userId, academicId),
         columns: {
             id: true,
         }
@@ -51,13 +68,44 @@ export async function deleteBookings(ids: number[]) {
 export async function searchAthletes(query: string): Promise<SearchAthletesResponse> {
     if (!query || query.length < 3) return { data: [] }
 
+    const session = await auth()
+
+    if (!session?.user) {
+        return { data: [] }
+    }
+
+    const cookieStore = await cookies()
+    const impersonatedId = session.user.role === 'admin'
+        ? cookieStore.get('impersonatedAcademyId')?.value
+        : null
+
+    // Build the where condition based on user role and impersonation
+    const academicId = session.user.role === 'admin' && impersonatedId
+        ? parseInt(impersonatedId)
+        : parseInt(session.user.id)
+
+    // If not admin and not academic, return error
+    if (session.user.role !== 'admin' && session.user.role !== 'academic') {
+        return { data: [] }
+    }
+
+    const academic = await db.query.academics.findFirst({
+        where: (academics, { eq }) => eq(academics.userId, academicId),
+        columns: {
+            id: true,
+        }
+    })
+
+    if (!academic) return { data: [] }
+
     try {
         const athletes = await db
             .select({
                 id: profiles.id,
                 name: profiles.name,
                 image: profiles.image,
-                phoneNumber: users.phoneNumber
+                phoneNumber: users.phoneNumber,
+                birthday: profiles.birthday,
             })
             .from(profiles)
             .innerJoin(
@@ -68,9 +116,12 @@ export async function searchAthletes(query: string): Promise<SearchAthletesRespo
                 academicAthletic,
                 eq(academicAthletic.userId, users.id)
             )
-            .where(or(
-                sql`${users.phoneNumber} ILIKE ${`%${query}%`}`,
-                sql`${academicAthletic.firstGuardianPhone} ILIKE ${`%${query}%`}`
+            .where(and(
+                or(
+                    sql`${users.phoneNumber} ILIKE ${`%${query}%`}`,
+                    sql`${academicAthletic.firstGuardianPhone} ILIKE ${`%${query}%`}`
+                ),
+                eq(academicAthletic.academicId, academic.id)
             ))
             .limit(5)
 
@@ -158,7 +209,8 @@ export async function getProgramDetails(programId: number): Promise<ProgramDetai
                         from: s.from,
                         to: s.to,
                     })),
-                    endDate: pkg.endDate
+                    endDate: pkg.endDate,
+                    startDate: pkg.startDate
                 })),
                 coaches: program.coachPrograms.map(cp => ({
                     id: cp.coach.id,
@@ -333,6 +385,16 @@ export async function checkEntryFees(
 
     if (existingFees) {
         return { shouldPay: false, amount: 0 };
+    }
+
+    const packageName = packageDetails.name.toLowerCase();
+    const isMonthly = packageName.startsWith('monthly');
+
+    if (isMonthly && packageDetails.entryFeesAppliedUntil) {
+        const currentMonthYear = format(currentDate, 'MMMM yyyy');
+        if (!packageDetails.entryFeesAppliedUntil.includes(currentMonthYear)) {
+            return { shouldPay: false, amount: 0 };
+        }
     }
 
     // Check if there's an assessment that can be deducted

@@ -50,7 +50,7 @@ interface Schedule {
 }
 
 interface Package {
-    type: "Term" | "Monthly" | "Full Season"
+    type: "Term" | "Monthly" | "Full Season" | 'Assessment'
     termNumber?: number
     name: string
     price: number

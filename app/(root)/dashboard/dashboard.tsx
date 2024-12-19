@@ -1,19 +1,27 @@
 'use client'
 
 import { Card } from '@/components/ui/card'
-import { ArrowDown, ArrowUp } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronDown } from 'lucide-react'
 import { PieChart, Pie, Cell, Legend, ResponsiveContainer } from 'recharts'
+import { useState, useEffect, useMemo } from 'react'
+import { Button } from '@/components/ui/button'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 type DashboardStats = {
     currentMonthCount: number
     lastMonthCount: number
     totalBookings: number
     timeTraffic: Array<{ hour: string; count: number }>
-    packageTraffic: Array<{ name: string | null; count: number }>
-    programTraffic: Array<{ name: string | null; count: number }>
-    coachTraffic: Array<{ name: string | null; count: number }>
-    sportTraffic: Array<{ name: string; count: number }>
-    branchTraffic: Array<{ name: string; count: number }>
+    packageTraffic: Array<{ name: string | null; count: number; branchName?: string; sportName?: string; programName?: string | null }>
+    programTraffic: Array<{ name: string | null; count: number; branchName?: string; sportName?: string; programName?: string | null }>
+    coachTraffic: Array<{ name: string | null; count: number; branchName?: string; sportName?: string; programName?: string | null }>
+    sportTraffic: Array<{ name: string; count: number; branchName?: string; sportName?: string; programName?: string | null }>
+    branchTraffic: Array<{ name: string; count: number; branchName?: string; sportName?: string; programName?: string | null }>
 }
 
 const formatTime = (time: string) => {
@@ -32,7 +40,7 @@ const formatTime = (time: string) => {
 const COLORS = ['#AA7CBF', '#87B28A', '#87B2B2', '#E5DCAE']
 
 const CustomPieChart = ({ data, title, isTime = false }: {
-    data: Array<{ name: string; count: number }>,
+    data: Array<{ name: string | null; count: number }>,
     title: string,
     isTime?: boolean
 }) => {
@@ -117,39 +125,188 @@ const CustomPieChart = ({ data, title, isTime = false }: {
 }
 
 export function DashboardClient({ stats }: { stats: DashboardStats }) {
-    const percentageChange = ((stats.currentMonthCount - stats.lastMonthCount) / stats.lastMonthCount) * 100
+    const [selectedLocation, setSelectedLocation] = useState<string | null>(null)
+    const [selectedSport, setSelectedSport] = useState<string | null>(null)
+    const [selectedProgram, setSelectedProgram] = useState<string | null>(null)
+    const [selectedGender, setSelectedGender] = useState<string | null>(null)
+    const [filteredStats, setFilteredStats] = useState<DashboardStats>(stats)
 
-    const transformedTimeTraffic = [
-        ...stats.timeTraffic.slice(0, 3).map(item => ({
-            name: item.hour,
-            count: item.count
-        })),
-        {
-            name: 'Others',
-            count: stats.timeTraffic.slice(3).reduce((acc, curr) => acc + curr.count, 0)
-        }
-    ]
+    const getUniqueValues = (key: 'branchName' | 'sportName' | 'programName'): string[] => {
+        const allValues = Object.values(stats)
+            .filter(Array.isArray)
+            .flatMap(arr => arr.map(item => item[key]))
+            .filter(Boolean) as string[]
+        return Array.from(new Set(allValues))
+    }
 
-    const transformData = (data: Array<{ name: string | null; count: number }>) => [
-        ...data.slice(0, 3).map(item => ({
-            name: item.name || 'Unknown',
-            count: item.count
-        })),
-        {
-            name: 'Others',
-            count: data.slice(3).reduce((acc, curr) => acc + curr.count, 0)
+    const locations = getUniqueValues('branchName')
+    const sports = getUniqueValues('sportName')
+    const programs = getUniqueValues('programName')
+    const genders = ['Male', 'Female', 'Mixed']
+
+    useEffect(() => {
+        const filterData = (data: any[]) => {
+            return data.filter(item => {
+                const locationMatch = !selectedLocation || item.branchName === selectedLocation
+                const sportMatch = !selectedSport || item.sportName === selectedSport
+                const programMatch = !selectedProgram || item.programName === selectedProgram
+                const genderMatch = !selectedGender || (item.gender && item.gender === selectedGender)
+                return locationMatch && sportMatch && programMatch && genderMatch
+            })
         }
-    ]
+
+        const newFilteredStats: DashboardStats = {
+            ...stats,
+            timeTraffic: filterData(stats.timeTraffic),
+            packageTraffic: filterData(stats.packageTraffic),
+            programTraffic: filterData(stats.programTraffic),
+            coachTraffic: filterData(stats.coachTraffic),
+            sportTraffic: filterData(stats.sportTraffic),
+            branchTraffic: filterData(stats.branchTraffic),
+        }
+
+        setFilteredStats(newFilteredStats)
+    }, [selectedLocation, selectedSport, selectedProgram, selectedGender, stats])
+
+    const percentageChange = ((filteredStats.currentMonthCount - filteredStats.lastMonthCount) / filteredStats.lastMonthCount) * 100
+
+    const aggregateData = (data: any[], key: string) => {
+        const aggregated = data.reduce((acc, item) => {
+            const name = item[key] || 'Unknown'
+            if (!acc[name]) {
+                acc[name] = { name, count: 0 }
+            }
+            acc[name].count += item.count
+            return acc
+        }, {})
+        return Object.values(aggregated)
+    }
+
+    const transformData = (data: any[], key: string) => {
+        const aggregatedData = aggregateData(data, key)
+        const sortedData = aggregatedData.sort((a: any, b: any) => b.count - a.count)
+        return [
+            ...sortedData.slice(0, 3),
+            {
+                name: 'Others',
+                count: sortedData.slice(3).reduce((acc: number, curr: any) => acc + curr.count, 0)
+            }
+        ]
+    }
+
+
+    const transformedTimeTraffic = useMemo(() => transformData(filteredStats.timeTraffic, 'hour'), [filteredStats.timeTraffic])
+    const transformedPackageTraffic = useMemo(() => transformData(filteredStats.packageTraffic, 'name'), [filteredStats.packageTraffic])
+    const transformedProgramTraffic = useMemo(() => transformData(filteredStats.programTraffic, 'name'), [filteredStats.programTraffic])
+    const transformedCoachTraffic = useMemo(() => transformData(filteredStats.coachTraffic, 'name'), [filteredStats.coachTraffic])
+    const transformedSportTraffic = useMemo(() => transformData(filteredStats.sportTraffic, 'name'), [filteredStats.sportTraffic])
+    const transformedBranchTraffic = useMemo(() => transformData(filteredStats.branchTraffic, 'name'), [filteredStats.branchTraffic])
 
     return (
         <div className="space-y-8 p-6 font-inter">
+            {/* Filters Section */}
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+                <span className="text-sm font-medium">Filters:</span>
+
+                {/* Location Filter */}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
+                            {selectedLocation || 'Locations'}
+                            <ChevronDown className="w-4 h-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className='bg-[#F1F2E9]'>
+                        <DropdownMenuItem onClick={() => setSelectedLocation(null)}>
+                            All Locations
+                        </DropdownMenuItem>
+                        {locations.map(location => (
+                            <DropdownMenuItem
+                                key={location}
+                                onClick={() => setSelectedLocation(location)}
+                            >
+                                {location}
+                            </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Sport Filter */}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
+                            {selectedSport || 'Sports'}
+                            <ChevronDown className="w-4 h-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className='bg-[#F1F2E9]'>
+                        <DropdownMenuItem onClick={() => setSelectedSport(null)}>
+                            All Sports
+                        </DropdownMenuItem>
+                        {sports.map(sport => (
+                            <DropdownMenuItem
+                                key={sport}
+                                onClick={() => setSelectedSport(sport)}
+                            >
+                                {sport}
+                            </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Program Filter */}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
+                            {selectedProgram || 'Programs'}
+                            <ChevronDown className="w-4 h-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className='bg-[#F1F2E9]'>
+                        <DropdownMenuItem onClick={() => setSelectedProgram(null)}>
+                            All Programs
+                        </DropdownMenuItem>
+                        {programs.map(program => (
+                            <DropdownMenuItem
+                                key={program}
+                                onClick={() => setSelectedProgram(program)}
+                            >
+                                {program}
+                            </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Gender Filter */}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
+                            {selectedGender || 'Gender'}
+                            <ChevronDown className="w-4 h-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className='bg-[#F1F2E9]'>
+                        <DropdownMenuItem onClick={() => setSelectedGender(null)}>
+                            All Genders
+                        </DropdownMenuItem>
+                        {genders.map(gender => (
+                            <DropdownMenuItem
+                                key={gender}
+                                onClick={() => setSelectedGender(gender)}
+                            >
+                                {gender}
+                            </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
             {/* Top Section */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <Card className="p-6 space-y-4 bg-[#F1F2E9] shadow-none border-none col-span-1">
                     <h3 className="text-sm font-normal mb-2 text-[#1F441F] font-inter">New Bookings</h3>
                     <div className="flex items-center justify-between">
                         <p className="text-3xl font-bold text-[#1F441F] font-inter">
-                            {isNaN(stats.currentMonthCount) ? 'No data yet' : stats.currentMonthCount}
+                            {isNaN(filteredStats.currentMonthCount) ? 'No data yet' : filteredStats.currentMonthCount}
                         </p>
                         {!isNaN(percentageChange) && (
                             <div className={`flex items-center ${percentageChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -163,24 +320,26 @@ export function DashboardClient({ stats }: { stats: DashboardStats }) {
                 <Card className="p-6 space-y-4 bg-[#F1F2E9] shadow-none border-none col-span-3">
                     <h3 className="text-sm font-normal mb-2 text-[#1F441F] font-inter">Total Bookings</h3>
                     <p className="text-3xl font-bold text-[#1F441F] font-inter">
-                        {isNaN(stats.totalBookings) ? 'No data yet' : stats.totalBookings}
+                        {isNaN(filteredStats.totalBookings) ? 'No data yet' : filteredStats.totalBookings}
                     </p>
                 </Card>
             </div>
 
+
+
             {/* Middle Section */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-[#F1F2E9] rounded-[24px]">
                 <CustomPieChart
-                    data={transformedTimeTraffic}
+                    data={transformedTimeTraffic as any}
                     title="Traffic by Time"
                     isTime
                 />
                 <CustomPieChart
-                    data={transformData(stats.packageTraffic)}
+                    data={transformedPackageTraffic as any}
                     title="Traffic by Package"
                 />
                 <CustomPieChart
-                    data={transformData(stats.programTraffic)}
+                    data={transformedProgramTraffic as any}
                     title="Traffic by Program"
                 />
             </div>
@@ -188,18 +347,19 @@ export function DashboardClient({ stats }: { stats: DashboardStats }) {
             {/* Bottom Section */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-[#F1F2E9] rounded-[24px]">
                 <CustomPieChart
-                    data={transformData(stats.coachTraffic)}
+                    data={transformedCoachTraffic as any}
                     title="Traffic by Coach"
                 />
                 <CustomPieChart
-                    data={transformData(stats.sportTraffic)}
+                    data={transformedSportTraffic as any}
                     title="Traffic by Sport"
                 />
                 <CustomPieChart
-                    data={transformData(stats.branchTraffic)}
+                    data={transformedBranchTraffic as any}
                     title="Traffic by Location"
                 />
             </div>
         </div>
     )
 }
+

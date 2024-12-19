@@ -28,6 +28,7 @@ export default async function RootLayout({
 	const status = await checkAcademyStatus()
 
 	console.log(status)
+	console.log("status academy Id", status.academyId)
 
 	if (status.shouldRedirect) {
 		redirect(status.redirectTo!)
@@ -42,7 +43,7 @@ export default async function RootLayout({
 			<body
 				className={cn(`antialiased bg-[#E0E4D9]`, inter.variable)}
 			>
-				<OnboardingProvider onboarded={!!status.isOnboarded}>
+				<OnboardingProvider onboarded={!!status.isOnboarded} isAdmin={!!status.isAdmin} academyName={status.isAdmin ? status.academyName : ''}>
 					<OnboardingSaveProvider>
 						<SidebarProvider className='font-inter bg-[#E0E4D9]'>
 							<AcademySidebar onboarded={!!status.isOnboarded} />

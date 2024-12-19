@@ -45,6 +45,7 @@ const NotificationsComponent: React.FC<Props> = ({ academicId }) => {
     useEffect(() => {
         const fetchNotifications = async () => {
             try {
+                console.log("Academy Id", academicId)
                 // Get the academy owner's user_id and all athletes' user_ids
                 const { data: academic, error: academicError } = await supabase
                     .from('academics')

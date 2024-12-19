@@ -24,14 +24,17 @@ export default function TopBar() {
         totalSteps,
         goToNextStep,
         goToPreviousStep,
-        isStepComplete
+        isStepComplete,
+        isAdmin,
+        academyName
     } = useOnboarding()
+
+    console.log(isAdmin)
 
     const { save, isSaving } = useSave()
     const { toast } = useToast()
 
     const handleSave = async () => {
-        console.log("aadawdaw")
         const result = await save()
         if (result.success) {
             toast({
@@ -90,6 +93,8 @@ export default function TopBar() {
                     </PopoverContent>
                 </Popover>
             </div>
+
+            {isAdmin && <p className='text-sm text-gray-500'>Currently Navigating as: {academyName}</p>}
 
             <div className="flex items-center gap-4">
                 <button

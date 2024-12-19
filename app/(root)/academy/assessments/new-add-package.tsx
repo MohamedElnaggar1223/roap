@@ -30,7 +30,7 @@ import { useOnboarding } from '@/providers/onboarding-provider';
 import { DateSelector } from '@/components/shared/date-selector';
 
 const packageSchema = z.object({
-    type: z.enum(["Term", "Monthly", "Full Season"]),
+    type: z.enum(["Term", "Monthly", "Full Season", "Assessment"]),
     termNumber: z.string().optional(),
     name: z.string().optional(),
     price: z.string().min(1, "Price is required"),
@@ -70,7 +70,7 @@ const packageSchema = z.object({
 });
 
 interface Package {
-    type: "Term" | "Monthly" | "Full Season"
+    type: "Term" | "Monthly" | "Full Season" | 'Assessment' | 'Assessment'
     termNumber?: number
     name: string
     price: number
@@ -138,7 +138,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
     const form = useForm<z.infer<typeof packageSchema>>({
         resolver: zodResolver(packageSchema),
         defaultValues: {
-            type: "Monthly",
+            type: "Assessment",
             price: '',
             termNumber: packagesLength ? (packagesLength + 1).toString() : '1',
             memo: '',
@@ -165,7 +165,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                 const packageName = values.type === "Term" ?
                     `Assessment ${values.termNumber}` :
                     values.type === "Monthly" ?
-                        `Monthly ${values.name}` :
+                        `Monthly ${values.name ?? ''}` :
                         values.name
 
                 let finalStartDate = values.startDate;
@@ -432,7 +432,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                     control={form.control}
                                     name="entryFees"
                                     render={({ field }) => (
-                                        <FormItem>
+                                        <FormItem className='hidden absolute'>
                                             <FormLabel>Entry Fees</FormLabel>
                                             <FormControl>
                                                 <div className="flex items-center">

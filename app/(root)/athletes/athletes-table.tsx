@@ -295,7 +295,7 @@ export function AthletesDataTable({ data }: AthletesDataTableProps) {
                                 </Button>
                             )}
                         </div>
-                        <div className="grid grid-cols-[auto,auto,auto,auto,auto,auto,auto,auto] gap-y-2">
+                        <div className="grid grid-cols-[auto,auto,auto,auto,auto,auto,auto,auto,auto] gap-y-2">
                             <div className="contents font-bold">
                                 <div className="py-4 px-4 flex items-center justify-center">
                                     <Checkbox
@@ -310,6 +310,7 @@ export function AthletesDataTable({ data }: AthletesDataTableProps) {
                                 <div className="py-4 px-4">Branch</div>
                                 <div className="py-4 px-4">Sport</div>
                                 <div className="py-4 px-4">Package</div>
+                                <div className="py-4 px-4">Type</div>
                                 <div className="py-4 px-4">Price</div>
                             </div>
 
@@ -342,6 +343,9 @@ export function AthletesDataTable({ data }: AthletesDataTableProps) {
                                     </div>
                                     <div className="py-8 px-4 bg-main-white">
                                         {booking.packageName}
+                                    </div>
+                                    <div className="py-8 px-4 bg-main-white">
+                                        {booking.programType}
                                     </div>
                                     <div className="py-8 px-4 bg-main-white rounded-r-[20px]">
                                         {booking.price} AED

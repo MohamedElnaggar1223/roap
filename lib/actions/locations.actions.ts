@@ -5,6 +5,7 @@ import { auth } from '@/auth'
 import { and, eq, inArray, not, sql } from 'drizzle-orm'
 import { revalidateTag, unstable_cache } from 'next/cache'
 import { slugify } from '../utils'
+import { cookies } from 'next/headers'
 
 const getLocationsAction = async (academicId: number) => {
     return unstable_cache(async (academicId: number) => {
@@ -71,12 +72,27 @@ const getLocationsAction = async (academicId: number) => {
 export async function getLocations() {
     const session = await auth()
 
-    if (!session?.user || session.user.role !== 'academic') {
-        return { error: 'Unauthorized', data: null }
+    if (!session?.user) {
+        return { error: 'You are not authorized to perform this action', field: null, data: [] }
+    }
+
+    const cookieStore = await cookies()
+    const impersonatedId = session.user.role === 'admin'
+        ? cookieStore.get('impersonatedAcademyId')?.value
+        : null
+
+    // Build the where condition based on user role and impersonation
+    const academicId = session.user.role === 'admin' && impersonatedId
+        ? parseInt(impersonatedId)
+        : parseInt(session.user.id)
+
+    // If not admin and not academic, return error
+    if (session.user.role !== 'admin' && session.user.role !== 'academic') {
+        return { error: 'You are not authorized to perform this action', field: null, data: [] }
     }
 
     const academic = await db.query.academics.findFirst({
-        where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
+        where: (academics, { eq }) => eq(academics.userId, academicId),
         columns: {
             id: true,
         }
@@ -117,12 +133,27 @@ export async function createLocation(data: {
 }) {
     const session = await auth()
 
-    if (!session?.user || session.user.role !== 'academic') {
-        return { error: 'Unauthorized', field: 'root' }
+    if (!session?.user) {
+        return { error: 'You are not authorized to perform this action', field: null, data: [] }
+    }
+
+    const cookieStore = await cookies()
+    const impersonatedId = session.user.role === 'admin'
+        ? cookieStore.get('impersonatedAcademyId')?.value
+        : null
+
+    // Build the where condition based on user role and impersonation
+    const academicId = session.user.role === 'admin' && impersonatedId
+        ? parseInt(impersonatedId)
+        : parseInt(session.user.id)
+
+    // If not admin and not academic, return error
+    if (session.user.role !== 'admin' && session.user.role !== 'academic') {
+        return { error: 'You are not authorized to perform this action', field: null, data: [] }
     }
 
     const academy = await db.query.academics.findFirst({
-        where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
+        where: (academics, { eq }) => eq(academics.userId, academicId),
         columns: {
             id: true,
         }
@@ -232,12 +263,27 @@ export async function updateLocation(id: number, data: {
 }) {
     const session = await auth()
 
-    if (!session?.user || session.user.role !== 'academic') {
-        return { error: 'Unauthorized' }
+    if (!session?.user) {
+        return { error: 'You are not authorized to perform this action', field: null, data: [] }
+    }
+
+    const cookieStore = await cookies()
+    const impersonatedId = session.user.role === 'admin'
+        ? cookieStore.get('impersonatedAcademyId')?.value
+        : null
+
+    // Build the where condition based on user role and impersonation
+    const academicId = session.user.role === 'admin' && impersonatedId
+        ? parseInt(impersonatedId)
+        : parseInt(session.user.id)
+
+    // If not admin and not academic, return error
+    if (session.user.role !== 'admin' && session.user.role !== 'academic') {
+        return { error: 'You are not authorized to perform this action', field: null, data: [] }
     }
 
     const academy = await db.query.academics.findFirst({
-        where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
+        where: (academics, { eq }) => eq(academics.userId, academicId),
         columns: {
             id: true,
         }

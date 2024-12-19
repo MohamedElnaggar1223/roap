@@ -76,6 +76,8 @@ interface OnboardingContextType {
     updateRequirements: (stepId: StepId, requirements: Partial<StepRequirements[StepId]>) => void
     mutate: () => void
     onboarded: boolean
+    isAdmin: boolean
+    academyName: string
 }
 
 const OnboardingContext = createContext<OnboardingContextType | undefined>(undefined)
@@ -113,7 +115,7 @@ const STEPS: Step[] = [
     },
 ]
 
-export function OnboardingProvider({ children, onboarded }: { children: React.ReactNode, onboarded: boolean }) {
+export function OnboardingProvider({ children, onboarded, isAdmin, academyName }: Readonly<{ children: React.ReactNode, onboarded: boolean, isAdmin: boolean, academyName: string }>) {
     const router = useRouter()
     const pathname = usePathname()
     const [steps, setSteps] = useState<Step[]>(STEPS)
@@ -329,7 +331,9 @@ export function OnboardingProvider({ children, onboarded }: { children: React.Re
         goToPreviousStep,
         updateRequirements,
         onboarded,
-        mutate
+        mutate,
+        isAdmin,
+        academyName
     }
 
     return (

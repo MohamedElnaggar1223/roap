@@ -11,7 +11,7 @@ declare module "next-auth" {
         user: {
             id: string
             role: UserRole
-            // Extend with other custom fields
+            impersonatedAcademyId?: number // Add this
         } & DefaultSession["user"]
     }
 

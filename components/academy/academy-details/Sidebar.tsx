@@ -21,7 +21,7 @@ export function AcadenyDetailsSidebar({ onboarded }: { onboarded: boolean }) {
             href.includes('/locations') && (completedSteps < 1)
             || href.includes('/coaches') && (completedSteps < 1)
             || href.includes('/programs') && (completedSteps < 3)
-            || href.includes('/assessments') && (completedSteps < 4)
+            || href.includes('/assessments') && (completedSteps < 3)
             || href.includes('/promo-codes') && (completedSteps < 5)
 
         if (disabledHref) {

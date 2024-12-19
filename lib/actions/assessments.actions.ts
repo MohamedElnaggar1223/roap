@@ -6,6 +6,7 @@ import { auth } from '@/auth'
 import { and, eq, sql, asc, inArray } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { formatDateForDB } from '../utils'
+import { cookies } from 'next/headers'
 
 interface Schedule {
     day: string
@@ -15,7 +16,7 @@ interface Schedule {
 }
 
 interface Package {
-    type: "Term" | "Monthly" | "Full Season"
+    type: "Term" | "Monthly" | "Full Season" | 'Assessment' | 'Assessment'
     termNumber?: number
     name: string
     price: number
@@ -29,12 +30,27 @@ interface Package {
 export async function getAssessments() {
     const session = await auth()
 
-    if (!session?.user || session.user.role !== 'academic') {
-        return { error: 'Unauthorized' }
+    if (!session?.user) {
+        return { error: 'You are not authorized to perform this action', field: null, data: [] }
+    }
+
+    const cookieStore = await cookies()
+    const impersonatedId = session.user.role === 'admin'
+        ? cookieStore.get('impersonatedAcademyId')?.value
+        : null
+
+    // Build the where condition based on user role and impersonation
+    const academicId = session.user.role === 'admin' && impersonatedId
+        ? parseInt(impersonatedId)
+        : parseInt(session.user.id)
+
+    // If not admin and not academic, return error
+    if (session.user.role !== 'admin' && session.user.role !== 'academic') {
+        return { error: 'You are not authorized to perform this action', field: null, data: [] }
     }
 
     const academy = await db.query.academics.findFirst({
-        where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
+        where: (academics, { eq }) => eq(academics.userId, academicId),
         columns: {
             id: true,
         }
@@ -119,8 +135,23 @@ export async function updateAssessment(id: number, data: {
 }) {
     const session = await auth()
 
-    if (!session?.user || session.user.role !== 'academic') {
-        return { error: 'Unauthorized', field: 'root' }
+    if (!session?.user) {
+        return { error: 'You are not authorized to perform this action', field: null }
+    }
+
+    const cookieStore = await cookies()
+    const impersonatedId = session.user.role === 'admin'
+        ? cookieStore.get('impersonatedAcademyId')?.value
+        : null
+
+    // Build the where condition based on user role and impersonation
+    const academicId = session.user.role === 'admin' && impersonatedId
+        ? parseInt(impersonatedId)
+        : parseInt(session.user.id)
+
+    // If not admin and not academic, return error
+    if (session.user.role !== 'admin' && session.user.role !== 'academic') {
+        return { error: 'You are not authorized to perform this action', field: null }
     }
 
     try {
@@ -262,10 +293,10 @@ export async function updateAssessment(id: number, data: {
         })
 
         revalidatePath('/academy/programs')
-        return { success: true }
+        return { success: true, field: null, error: null }
 
     } catch (error) {
         console.error('Error updating assessment:', error)
-        return { error: 'Failed to update assessment' }
+        return { error: 'Failed to update assessment', field: null }
     }
 }

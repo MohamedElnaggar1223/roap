@@ -273,7 +273,7 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingDetails, athlete
         const fetchPrograms = async () => {
             setLoading(true);
             try {
-                const { data } = await getProgramsData();
+                const { data } = await getProgramsData(athlete.birthday ?? undefined);
 
                 if (data) {
                     setPrograms(data.map(p => ({ ...p, name: p.name || '' })));

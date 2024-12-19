@@ -1,9 +1,9 @@
 'use client'
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from "../ui/breadcrumb";
 import { Separator } from "../ui/separator";
 import { SidebarInset, SidebarTrigger } from "../ui/sidebar";
-import React from "react";
+import React, { useState } from "react";
 import { Check, ChevronRight, Home, X } from "lucide-react";
 import NotificationsComponent from "./Notifications";
 import { useOnboarding } from "@/providers/onboarding-provider";
@@ -12,9 +12,12 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover"
+import { startImpersonation, stopImpersonation } from "@/lib/actions/impersonations.actions";
 
 export default function AcademyHeader({ academyId, children }: Readonly<{ academyId: number, children: React.ReactNode }>) {
 	const pathname = usePathname();
+	const router = useRouter()
+	const [loading, setLoading] = useState(false)
 
 	const {
 		currentStep,
@@ -22,7 +25,9 @@ export default function AcademyHeader({ academyId, children }: Readonly<{ academ
 		completedSteps,
 		totalSteps,
 		isStepComplete,
-		onboarded
+		onboarded,
+		isAdmin,
+		academyName
 	} = useOnboarding()
 
 	const generateBreadcrumbs = () => {
@@ -57,6 +62,22 @@ export default function AcademyHeader({ academyId, children }: Readonly<{ academ
 				);
 			});
 	};
+
+	const handleChange = async (academyId: string) => {
+		try {
+			setLoading(true)
+			if (academyId === 'stop') {
+				await stopImpersonation()
+			} else {
+				await startImpersonation(parseInt(academyId))
+			}
+			router.push('/admin')
+		} catch (error) {
+			console.error('Failed to switch academy:', error)
+		} finally {
+			setLoading(false)
+		}
+	}
 
 	return (
 		<SidebarInset>
@@ -123,6 +144,14 @@ export default function AcademyHeader({ academyId, children }: Readonly<{ academ
 						</PopoverContent>
 					</Popover>
 				</div>}
+				{isAdmin && (
+					<div className="flex items-center gap-2">
+						<p className='text-xs'>Currently Navigating as: {academyName}</p>
+						<button onClick={() => handleChange('stop')} className="text-xs bg-red-500 hover:bg-red-700 text-white px-2 py-1 rounded-lg">
+							Stop
+						</button>
+					</div>
+				)}
 				<NotificationsComponent academicId={academyId} />
 			</header>
 			{children}

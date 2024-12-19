@@ -31,7 +31,7 @@ import { useOnboarding } from '@/providers/onboarding-provider';
 import { DateSelector } from '@/components/shared/date-selector';
 
 const packageSchema = z.object({
-    type: z.enum(["Term", "Monthly", "Full Season"]),
+    type: z.enum(["Term", "Monthly", "Full Season", "Assessment"]),
     termNumber: z.string().optional(),
     name: z.string().optional(),
     price: z.string().min(1, "Price is required"),
@@ -71,7 +71,7 @@ const packageSchema = z.object({
 });
 
 interface Package {
-    type: "Term" | "Monthly" | "Full Season"
+    type: "Term" | "Monthly" | "Full Season" | 'Assessment'
     termNumber?: number
     name: string
     price: number
@@ -153,7 +153,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
     const form = useForm<z.infer<typeof packageSchema>>({
         resolver: zodResolver(packageSchema),
         defaultValues: {
-            type: packageEdited.name.startsWith('Term') ? 'Term' :
+            type: packageEdited.name.startsWith('Assessment') ? 'Assessment' : packageEdited.name.startsWith('Term') ? 'Term' :
                 packageEdited.name.includes('Monthly') ? 'Monthly' : 'Full Season',
             termNumber: packageEdited.name.startsWith('Term') ?
                 packageEdited.name.split(' ')[1] : undefined,
@@ -491,7 +491,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                     control={form.control}
                                     name="entryFees"
                                     render={({ field }) => (
-                                        <FormItem>
+                                        <FormItem className='hidden absolute'>
                                             <FormLabel>Entry Fees</FormLabel>
                                             <FormControl>
                                                 <div className="flex items-center">

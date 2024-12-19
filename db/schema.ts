@@ -1157,6 +1157,59 @@ export const payments = pgTable("payments", {
     }
 });
 
+export const pages = pgTable("pages", {
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({
+        name: "pages_id_seq",
+        startWith: 1000,
+        increment: 1,
+        minValue: 1,
+        maxValue: 9223372036854775807,
+        cache: 1
+    }),
+    orderBy: varchar("order_by", { length: 255 }).notNull(),
+    createdAt: timestamp("created_at", { mode: 'string' }),
+    updatedAt: timestamp("updated_at", { mode: 'string' }),
+    image: varchar({ length: 255 }),
+});
+
+export const pageTranslations = pgTable("page_translations", {
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({
+        name: "page_translations_id_seq",
+        startWith: 1000,
+        increment: 1,
+        minValue: 1,
+        maxValue: 9223372036854775807,
+        cache: 1
+    }),
+    pageId: bigint("page_id", { mode: "number" }).notNull(),
+    locale: varchar({ length: 255 }).notNull(),
+    title: varchar({ length: 255 }),
+    content: text("content"),
+    createdAt: timestamp("created_at", { mode: 'string' }),
+    updatedAt: timestamp("updated_at", { mode: 'string' }),
+}, (table) => {
+    return {
+        pageIdLocaleUnique: uniqueIndex("page_translations_page_id_locale_unique")
+            .using("btree", table.pageId.asc().nullsLast().op("int8_ops"), table.locale.asc().nullsLast().op("int8_ops")),
+        pageTranslationsPageIdForeign: foreignKey({
+            columns: [table.pageId],
+            foreignColumns: [pages.id],
+            name: "page_translations_page_id_foreign"
+        }).onDelete("cascade"),
+    }
+});
+
+export const pagesRelations = relations(pages, ({ many }) => ({
+    pageTranslations: many(pageTranslations),
+}));
+
+export const pageTranslationsRelations = relations(pageTranslations, ({ one }) => ({
+    page: one(pages, {
+        fields: [pageTranslations.pageId],
+        references: [pages.id]
+    }),
+}));
+
 export const discountsRelations = relations(discounts, ({ one, many }) => ({
     program: one(programs, {
         fields: [discounts.programId],

@@ -31,7 +31,7 @@ import { useOnboarding } from '@/providers/onboarding-provider';
 import { DateSelector } from '@/components/shared/date-selector';
 
 const packageSchema = z.object({
-    type: z.enum(["Term", "Monthly", "Full Season"]),
+    type: z.enum(["Term", "Monthly", "Full Season", "Assessment"]),
     termNumber: z.string().optional(),
     name: z.string().optional(),
     price: z.string().min(1, "Price is required"),
@@ -71,7 +71,7 @@ const packageSchema = z.object({
 });
 
 interface Package {
-    type: "Term" | "Monthly" | "Full Season"
+    type: "Term" | "Monthly" | "Full Season" | 'Assessment'
     termNumber?: number
     name: string
     price: number
@@ -153,13 +153,13 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
     const form = useForm<z.infer<typeof packageSchema>>({
         resolver: zodResolver(packageSchema),
         defaultValues: {
-            type: packageEdited.name.startsWith('Term') ? 'Term' :
+            type: packageEdited.name.startsWith('Assessment') ? 'Assessment' : packageEdited.name.startsWith('Term') ? 'Term' :
                 packageEdited.name.includes('Monthly') ? 'Monthly' : 'Full Season',
             termNumber: packageEdited.name.startsWith('Term') ?
                 packageEdited.name.split(' ')[1] : undefined,
             name: packageEdited.name.startsWith('Term') ? '' :
                 packageEdited.name.startsWith('Monthly') ?
-                    packageEdited.name.split(' ')[1] : packageEdited.name,
+                    packageEdited.name.split(' ')[1] : packageEdited.name.split(' ')[1],
             price: packageEdited.price.toString(),
             startDate: new Date(packageEdited.startDate),
             endDate: new Date(packageEdited.endDate),
@@ -194,7 +194,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                     `Term ${values.termNumber}` :
                     values.type === "Monthly" ?
                         `Monthly ${values.name}` :
-                        values.name
+                        `Full Season ${values.name ?? ''}`
 
                 const result = await updatePackage(packageEdited.id, {
                     name: packageName!,
@@ -259,7 +259,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                     `Term ${values.termNumber}` :
                     values.type === "Monthly" ?
                         `Monthly ${values.name}` :
-                        values.name
+                        `Full Season ${values.name ?? ''}`
 
                 setCreatedPackages(prev => prev.map((packageData, i) =>
                     i === index ? {
@@ -410,7 +410,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                         control={form.control}
                                         name="name"
                                         render={({ field }) => (
-                                            <FormItem>
+                                            <FormItem className='absolute hidden'>
                                                 <FormLabel>Name</FormLabel>
                                                 <FormControl>
                                                     <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />

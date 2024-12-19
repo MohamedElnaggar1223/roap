@@ -37,6 +37,7 @@ export interface SearchedAthlete {
     id: number;
     name: string;
     image: string | null;
+    birthday: string | null;
     phoneNumber?: string;
 }
 

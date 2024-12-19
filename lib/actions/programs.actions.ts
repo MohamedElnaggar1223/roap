@@ -7,16 +7,32 @@ import { and, eq, sql, inArray, asc, not } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { formatDateForDB } from '../utils'
 import { CoachDetails, PackageDetails } from '../validations/bookings'
+import { cookies } from 'next/headers'
 
-export const getProgramsData = async () => {
+export const getProgramsData = async (birthday?: string) => {
     const session = await auth()
 
-    if (!session?.user || session.user.role !== 'academic') {
-        return { error: 'Unauthorized' }
+    if (!session?.user) {
+        return { error: 'You are not authorized to perform this action', field: null, data: [] }
+    }
+
+    const cookieStore = await cookies()
+    const impersonatedId = session.user.role === 'admin'
+        ? cookieStore.get('impersonatedAcademyId')?.value
+        : null
+
+    // Build the where condition based on user role and impersonation
+    const academicId = session.user.role === 'admin' && impersonatedId
+        ? parseInt(impersonatedId)
+        : parseInt(session.user.id)
+
+    // If not admin and not academic, return error
+    if (session.user.role !== 'admin' && session.user.role !== 'academic') {
+        return { error: 'You are not authorized to perform this action', field: null, data: [] }
     }
 
     const academy = await db.query.academics.findFirst({
-        where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
+        where: (academics, { eq }) => eq(academics.userId, academicId),
         columns: {
             id: true,
         }
@@ -120,8 +136,22 @@ export const getProgramsData = async () => {
         sport: program.sport?.sportTranslations[0]?.name || ''
     }))
 
+    const finalProgramsDataArray = birthday
+        ? finalProgramsData.filter(program => {
+            const birthDate = new Date(birthday)
+            const startDate = program.startDateOfBirth ? new Date(program.startDateOfBirth) : null
+            const endDate = program.endDateOfBirth ? new Date(program.endDateOfBirth) : null
+
+            // If either date is missing, include the program
+            if (!startDate || !endDate) return true
+
+            // Check if birthday falls within the program's date range
+            return birthDate >= startDate && birthDate <= endDate
+        })
+        : finalProgramsData
+
     return {
-        data: finalProgramsData,
+        data: finalProgramsDataArray,
         error: null
     }
 }
@@ -129,12 +159,27 @@ export const getProgramsData = async () => {
 export async function getPrograms() {
     const session = await auth()
 
-    if (!session?.user || session.user.role !== 'academic') {
-        return { error: 'Unauthorized' }
+    if (!session?.user) {
+        return { error: 'You are not authorized to perform this action', field: null, data: [] }
+    }
+
+    const cookieStore = await cookies()
+    const impersonatedId = session.user.role === 'admin'
+        ? cookieStore.get('impersonatedAcademyId')?.value
+        : null
+
+    // Build the where condition based on user role and impersonation
+    const academicId = session.user.role === 'admin' && impersonatedId
+        ? parseInt(impersonatedId)
+        : parseInt(session.user.id)
+
+    // If not admin and not academic, return error
+    if (session.user.role !== 'admin' && session.user.role !== 'academic') {
+        return { error: 'You are not authorized to perform this action', field: null, data: [] }
     }
 
     const academy = await db.query.academics.findFirst({
-        where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
+        where: (academics, { eq }) => eq(academics.userId, academicId),
         columns: {
             id: true,
         }
@@ -207,7 +252,7 @@ interface Schedule {
 }
 
 interface Package {
-    type: "Term" | "Monthly" | "Full Season"
+    type: "Term" | "Monthly" | "Full Season" | 'Assessment'
     termNumber?: number
     name: string
     price: number
@@ -238,18 +283,34 @@ export async function createProgram(data: {
 }) {
     const session = await auth()
 
-    if (!session?.user || session.user.role !== 'academic') {
-        return { error: 'Unauthorized', field: 'root' }
+    if (!session?.user) {
+        return { error: 'You are not authorized to perform this action', field: null, data: [] }
     }
+
+    const cookieStore = await cookies()
+    const impersonatedId = session.user.role === 'admin'
+        ? cookieStore.get('impersonatedAcademyId')?.value
+        : null
+
+    // Build the where condition based on user role and impersonation
+    const academicId = session.user.role === 'admin' && impersonatedId
+        ? parseInt(impersonatedId)
+        : parseInt(session.user.id)
+
+    // If not admin and not academic, return error
+    if (session.user.role !== 'admin' && session.user.role !== 'academic') {
+        return { error: 'You are not authorized to perform this action', field: null, data: [] }
+    }
+
+    const academy = await db.query.academics.findFirst({
+        where: (academics, { eq }) => eq(academics.userId, academicId),
+        columns: {
+            id: true,
+        }
+    })
 
     try {
         return await db.transaction(async (tx) => {
-            const academy = await tx.query.academics.findFirst({
-                where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
-                columns: {
-                    id: true,
-                }
-            })
 
             if (!academy) return { error: 'Academy not found', field: 'root' }
 
@@ -389,8 +450,23 @@ export async function updateProgram(id: number, data: {
 }) {
     const session = await auth()
 
-    if (!session?.user || session.user.role !== 'academic') {
-        return { error: 'Unauthorized', field: 'root' }
+    if (!session?.user) {
+        return { error: 'You are not authorized to perform this action', field: null, data: [] }
+    }
+
+    const cookieStore = await cookies()
+    const impersonatedId = session.user.role === 'admin'
+        ? cookieStore.get('impersonatedAcademyId')?.value
+        : null
+
+    // Build the where condition based on user role and impersonation
+    const academicId = session.user.role === 'admin' && impersonatedId
+        ? parseInt(impersonatedId)
+        : parseInt(session.user.id)
+
+    // If not admin and not academic, return error
+    if (session.user.role !== 'admin' && session.user.role !== 'academic') {
+        return { error: 'You are not authorized to perform this action', field: null, data: [] }
     }
 
     try {
@@ -619,11 +695,11 @@ export async function updateProgram(id: number, data: {
         })
 
         revalidatePath('/academy/programs')
-        return { success: true }
+        return { success: true, field: null }
 
     } catch (error) {
         console.error('Error updating program:', error)
-        return { error: 'Failed to update program' }
+        return { error: 'Failed to update program', field: null }
     }
 }
 
