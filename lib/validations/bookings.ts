@@ -65,6 +65,7 @@ export interface PackageDetails {
     sessionDuration: number | null;
     schedules: Schedule[];
     endDate: string | null;
+    startDate: string | null;
 }
 
 export interface CoachDetails {

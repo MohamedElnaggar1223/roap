@@ -313,6 +313,33 @@ export const facilityTranslations = pgTable("facility_translations", {
     }
 });
 
+export const genders = pgTable("genders", {
+    // You can use { mode: "bigint" } if numbers are exceeding js number limitations
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "genders_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+    createdAt: timestamp("created_at", { mode: 'string' }),
+    updatedAt: timestamp("updated_at", { mode: 'string' }),
+});
+
+export const genderTranslations = pgTable("gender_translations", {
+    // You can use { mode: "bigint" } if numbers are exceeding js number limitations
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "gender_translations_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+    // You can use { mode: "bigint" } if numbers are exceeding js number limitations
+    genderId: bigint("gender_id", { mode: "number" }).notNull(),
+    locale: varchar({ length: 255 }).notNull(),
+    name: varchar({ length: 255 }).notNull(),
+    createdAt: timestamp("created_at", { mode: 'string' }),
+    updatedAt: timestamp("updated_at", { mode: 'string' }),
+}, (table) => {
+    return {
+        genderIdLocaleUnique: uniqueIndex("gender_translations_gender_id_locale_unique").using("btree", table.genderId.asc().nullsLast().op("int8_ops"), table.locale.asc().nullsLast().op("int8_ops")),
+        genderTranslationsGenderIdForeign: foreignKey({
+            columns: [table.genderId],
+            foreignColumns: [genders.id],
+            name: "gender_translations_gender_id_foreign"
+        }).onDelete("cascade"),
+    }
+});
+
 export const sports = pgTable("sports", {
     // You can use { mode: "bigint" } if numbers are exceeding js number limitations
     id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "sports_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
@@ -1308,6 +1335,17 @@ export const facilityTranslationsRelations = relations(facilityTranslations, ({ 
 export const facilitiesRelations = relations(facilities, ({ many }) => ({
     facilityTranslations: many(facilityTranslations),
     branchFacilities: many(branchFacility),
+}));
+
+export const gendersRelations = relations(genders, ({ many }) => ({
+    genderTranslations: many(genderTranslations),
+}));
+
+export const genderTranslationsRelations = relations(genderTranslations, ({ one }) => ({
+    gender: one(genders, {
+        fields: [genderTranslations.genderId],
+        references: [genders.id]
+    }),
 }));
 
 export const sportTranslationsRelations = relations(sportTranslations, ({ one }) => ({

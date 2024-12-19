@@ -287,11 +287,11 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingDetails, athlete
         fetchPrograms();
     }, []);
 
-    const disabledDays = (date: Date) => {
+    const disabledDays = (date: Date, startDate: Date) => {
         const schedules = selectedPackage?.schedules.map(schedule => ({ ...schedule, day: days[schedule.day.toLowerCase() as keyof typeof days] }));
         if (!schedules || !selectedPackage?.schedules) return true;
 
-        const today = new Date();
+        const today = new Date(startDate);
         today.setHours(0, 0, 0, 0);
 
         if (isBefore(date, today)) return true;
@@ -474,7 +474,7 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingDetails, athlete
                             mode="single"
                             selected={date}
                             onSelect={(date) => date && setDate(date)}
-                            disabled={disabledDays}
+                            disabled={(date) => disabledDays(date, new Date(selectedPackage?.startDate!))}
                             initialFocus
                         />
                     </PopoverContent>
