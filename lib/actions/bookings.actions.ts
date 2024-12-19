@@ -304,17 +304,22 @@ export async function checkEntryFees(
     profileId: number,
     sportId: number,
     programId: number,
-    packageDetails: any
+    packageDetails: any,
+    startDate: string
 ): Promise<{ shouldPay: boolean; amount: number }> {
-    const currentDate = new Date();
+    const currentDate = new Date(startDate);
     const entryFeesStartDate = packageDetails.entryFeesStartDate ? new Date(packageDetails.entryFeesStartDate) : null;
     const entryFeesEndDate = packageDetails.entryFeesEndDate ? new Date(packageDetails.entryFeesEndDate) : null;
 
+    console.log("Entry fees", packageDetails.entryFees)
+
     // If there are entry fees dates defined and we're not within the range, no entry fees should be charged
     if (entryFeesStartDate && currentDate < entryFeesStartDate) {
+        console.log("Entry fees start date", entryFeesStartDate)
         return { shouldPay: false, amount: 0 };
     }
     if (entryFeesEndDate && currentDate > entryFeesEndDate) {
+        console.log("Entry fees end date", entryFeesEndDate)
         return { shouldPay: false, amount: 0 };
     }
     // Check if entry fees already paid for this season
@@ -331,7 +336,7 @@ export async function checkEntryFees(
     }
 
     // Check if there's an assessment that can be deducted
-    if (packageDetails.program.assessmentDeductedFromProgram) {
+    if (packageDetails?.program?.assessmentDeductedFromProgram) {
         const assessmentBooking = await db.query.bookings.findFirst({
             where: and(
                 eq(bookings.profileId, profileId),
@@ -358,6 +363,8 @@ export async function checkEntryFees(
             };
         }
     }
+
+    console.log(" Entry fees: ", packageDetails.entryFees)
 
     return {
         shouldPay: true,
@@ -433,7 +440,8 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
                 validatedInput.profileId,
                 packageDetails.program.sport.id,
                 packageDetails.program.id,
-                packageDetails
+                packageDetails,
+                validatedInput.date
             );
 
         // Get active discounts

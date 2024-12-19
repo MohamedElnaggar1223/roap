@@ -540,7 +540,8 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
                         bookingDetails.athlete.id,
                         sportId,
                         bookingDetails.program.id,
-                        bookingDetails.package
+                        bookingDetails.package,
+                        bookingDetails.date.toISOString()
                     ),
                     calculateSessionsAndPrice(
                         bookingDetails.package,
@@ -639,7 +640,7 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
 
                 <div className="flex justify-between items-center font-medium text-lg">
                     <div className='min-w-[140px] text-sm font-semibold'>Total</div>
-                    <div className='font-semibold flex-1'>{(discountedPrice).toFixed(2)} AED</div>
+                    <div className='font-semibold flex-1'>{(discountedPrice + (bookingDetails.package.entryFees ?? 0)).toFixed(2)} AED</div>
                 </div>
             </div>
 

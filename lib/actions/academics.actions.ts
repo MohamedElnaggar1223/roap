@@ -176,6 +176,7 @@ export async function getPaginatedAcademics(
 			description: sql<string>`t.description`,
 			locale: sql<string>`t.locale`,
 			createdAt: academics.createdAt,
+			onboarded: academics.onboarded,
 		})
 		.from(academics)
 		.leftJoin(users, eq(academics.userId, users.id))

@@ -843,6 +843,7 @@ export default function AddNewProgram({ branches, sports, academySports }: Props
                                                 <div className="py-4 flex items-center justify-center">
                                                     <Button
                                                         onClick={() => setPackagesOpen(true)}
+                                                        type="button"
                                                         className='flex text-main-yellow text-nowrap items-center justify-center gap-2 rounded-3xl px-4 py-2 bg-main-green text-sm'
                                                     >
                                                         Add New Package
