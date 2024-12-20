@@ -5,7 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { updatePackage } from '@/lib/actions/packages.actions';
 import { Loader2, Pencil, TrashIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { z } from 'zod';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -149,6 +149,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
             (_, i) => startMonth + i
         );
     });
+    const [availableMonths, setAvailableMonths] = useState<Array<{ label: string, value: string }>>([])
 
     const form = useForm<z.infer<typeof packageSchema>>({
         resolver: zodResolver(packageSchema),
@@ -182,9 +183,36 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
         name: "schedules"
     })
 
+    const getMonthsInRange = (startDate: Date, endDate: Date) => {
+        const months: Array<{ label: string, value: string }> = [];
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        let current = new Date(start);
+        current.setDate(1); // Set to first day of month to avoid skipping months
+
+        while (current <= end) {
+            const monthLabel = format(current, "MMMM yyyy");
+            const monthValue = monthLabel; // Using the same format for value and label
+            months.push({ label: monthLabel, value: monthValue });
+            current.setMonth(current.getMonth() + 1);
+        }
+
+        return months;
+    };
+
     const packageType = form.watch("type")
     const entryFees = parseFloat(form.watch("entryFees") || "0")
     const showEntryFeesFields = entryFees > 0
+    const startDate = form.watch("startDate")
+    const endDate = form.watch("endDate")
+
+    useEffect(() => {
+        if (startDate && endDate) {
+            const months = getMonthsInRange(startDate, endDate)
+            setAvailableMonths(months)
+        }
+    }, [startDate, endDate])
 
     const onSubmit = async (values: z.infer<typeof packageSchema>) => {
         try {
@@ -438,54 +466,33 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                     )}
                                 />
 
-                                {packageType === "Monthly" ? (
-                                    <div className="space-y-4">
-                                        <FormLabel>Select Months</FormLabel>
-                                        <div className="grid grid-cols-3 gap-4">
-                                            {months.map((month) => (
-                                                <label
-                                                    key={month.value}
-                                                    className="flex items-center space-x-2 cursor-pointer"
-                                                >
-                                                    <Checkbox
-                                                        checked={selectedMonths.includes(month.value)}
-                                                        onCheckedChange={(checked) =>
-                                                            handleMonthSelect(month.value, checked === true)
-                                                        }
-                                                        className='data-[state=checked]:!bg-main-green'
-                                                    />
-                                                    <span>{month.label}</span>
-                                                </label>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="flex gap-4">
-                                        <FormField
-                                            control={form.control}
-                                            name="startDate"
-                                            render={({ field }) => (
-                                                <FormItem className="flex-1">
-                                                    <FormLabel>Start Date</FormLabel>
-                                                    <DateSelector field={field} />
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
 
-                                        <FormField
-                                            control={form.control}
-                                            name="endDate"
-                                            render={({ field }) => (
-                                                <FormItem className="flex-1">
-                                                    <FormLabel>End Date</FormLabel>
-                                                    <DateSelector field={field} />
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                    </div>
-                                )}
+                                <div className="flex gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="startDate"
+                                        render={({ field }) => (
+                                            <FormItem className="flex-1">
+                                                <FormLabel>Start Date</FormLabel>
+                                                <DateSelector field={field} />
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={form.control}
+                                        name="endDate"
+                                        render={({ field }) => (
+                                            <FormItem className="flex-1">
+                                                <FormLabel>End Date</FormLabel>
+                                                <DateSelector field={field} />
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+
 
                                 <FormField
                                     control={form.control}
@@ -538,27 +545,24 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                             <FormItem>
                                                 <FormLabel>Entry Fees Applied For</FormLabel>
                                                 <div className="grid grid-cols-3 gap-4 border rounded-[10px] p-4">
-                                                    {selectedMonths.map((monthNum) => {
-                                                        const month = months.find(m => m.value === monthNum);
-                                                        return month ? (
-                                                            <label
-                                                                key={month.value}
-                                                                className="flex items-center space-x-2 cursor-pointer"
-                                                            >
-                                                                <Checkbox
-                                                                    checked={field?.value?.includes(month.label)}
-                                                                    onCheckedChange={(checked) => {
-                                                                        const updatedMonths = checked
-                                                                            ? [...(field.value ?? []), month.label]
-                                                                            : field?.value?.filter((m: string) => m !== month.label);
-                                                                        field.onChange(updatedMonths);
-                                                                    }}
-                                                                    className='data-[state=checked]:!bg-main-green'
-                                                                />
-                                                                <span>{month.label}</span>
-                                                            </label>
-                                                        ) : null;
-                                                    })}
+                                                    {availableMonths.map((month) => (
+                                                        <label
+                                                            key={month.value}
+                                                            className="flex items-center space-x-2 cursor-pointer"
+                                                        >
+                                                            <Checkbox
+                                                                checked={field.value?.includes(month.value)}
+                                                                onCheckedChange={(checked) => {
+                                                                    const updatedMonths = checked
+                                                                        ? [...(field.value ?? []), month.value]
+                                                                        : field.value?.filter((m: string) => m !== month.value) ?? [];
+                                                                    field.onChange(updatedMonths);
+                                                                }}
+                                                                className='data-[state=checked]:!bg-main-green'
+                                                            />
+                                                            <span>{month.label}</span>
+                                                        </label>
+                                                    ))}
                                                 </div>
                                                 <FormMessage />
                                             </FormItem>

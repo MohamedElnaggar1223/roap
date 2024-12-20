@@ -162,7 +162,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
         try {
             if (programId) {
                 setLoading(true)
-                const packageName = values.type === "Term" ?
+                const packageName = values.type === "Assessment" ?
                     `Assessment ${values.termNumber}` :
                     values.type === "Monthly" ?
                         `Monthly ${values.name ?? ''}` :
@@ -214,7 +214,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                 router.refresh()
             }
             else if (setCreatedPackages) {
-                const packageName = values.type === "Term" ?
+                const packageName = values.type === "Assessment" ?
                     `Assessment ${values.termNumber}` :
                     values.type === "Monthly" ?
                         `Monthly ${values.name ?? ''}` :

@@ -44,6 +44,8 @@ const packageSchema = z.object({
     entryFees: z.string().default("0"),
     entryFeesExplanation: z.string().optional(),
     entryFeesAppliedUntil: z.array(z.string()).default([]).optional(),
+    entryFeesStartDate: z.date().optional(),
+    entryFeesEndDate: z.date().optional(),
     schedules: z.array(z.object({
         day: z.string().min(1, "Day is required"),
         from: z.string().min(1, "Start time is required"),
@@ -76,6 +78,8 @@ interface Package {
     entryFees: number
     entryFeesExplanation?: string
     entryFeesAppliedUntil?: string[]
+    entryFeesStartDate?: Date
+    entryFeesEndDate?: Date
     id?: number
 }
 
@@ -136,6 +140,8 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
             memo: '',
             entryFees: '0',
             schedules: [{ day: '', from: '', to: '', memo: '' }],
+            entryFeesStartDate: undefined,
+            entryFeesEndDate: undefined
         }
     })
 
@@ -176,7 +182,12 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                     memo: values.memo,
                     entryFees: parseFloat(values.entryFees),
                     entryFeesExplanation: showEntryFeesFields ? values.entryFeesExplanation : undefined,
-                    entryFeesAppliedUntil: showEntryFeesFields ? values.entryFeesAppliedUntil : undefined,
+                    entryFeesAppliedUntil: values.type === "Monthly" && showEntryFeesFields ?
+                        values.entryFeesAppliedUntil : undefined,
+                    entryFeesStartDate: values.type !== "Monthly" && showEntryFeesFields ?
+                        values.entryFeesStartDate : undefined,
+                    entryFeesEndDate: values.type !== "Monthly" && showEntryFeesFields ?
+                        values.entryFeesEndDate : undefined,
                     schedules: values.schedules.map(schedule => ({
                         day: schedule.day,
                         from: schedule.from,
@@ -201,7 +212,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                 const packageName = values.type === "Term" ?
                     `Term ${values.termNumber}` :
                     values.type === "Monthly" ?
-                        `Monthly ${values.name}` :
+                        `Monthly ${values.name ?? ''}` :
                         `Full Season ${values.name ?? ''}`
 
                 setCreatedPackages(prev => [...prev, {
@@ -387,7 +398,35 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                     />
                                 )}
 
-                                {showEntryFeesFields && (
+                                {showEntryFeesFields && packageType !== "Monthly" && (
+                                    <div className="flex gap-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="entryFeesStartDate"
+                                            render={({ field }) => (
+                                                <FormItem className="flex-1">
+                                                    <FormLabel>Entry Fees Start Date</FormLabel>
+                                                    <DateSelector field={field} />
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
+                                        <FormField
+                                            control={form.control}
+                                            name="entryFeesEndDate"
+                                            render={({ field }) => (
+                                                <FormItem className="flex-1">
+                                                    <FormLabel>Entry Fees End Date</FormLabel>
+                                                    <DateSelector field={field} />
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                )}
+
+                                {showEntryFeesFields && packageType === "Monthly" && (
                                     <FormField
                                         control={form.control}
                                         name="entryFeesAppliedUntil"
