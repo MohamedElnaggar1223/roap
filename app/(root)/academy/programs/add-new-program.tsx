@@ -97,6 +97,7 @@ interface Package {
     entryFeesExplanation?: string
     entryFeesAppliedUntil?: string[]
     id?: number
+    capacity: number
 }
 
 interface Schedule {
