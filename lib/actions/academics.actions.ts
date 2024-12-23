@@ -500,6 +500,7 @@ export const getCalendarSlots = async (startDate: Date, endDate: Date) => {
 				eq(programs.academicId, academy.id)
 			)
 		);
+	console.log("academicId", academicId)
 
 	// Fetch blocks
 	const blocksData = await db
@@ -525,10 +526,12 @@ export const getCalendarSlots = async (startDate: Date, endDate: Date) => {
 		.leftJoin(packages, eq(blockPackages.packageId, packages.id))
 		.leftJoin(blockPrograms, eq(blocks.id, blockPrograms.blockId))
 		.leftJoin(programs, and(eq(packages.programId, programs.id), eq(programs.id, blockPrograms.programId)))
+		.innerJoin(academics, eq(academics.id, blocks.academicId))
 		.where(
 			and(
 				sql`DATE(${blocks.date}) >= DATE(${formattedStartDate})`,
-				sql`DATE(${blocks.date}) <= DATE(${formattedEndDate})`
+				sql`DATE(${blocks.date}) <= DATE(${formattedEndDate})`,
+				eq(academics.userId, academicId)
 			)
 		);
 

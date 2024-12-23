@@ -180,6 +180,8 @@ export async function getBlockData(): Promise<{ data: BlockData | null; error: s
             return { data: null, error: 'Academic not found' }
         }
 
+        console.log(academic.id)
+
         // Fetch all related data in parallel with proper type casting
         const [branchesData, sportsData, packagesData, programsData] = await Promise.all([
             // Get branches with their sports and programs
