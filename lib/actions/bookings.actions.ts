@@ -1,7 +1,7 @@
 'use server'
 import { auth } from "@/auth"
 import { db } from "@/db"
-import { academicAthletic, blockCoaches, blocks, bookings, bookingSessions, branchTranslations, coaches, entryFeesHistory, packageDiscount, packages, profiles, programs, sports, sportTranslations, users } from "@/db/schema"
+import { academicAthletic, blockPrograms, blocks, bookings, bookingSessions, branchTranslations, coaches, entryFeesHistory, packageDiscount, packages, profiles, programs, sports, sportTranslations, users } from "@/db/schema"
 import { and, eq, inArray, or, sql } from "drizzle-orm"
 import { revalidateTag } from "next/cache"
 import { revalidatePath } from 'next/cache'
@@ -243,6 +243,7 @@ export async function calculateSessionsAndPrice(
     schedules: any[],
     bookingTime: string
 ) {
+    console.log("Selected Date", selectedDate)
     const packageName = packageDetails.name.toLowerCase();
     const isAssessment = packageName.startsWith('assessment');
     const isMonthly = packageName.startsWith('monthly');
@@ -280,9 +281,15 @@ export async function calculateSessionsAndPrice(
         );
 
         deductions = missedSessions.length * pricePerSession;
+        console.log("Missed sessions", missedSessions)
+        console.log("Price per session", pricePerSession)
+        console.log("Deductions", deductions)
+        console.log("Total price", totalPrice)
+        console.log("All sessions", allSessions)
         sessions.push(...allSessions.filter(
             session => session.date >= selectedDate
         ));
+        console.log("Sessions", sessions)
     } else {
         // For term and full season packages
         const packageStartDate = new Date(packageDetails.startDate);

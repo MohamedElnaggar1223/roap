@@ -52,6 +52,7 @@ export async function getProgramPackages(url: string | null, programId: number) 
             entryFeesAppliedUntil: packages.entryFeesAppliedUntil,
             entryFeesStartDate: packages.entryFeesStartDate,
             entryFeesEndDate: packages.entryFeesEndDate,
+            capacity: packages.capacity,
             schedules: sql<Schedule[]>`json_agg(
                 json_build_object(
                     'id', ${schedules.id},
@@ -101,6 +102,7 @@ export async function createPackage(data: {
         to: string
         memo: string | null
     }[]
+    capacity: number
 }) {
     const session = await auth()
 
@@ -132,7 +134,8 @@ export async function createPackage(data: {
                         formatDateForDB(data.entryFeesEndDate) : null,
                     createdAt: sql`now()`,
                     updatedAt: sql`now()`,
-                    sessionPerWeek: data.schedules.length
+                    sessionPerWeek: data.schedules.length,
+                    capacity: data.capacity
                 })
                 .returning({
                     id: packages.id
@@ -180,6 +183,7 @@ export async function updatePackage(id: number, data: {
         to: string
         memo: string | null
     }[]
+    capacity: number
 }) {
     const session = await auth()
 
@@ -207,7 +211,8 @@ export async function updatePackage(id: number, data: {
                     entryFeesEndDate: data.entryFeesEndDate ?
                         formatDateForDB(data.entryFeesEndDate) : null,
                     updatedAt: sql`now()`,
-                    sessionPerWeek: data.schedules.length
+                    sessionPerWeek: data.schedules.length,
+                    capacity: data.capacity
                 })
                 .where(eq(packages.id, id))
 

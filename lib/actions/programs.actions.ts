@@ -157,6 +157,13 @@ export const getProgramsData = async (birthday?: string) => {
         })
         : finalProgramsData
 
+    if (finalProgramsDataArray.length === 0 && finalProgramsData.length > 0) {
+        return {
+            data: [],
+            error: 'No programs found for the selected athlete'
+        }
+    }
+
     console.log("Final Programs Data Array", finalProgramsDataArray)
 
     return {

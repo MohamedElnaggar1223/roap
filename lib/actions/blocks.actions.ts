@@ -1,7 +1,7 @@
 'use server'
 import { z } from 'zod'
 import { db } from '@/db'
-import { blocks, blockBranches, blockSports, blockPackages, blockCoaches, sportTranslations, sports, coaches, branches, branchTranslations, branchSport, academicSport, packages, programs } from '@/db/schema'
+import { blocks, blockBranches, blockSports, blockPackages, blockPrograms, sportTranslations, sports, programs, branches, branchTranslations, branchSport, academicSport, packages } from '@/db/schema'
 import { eq, and, sql } from 'drizzle-orm'
 import { auth } from '@/auth'
 import { revalidatePath } from 'next/cache'
@@ -63,7 +63,7 @@ export async function createBlock(input: z.infer<typeof createBlockSchema>) {
                 branchScope: validatedData.branches === 'all' ? 'all' : 'specific',
                 sportScope: validatedData.sports === 'all' ? 'all' : 'specific',
                 packageScope: validatedData.packages === 'all' ? 'all' : 'specific',
-                coachScope: validatedData.coaches === 'all' ? 'all' : 'specific',
+                programScope: validatedData.programs === 'all' ? 'all' : 'specific', // Changed from coachScope
                 note: validatedData.note,
                 createdAt: sql`now()`,
                 updatedAt: sql`now()`
@@ -105,19 +105,19 @@ export async function createBlock(input: z.infer<typeof createBlockSchema>) {
                 )
             }
 
-            // Insert coach relations if specific coaches are selected
-            if (validatedData.coaches !== 'all') {
-                await tx.insert(blockCoaches).values(
-                    validatedData.coaches.map(coachId => ({
+            // Insert program relations if specific programs are selected
+            if (validatedData.programs !== 'all') {
+                await tx.insert(blockPrograms).values(
+                    validatedData.programs.map(programId => ({
                         blockId: newBlock.id,
-                        coachId: coachId,
+                        programId: programId,
                         createdAt: sql`now()`,
                         updatedAt: sql`now()`
                     }))
                 )
             }
 
-            revalidatePath('/calendar') // Adjust the path as needed
+            revalidatePath('/calendar')
 
             return {
                 success: true,
@@ -143,20 +143,20 @@ type BlockData = {
         id: number
         name: string
         sports: number[]
-        coaches: number[]
+        programs: number[] // Changed from coaches
     }[]
     sports: {
         id: number
         name: string
-        coaches: number[]
+        programs: number[] // Changed from coaches
     }[]
     packages: {
         id: number
         name: string
         sportId: number
-        coaches: number[]
+        programs: number[] // Changed from coaches
     }[]
-    coaches: {
+    programs: { // Changed from coaches
         id: number
         name: string
         branchIds: number[]
@@ -181,13 +181,13 @@ export async function getBlockData(): Promise<{ data: BlockData | null; error: s
         }
 
         // Fetch all related data in parallel with proper type casting
-        const [branchesData, sportsData, packagesData, coachesData] = await Promise.all([
-            // Get branches with their sports
+        const [branchesData, sportsData, packagesData, programsData] = await Promise.all([
+            // Get branches with their sports and programs
             db.select({
                 id: branches.id,
                 name: branchTranslations.name,
                 sports: sql<number[]>`array_agg(DISTINCT cast(${branchSport.sportId} as integer))`,
-                coaches: sql<number[]>`array_agg(DISTINCT cast(${coaches.id} as integer))`
+                programs: sql<number[]>`array_agg(DISTINCT cast(${programs.id} as integer))`
             })
                 .from(branches)
                 .innerJoin(branchTranslations, and(
@@ -195,15 +195,18 @@ export async function getBlockData(): Promise<{ data: BlockData | null; error: s
                     eq(branchTranslations.locale, 'en')
                 ))
                 .leftJoin(branchSport, eq(branches.id, branchSport.branchId))
-                .leftJoin(coaches, eq(branches.academicId, coaches.academicId))
+                .leftJoin(programs, and(
+                    eq(branches.id, programs.branchId),
+                    eq(branches.academicId, programs.academicId)
+                ))
                 .where(eq(branches.academicId, academic.id))
                 .groupBy(branches.id, branchTranslations.name),
 
-            // Get sports with their coaches
+            // Get sports with their programs
             db.select({
                 id: sports.id,
                 name: sportTranslations.name,
-                coaches: sql<number[]>`array_agg(DISTINCT cast(${coaches.id} as integer))`
+                programs: sql<number[]>`array_agg(DISTINCT cast(${programs.id} as integer))`
             })
                 .from(sports)
                 .innerJoin(sportTranslations, and(
@@ -215,36 +218,37 @@ export async function getBlockData(): Promise<{ data: BlockData | null; error: s
                     eq(branchSport.branchId, branches.id),
                     eq(branches.academicId, academic.id)
                 ))
-                .leftJoin(coaches, eq(branches.academicId, coaches.academicId))
+                .leftJoin(programs, and(
+                    eq(sports.id, programs.sportId),
+                    eq(branches.academicId, programs.academicId)
+                ))
                 .groupBy(sports.id, sportTranslations.name),
 
-            // Get packages with their sport and coaches
+            // Get packages with their sport and programs
             db.select({
                 id: packages.id,
                 name: packages.name,
                 sportId: programs.sportId,
-                coaches: sql<number[]>`array_agg(DISTINCT cast(${coaches.id} as integer))`
+                programs: sql<number[]>`array_agg(DISTINCT cast(${programs.id} as integer))`
             })
                 .from(packages)
                 .innerJoin(programs, and(
                     eq(packages.programId, programs.id),
                     eq(programs.academicId, academic.id)
                 ))
-                .leftJoin(coaches, eq(programs.academicId, coaches.academicId))
                 .groupBy(packages.id, packages.name, programs.sportId),
 
-            // Get coaches with their branches and sports
+            // Get programs with their branches and sports
             db.select({
-                id: coaches.id,
-                name: coaches.name,
+                id: programs.id,
+                name: programs.name,
                 branchIds: sql<number[]>`array_agg(DISTINCT cast(${branches.id} as integer))`,
                 sportIds: sql<number[]>`array_agg(DISTINCT cast(${programs.sportId} as integer))`
             })
-                .from(coaches)
-                .where(eq(coaches.academicId, academic.id))
-                .leftJoin(branches, eq(coaches.academicId, branches.academicId))
-                .leftJoin(programs, eq(coaches.academicId, programs.academicId))
-                .groupBy(coaches.id, coaches.name)
+                .from(programs)
+                .where(eq(programs.academicId, academic.id))
+                .leftJoin(branches, eq(programs.branchId, branches.id))
+                .groupBy(programs.id, programs.name, programs.sportId)
         ])
 
         return {
@@ -252,21 +256,22 @@ export async function getBlockData(): Promise<{ data: BlockData | null; error: s
                 branches: branchesData.map(b => ({
                     ...b,
                     sports: b.sports.filter(Boolean).map(Number),
-                    coaches: b.coaches.filter(Boolean).map(Number)
+                    programs: b.programs.filter(Boolean).map(Number)
                 })),
                 sports: sportsData.map(s => ({
                     ...s,
-                    coaches: s.coaches.filter(Boolean).map(Number)
+                    programs: s.programs.filter(Boolean).map(Number)
                 })),
                 packages: packagesData.map(p => ({
                     ...p,
                     sportId: Number(p.sportId) || 0,
-                    coaches: p.coaches.filter(Boolean).map(Number)
+                    programs: p.programs.filter(Boolean).map(Number)
                 })),
-                coaches: coachesData.map(c => ({
-                    ...c,
-                    branchIds: c.branchIds.filter(Boolean).map(Number),
-                    sportIds: c.sportIds.filter(Boolean).map(Number)
+                programs: programsData.map(p => ({
+                    ...p,
+                    branchIds: p.branchIds.filter(Boolean).map(Number),
+                    sportIds: p.sportIds.filter(Boolean).map(Number),
+                    name: p.name ?? ''
                 }))
             },
             error: null

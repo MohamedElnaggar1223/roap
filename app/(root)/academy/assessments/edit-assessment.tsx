@@ -61,7 +61,7 @@ const calculateAge = (birthDate: string): number => {
     const totalMonths = years * 12 + months + (days / 30); // Average days in a month.
     console.log(totalMonths)
 
-    return (totalMonths / 12);
+    return parseFloat((totalMonths / 12).toFixed(1));
 };
 
 const editAssessmentSchema = z.object({
@@ -319,6 +319,12 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
             setLoading(false)
         }
     }
+
+    useEffect(() => {
+        if (!editPackageOpen) {
+            setEditedPackage(null)
+        }
+    }, [editPackageOpen])
 
     return (
         <>

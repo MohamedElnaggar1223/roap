@@ -47,20 +47,20 @@ export default function CreateBlockDialog({ setRefetch }: { setRefetch: React.Di
     const [branches, setBranches] = useState<Branch[]>([])
     const [sports, setSports] = useState<Sport[]>([])
     const [packages, setPackages] = useState<Package[]>([])
-    const [coaches, setCoaches] = useState<Coach[]>([])
+    const [programs, setPrograms] = useState<Coach[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
     // Selection states
     const [selectedBranches, setSelectedBranches] = useState<number[]>([])
     const [selectedSports, setSelectedSports] = useState<number[]>([])
     const [selectedPackages, setSelectedPackages] = useState<number[]>([])
-    const [selectedCoaches, setSelectedCoaches] = useState<number[]>([])
+    const [selectedPrograms, setSelectedPrograms] = useState<number[]>([])
 
     // Dropdown states
     const [branchesOpen, setBranchesOpen] = useState(false)
     const [sportsOpen, setSportsOpen] = useState(false)
     const [packagesOpen, setPackagesOpen] = useState(false)
-    const [coachesOpen, setCoachesOpen] = useState(false)
+    const [programsOpen, setProgramsOpen] = useState(false)
 
     // Time slots generation
     const timeSlots = Array.from({ length: 16 }, (_, i) => {
@@ -87,7 +87,7 @@ export default function CreateBlockDialog({ setRefetch }: { setRefetch: React.Di
                     setBranches(result.data.branches)
                     setSports(result.data.sports)
                     setPackages(result.data.packages)
-                    setCoaches(result.data.coaches)
+                    setPrograms(result.data.programs)
                 }
             } catch (error) {
                 // toast.error('Failed to load data')
@@ -108,7 +108,7 @@ export default function CreateBlockDialog({ setRefetch }: { setRefetch: React.Di
         setSelectedBranches([])
         setSelectedSports([])
         setSelectedPackages([])
-        setSelectedCoaches([])
+        setSelectedPrograms([])
     }
 
     // Handle form submission
@@ -128,7 +128,7 @@ export default function CreateBlockDialog({ setRefetch }: { setRefetch: React.Di
                 branches: selectedBranches.length ? selectedBranches : 'all',
                 sports: selectedSports.length ? selectedSports : 'all',
                 packages: selectedPackages.length ? selectedPackages : 'all',
-                coaches: selectedCoaches.length ? selectedCoaches : 'all',
+                programs: selectedPrograms.length ? selectedPrograms : 'all',
                 note
             })
 
@@ -298,12 +298,12 @@ export default function CreateBlockDialog({ setRefetch }: { setRefetch: React.Di
                                 setIsOpen={setPackagesOpen}
                             />
                             <SelectionSection
-                                title="Coaches"
-                                items={coaches}
-                                selectedItems={selectedCoaches}
-                                setSelectedItems={setSelectedCoaches}
-                                isOpen={coachesOpen}
-                                setIsOpen={setCoachesOpen}
+                                title="Programs"
+                                items={programs}
+                                selectedItems={selectedPrograms}
+                                setSelectedItems={setSelectedPrograms}
+                                isOpen={programsOpen}
+                                setIsOpen={setProgramsOpen}
                             />
                         </div>
 

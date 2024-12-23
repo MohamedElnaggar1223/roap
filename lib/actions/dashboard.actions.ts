@@ -11,12 +11,12 @@ type DashboardStats = {
     currentMonthCount: number
     lastMonthCount: number
     totalBookings: number
-    timeTraffic: Array<{ hour: string; count: number }>
-    packageTraffic: Array<{ name: string | null; count: number; branchName?: string; sportName?: string; programName?: string | null }>
-    programTraffic: Array<{ name: string | null; count: number; branchName?: string; sportName?: string; programName?: string | null }>
-    coachTraffic: Array<{ name: string | null; count: number; branchName?: string; sportName?: string; programName?: string | null }>
-    sportTraffic: Array<{ name: string; count: number; branchName?: string; sportName?: string; programName?: string | null }>
-    branchTraffic: Array<{ name: string; count: number; branchName?: string; sportName?: string; programName?: string | null }>
+    timeTraffic: Array<{ hour: string; count: number; date: string }>
+    packageTraffic: Array<{ name: string | null; count: number; branchName?: string; sportName?: string; programName?: string | null; date: string; genders: string }>
+    programTraffic: Array<{ name: string | null; count: number; branchName?: string; sportName?: string; programName?: string | null; date: string; genders: string }>
+    coachTraffic: Array<{ name: string | null; count: number; branchName?: string; sportName?: string; programName?: string | null; date: string }>
+    sportTraffic: Array<{ name: string; count: number; branchName?: string; sportName?: string; programName?: string | null; date: string }>
+    branchTraffic: Array<{ name: string; count: number; branchName?: string; sportName?: string; programName?: string | null; date: string }>
 }
 
 export interface DashboardResponse {
@@ -151,6 +151,9 @@ export async function getDashboardStats(params: DashboardStatsParams = {}): Prom
                 .select({
                     hour: sql<string>`to_char(${bookingSessions.from}::time, 'HH24:MI')`,
                     count: sql<number>`count(*)::int`,
+                    date: bookings.createdAt,
+                    branchName: branchTranslations.name,
+                    genders: programs.gender
                 })
                 .from(bookingSessions)
                 .innerJoin(bookings, eq(bookingSessions.bookingId, bookings.id))
@@ -169,7 +172,7 @@ export async function getDashboardStats(params: DashboardStatsParams = {}): Prom
                         gender ? eq(programs.gender, gender) : sql`true`
                     )
                 )
-                .groupBy(sql`to_char(${bookingSessions.from}::time, 'HH24:MI')`)
+                .groupBy(sql`to_char(${bookingSessions.from}::time, 'HH24:MI')`, bookings.createdAt, branchTranslations.name, programs.gender)
                 .orderBy(sql`count(*) desc`)
                 .limit(4)
 
@@ -181,6 +184,8 @@ export async function getDashboardStats(params: DashboardStatsParams = {}): Prom
                     branchName: branchTranslations.name,
                     sportName: sportTranslations.name,
                     programName: sql<string>`COALESCE(${programs.name}, '')`,
+                    date: bookings.createdAt,
+                    genders: programs.gender
                 })
                 .from(bookingSessions)
                 .innerJoin(bookings, eq(bookingSessions.bookingId, bookings.id))
@@ -199,7 +204,7 @@ export async function getDashboardStats(params: DashboardStatsParams = {}): Prom
                         gender ? eq(programs.gender, gender) : sql`true`
                     )
                 )
-                .groupBy(packages.name, branchTranslations.name, sportTranslations.name, programs.name)
+                .groupBy(packages.name, branchTranslations.name, sportTranslations.name, programs.name, bookings.createdAt, programs.gender)
                 .orderBy(sql`count(*) desc`)
                 .limit(4)
 
@@ -211,6 +216,8 @@ export async function getDashboardStats(params: DashboardStatsParams = {}): Prom
                     branchName: branchTranslations.name,
                     sportName: sportTranslations.name,
                     programName: sql<string>`COALESCE(${programs.name}, '')`,
+                    date: bookings.createdAt,
+                    genders: programs.gender
                 })
                 .from(bookingSessions)
                 .innerJoin(bookings, eq(bookingSessions.bookingId, bookings.id))
@@ -229,7 +236,7 @@ export async function getDashboardStats(params: DashboardStatsParams = {}): Prom
                         gender ? eq(programs.gender, gender) : sql`true`
                     )
                 )
-                .groupBy(programs.name, branchTranslations.name, sportTranslations.name)
+                .groupBy(programs.name, branchTranslations.name, sportTranslations.name, bookings.createdAt, programs.gender)
                 .orderBy(sql`count(*) desc`)
                 .limit(4)
 
@@ -241,6 +248,8 @@ export async function getDashboardStats(params: DashboardStatsParams = {}): Prom
                     branchName: branchTranslations.name,
                     sportName: sportTranslations.name,
                     programName: sql<string>`COALESCE(${programs.name}, '')`,
+                    date: bookings.createdAt,
+                    genders: programs.gender
                 })
                 .from(bookingSessions)
                 .innerJoin(bookings, eq(bookingSessions.bookingId, bookings.id))
@@ -260,7 +269,7 @@ export async function getDashboardStats(params: DashboardStatsParams = {}): Prom
                         gender ? eq(programs.gender, gender) : sql`true`
                     )
                 )
-                .groupBy(coaches.name, branchTranslations.name, sportTranslations.name, programs.name)
+                .groupBy(coaches.name, branchTranslations.name, sportTranslations.name, programs.name, bookings.createdAt, programs.gender)
                 .orderBy(sql`count(*) desc`)
                 .limit(4)
 
@@ -272,6 +281,8 @@ export async function getDashboardStats(params: DashboardStatsParams = {}): Prom
                     branchName: branchTranslations.name,
                     sportName: sportTranslations.name,
                     programName: sql<string>`COALESCE(${programs.name}, '')`,
+                    date: bookings.createdAt,
+                    genders: programs.gender
                 })
                 .from(bookingSessions)
                 .innerJoin(bookings, eq(bookingSessions.bookingId, bookings.id))
@@ -296,7 +307,7 @@ export async function getDashboardStats(params: DashboardStatsParams = {}): Prom
                         gender ? eq(programs.gender, gender) : sql`true`
                     )
                 )
-                .groupBy(sportTranslations.name, branchTranslations.name, programs.name)
+                .groupBy(sportTranslations.name, branchTranslations.name, programs.name, bookings.createdAt, programs.gender)
                 .orderBy(sql`count(*) desc`)
                 .limit(4)
 
@@ -308,6 +319,8 @@ export async function getDashboardStats(params: DashboardStatsParams = {}): Prom
                     branchName: branchTranslations.name,
                     sportName: sportTranslations.name,
                     programName: sql<string>`COALESCE(${programs.name}, '')`,
+                    date: bookings.createdAt,
+                    genders: programs.gender
                 })
                 .from(bookingSessions)
                 .innerJoin(bookings, eq(bookingSessions.bookingId, bookings.id))
@@ -332,7 +345,7 @@ export async function getDashboardStats(params: DashboardStatsParams = {}): Prom
                         gender ? eq(programs.gender, gender) : sql`true`
                     )
                 )
-                .groupBy(branchTranslations.name, sportTranslations.name, programs.name)
+                .groupBy(branchTranslations.name, sportTranslations.name, programs.name, bookings.createdAt, programs.gender)
                 .orderBy(sql`count(*) desc`)
                 .limit(4)
 
@@ -340,7 +353,7 @@ export async function getDashboardStats(params: DashboardStatsParams = {}): Prom
                 currentMonthCount: currentMonthCount.count,
                 lastMonthCount: lastMonthCount.count,
                 totalBookings: totalBookings.count,
-                timeTraffic,
+                timeTraffic: timeTraffic as DashboardStats['timeTraffic'],
                 packageTraffic: packageTraffic as DashboardStats['packageTraffic'],
                 programTraffic: programTraffic as DashboardStats['programTraffic'],
                 coachTraffic: coachTraffic as DashboardStats['coachTraffic'],

@@ -90,7 +90,7 @@ export const blocks = pgTable("blocks", {
     branchScope: blockScope("branch_scope").default('all'),
     sportScope: blockScope("sport_scope").default('all'),
     packageScope: blockScope("package_scope").default('all'),
-    coachScope: blockScope("coach_scope").default('all'),
+    programScope: blockScope("program_scope").default('all'),
     note: varchar({ length: 255 }).default(sql`NULL`),
     createdAt: timestamp("created_at", { mode: 'string' }),
     updatedAt: timestamp("updated_at", { mode: 'string' }),
@@ -722,30 +722,27 @@ export const coaches = pgTable("coaches", {
     }
 });
 
-export const blockCoaches = pgTable("block_coaches", {
-    // You can use { mode: "bigint" } if numbers are exceeding js number limitations
-    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "block_coaches_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
-    // You can use { mode: "bigint" } if numbers are exceeding js number limitations
+export const blockPrograms = pgTable("block_programs", {
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "block_programs_id_seq", startWith: 1000, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
     blockId: bigint("block_id", { mode: "number" }).notNull(),
-    // You can use { mode: "bigint" } if numbers are exceeding js number limitations
-    coachId: bigint("coach_id", { mode: "number" }).notNull(),
+    programId: bigint("program_id", { mode: "number" }).notNull(),
     createdAt: timestamp("created_at", { mode: 'string' }),
     updatedAt: timestamp("updated_at", { mode: 'string' }),
 }, (table) => {
     return {
-        idxBlockCoachesBlockId: index("idx_block_coaches_block_id").using("btree", table.blockId.asc().nullsLast().op("int8_ops")),
-        idxBlockCoachesCoachId: index("idx_block_coaches_coach_id").using("btree", table.coachId.asc().nullsLast().op("int8_ops")),
-        blockCoachesBlockIdFkey: foreignKey({
+        idxBlockProgramsBlockId: index("idx_block_programs_block_id").using("btree", table.blockId.asc().nullsLast().op("int8_ops")),
+        idxBlockProgramsProgramId: index("idx_block_programs_program_id").using("btree", table.programId.asc().nullsLast().op("int8_ops")),
+        blockProgramsBlockIdFkey: foreignKey({
             columns: [table.blockId],
             foreignColumns: [blocks.id],
-            name: "block_coaches_block_id_fkey"
+            name: "block_programs_block_id_fkey"
         }).onDelete("cascade"),
-        blockCoachesCoachIdFkey: foreignKey({
-            columns: [table.coachId],
-            foreignColumns: [coaches.id],
-            name: "block_coaches_coach_id_fkey"
+        blockProgramsProgramIdFkey: foreignKey({
+            columns: [table.programId],
+            foreignColumns: [programs.id],
+            name: "block_programs_program_id_fkey"
         }).onDelete("cascade"),
-        blockCoachesBlockIdCoachIdKey: unique("block_coaches_block_id_coach_id_key").on(table.blockId, table.coachId),
+        blockProgramsBlockIdProgramIdKey: unique("block_programs_block_id_program_id_key").on(table.blockId, table.programId),
     }
 });
 
@@ -794,6 +791,7 @@ export const packages = pgTable("packages", {
     endDate: date("end_date").notNull(),
     sessionPerWeek: integer("session_per_week").default(0).notNull(),
     sessionDuration: integer("session_duration"),
+    capacity: integer("capacity").default(0).notNull(),
     // You can use { mode: "bigint" } if numbers are exceeding js number limitations
     programId: bigint("program_id", { mode: "number" }).notNull(),
     createdAt: timestamp("created_at", { mode: 'string' }),
@@ -1269,7 +1267,7 @@ export const blocksRelations = relations(blocks, ({ one, many }) => ({
     blockBranches: many(blockBranches),
     blockSports: many(blockSports),
     blockPackages: many(blockPackages),
-    blockCoaches: many(blockCoaches),
+    blockPrograms: many(blockPrograms),
 }));
 
 export const academicsRelations = relations(academics, ({ one, many }) => ({
@@ -1521,6 +1519,7 @@ export const programsRelations = relations(programs, ({ one, many }) => ({
     packages: many(packages),
     coachPrograms: many(coachProgram),
     discounts: many(discounts),
+    blockPrograms: many(blockPrograms),
 }));
 
 export const coachesRelations = relations(coaches, ({ one, many }) => ({
@@ -1528,7 +1527,7 @@ export const coachesRelations = relations(coaches, ({ one, many }) => ({
         fields: [coaches.academicId],
         references: [academics.id]
     }),
-    blockCoaches: many(blockCoaches),
+    // blockCoaches: many(blockCoaches),
     bookings: many(bookings),
     coachPackages: many(coachPackage),
     coachPrograms: many(coachProgram),
@@ -1536,14 +1535,14 @@ export const coachesRelations = relations(coaches, ({ one, many }) => ({
     coachSports: many(coachSport),
 }));
 
-export const blockCoachesRelations = relations(blockCoaches, ({ one }) => ({
+export const blockProgramsRelations = relations(blockPrograms, ({ one }) => ({
     block: one(blocks, {
-        fields: [blockCoaches.blockId],
+        fields: [blockPrograms.blockId],
         references: [blocks.id]
     }),
-    coach: one(coaches, {
-        fields: [blockCoaches.coachId],
-        references: [coaches.id]
+    program: one(programs, {
+        fields: [blockPrograms.programId],
+        references: [programs.id]
     }),
 }));
 

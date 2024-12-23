@@ -2,7 +2,7 @@
 
 import { SQL, and, asc, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm'
 import { db } from '@/db'
-import { academics, academicSport, academicTranslations, blockBranches, blockCoaches, blockPackages, blocks, blockSports, bookings, bookingSessions, branches, branchTranslations, coaches, media, packages, profiles, programs, sports, sportTranslations, users } from '@/db/schema'
+import { academics, academicSport, academicTranslations, blockBranches, blockPrograms, blockPackages, blocks, blockSports, bookings, bookingSessions, branches, branchTranslations, coaches, media, packages, profiles, programs, sports, sportTranslations, users } from '@/db/schema'
 // import { auth } from '../auth'
 import bcrypt from "bcryptjs";
 import { isAdmin } from '../admin'
@@ -511,9 +511,7 @@ export const getCalendarSlots = async (startDate: Date, endDate: Date) => {
 			branchName: branchTranslations.name,
 			sportName: sportTranslations.name,
 			packageName: packages.name,
-			coachName: coaches.name,
 			packageId: packages.id,
-			coachId: coaches.id,
 			gender: programs.gender
 		})
 		.from(blocks)
@@ -525,9 +523,8 @@ export const getCalendarSlots = async (startDate: Date, endDate: Date) => {
 		.leftJoin(sportTranslations, eq(sports.id, sportTranslations.sportId))
 		.leftJoin(blockPackages, eq(blocks.id, blockPackages.blockId))
 		.leftJoin(packages, eq(blockPackages.packageId, packages.id))
-		.leftJoin(programs, eq(packages.programId, programs.id))
-		.leftJoin(blockCoaches, eq(blocks.id, blockCoaches.blockId))
-		.leftJoin(coaches, eq(blockCoaches.coachId, coaches.id))
+		.leftJoin(blockPrograms, eq(blocks.id, blockPrograms.blockId))
+		.leftJoin(programs, and(eq(packages.programId, programs.id), eq(programs.id, blockPrograms.programId)))
 		.where(
 			and(
 				sql`DATE(${blocks.date}) >= DATE(${formattedStartDate})`,
@@ -543,6 +540,8 @@ export const getCalendarSlots = async (startDate: Date, endDate: Date) => {
 		studentName: null,
 		studentBirthday: null,
 		color: '#F5F5F5',
+		coachName: null,
+		coachId: null,
 	}));
 
 

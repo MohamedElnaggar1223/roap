@@ -238,6 +238,10 @@ export default function Calendar() {
 		}
 	}
 
+	const availableGenders = useMemo(() => {
+		return [...events.map(item => item?.gender?.split(',')).flat().filter(Boolean), ...events.map(item => item.gender?.split(',')).flat().filter(Boolean)].filter(value => value !== '').filter((value, index, self) => self.indexOf(value) === index)
+	}, [events]);
+
 	const getEventsForSlot = (date: Date, hour: number) => {
 		const slotEvents = filteredEvents.filter((event) => {
 			if (!event.date || !event.startTime) return false
@@ -274,7 +278,7 @@ export default function Calendar() {
 		<>
 			<div className="flex-wrap items-center gap-2 mb-2 sm:mb-0 flex">
 				<BookingDialog setRefetch={setRefetch} />
-				<AddBlock setRefetch={setRefetch} />
+				{/* <AddBlock setRefetch={setRefetch} /> */}
 			</div>
 			<div className="w-full max-w-7xl mx-auto p-2 sm:p-4 bg-[#E0E4D9]">
 				{/* Header */}
@@ -374,7 +378,7 @@ export default function Calendar() {
 										height={16}
 										alt='Gender'
 									/>
-									{selectedGender || 'Gender'}
+									{selectedGender || 'For'}
 									<ChevronDown className="w-4 h-4" />
 								</Button>
 							</DropdownMenuTrigger>
@@ -382,7 +386,7 @@ export default function Calendar() {
 								<DropdownMenuItem onClick={() => setSelectedGender(null)}>
 									All Genders
 								</DropdownMenuItem>
-								{genders.map(gender => (
+								{availableGenders.map(gender => (
 									<DropdownMenuItem
 										key={gender}
 										onClick={() => setSelectedGender(gender ?? '')}

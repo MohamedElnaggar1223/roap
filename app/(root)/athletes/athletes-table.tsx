@@ -239,7 +239,7 @@ export function AthletesDataTable({ data }: AthletesDataTableProps) {
                                 {athlete.profile?.name}
                             </div>
                             <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                {athlete.phoneNumber}
+                                {athlete.phoneNumber ? athlete.phoneNumber : athlete.firstGuardianPhone}
                             </div>
                             <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
                                 {calculateAge(athlete.profile?.birthday!)}

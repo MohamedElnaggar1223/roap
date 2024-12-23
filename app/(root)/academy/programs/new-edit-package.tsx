@@ -53,7 +53,8 @@ const packageSchema = z.object({
         to: z.string().min(1, "End time is required"),
         memo: z.string(),
         id: z.number().optional()
-    }))
+    })),
+    capacity: z.string().default("0"),
 }).refine((data) => {
     if (parseFloat(data.entryFees) > 0 && !data.entryFeesExplanation) {
         return false;
@@ -85,6 +86,7 @@ interface Package {
     entryFeesStartDate?: Date
     entryFeesEndDate?: Date
     id?: number
+    capacity: number
 }
 
 interface Schedule {
@@ -175,6 +177,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                 new Date(packageEdited.entryFeesStartDate) : undefined,
             entryFeesEndDate: packageEdited.entryFeesEndDate ?
                 new Date(packageEdited.entryFeesEndDate) : undefined,
+            capacity: packageEdited.capacity.toString()
         }
     })
 
@@ -244,7 +247,8 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                     entryFeesStartDate: values.type !== "Monthly" && showEntryFeesFields ?
                         values.entryFeesStartDate : undefined,
                     entryFeesEndDate: values.type !== "Monthly" && showEntryFeesFields ?
-                        values.entryFeesEndDate : undefined
+                        values.entryFeesEndDate : undefined,
+                    capacity: parseInt(values.capacity)
                 })
 
                 if (result.error) {
@@ -274,7 +278,8 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                         entryFeesStartDate: values.type !== "Monthly" && showEntryFeesFields ?
                             values.entryFeesStartDate : undefined,
                         entryFeesEndDate: values.type !== "Monthly" && showEntryFeesFields ?
-                            values.entryFeesEndDate : undefined
+                            values.entryFeesEndDate : undefined,
+                        capacity: parseInt(values.capacity)
                     }
                 })
 
@@ -459,6 +464,22 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                                 <div className="flex items-center">
                                                     <span className="px-2 py-3.5 text-sm bg-transparent border border-r-0 border-gray-500 rounded-l-[10px]">AED</span>
                                                     <Input {...field} type="number" min="0" step="0.01" className='px-2 py-6 rounded-l-none rounded-r-[10px] border border-gray-500 font-inter' />
+                                                </div>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="capacity"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Capacity</FormLabel>
+                                            <FormControl>
+                                                <div className="flex items-center">
+                                                    <Input {...field} type="number" min="0" step="1" className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                 </div>
                                             </FormControl>
                                             <FormMessage />

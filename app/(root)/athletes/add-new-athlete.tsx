@@ -38,8 +38,6 @@ type FileState = {
 const relationships = [
     "Mother",
     "Father",
-    "Grandmother",
-    "Grandfather",
     "Other"
 ]
 
@@ -385,6 +383,49 @@ export default function AddNewAthlete() {
                                             </FormItem>
                                         )}
                                     />
+                                    <div className="flex gap-4">
+
+                                        <div className='flex w-full gap-2 items-start justify-center'>
+                                            <FormField
+                                                control={form.control}
+                                                name='gender'
+                                                render={({ field }) => (
+                                                    <FormItem className='flex-1'>
+                                                        <FormLabel>Gender</FormLabel>
+                                                        <Select onValueChange={field.onChange} value={field.value}>
+                                                            <FormControl>
+                                                                <SelectTrigger className='px-2 h-12 rounded-[10px] border border-gray-500 font-inter'>
+                                                                    <SelectValue placeholder="Select gender" />
+                                                                </SelectTrigger>
+                                                            </FormControl>
+                                                            <SelectContent className='!bg-[#F1F2E9]'>
+                                                                <SelectItem value="male">Male</SelectItem>
+                                                                <SelectItem value="female">Female</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
+
+                                        <div className='flex w-full gap-2 items-start justify-center'>
+                                            <FormField
+                                                control={form.control}
+                                                name='birthday'
+                                                render={({ field }) => (
+                                                    <FormItem className='flex-1'>
+                                                        <FormLabel>Date of Birth</FormLabel>
+                                                        <FormControl>
+                                                            <DateSelector field={field} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+
+                                        </div>
+                                    </div>
                                     <>
                                         <div className='flex w-full gap-2 items-start justify-center'>
                                             <FormField
@@ -479,49 +520,7 @@ export default function AddNewAthlete() {
 
 
 
-                                    <div className="flex gap-4">
 
-                                        <div className='flex w-full gap-2 items-start justify-center'>
-                                            <FormField
-                                                control={form.control}
-                                                name='gender'
-                                                render={({ field }) => (
-                                                    <FormItem className='flex-1'>
-                                                        <FormLabel>Gender</FormLabel>
-                                                        <Select onValueChange={field.onChange} value={field.value}>
-                                                            <FormControl>
-                                                                <SelectTrigger className='px-2 h-12 rounded-[10px] border border-gray-500 font-inter'>
-                                                                    <SelectValue placeholder="Select gender" />
-                                                                </SelectTrigger>
-                                                            </FormControl>
-                                                            <SelectContent className='!bg-[#F1F2E9]'>
-                                                                <SelectItem value="male">Male</SelectItem>
-                                                                <SelectItem value="female">Female</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </div>
-
-                                        <div className='flex w-full gap-2 items-start justify-center'>
-                                            <FormField
-                                                control={form.control}
-                                                name='birthday'
-                                                render={({ field }) => (
-                                                    <FormItem className='flex-1'>
-                                                        <FormLabel>Date of Birth</FormLabel>
-                                                        <FormControl>
-                                                            <DateSelector field={field} />
-                                                        </FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-
-                                        </div>
-                                    </div>
                                     <div className='flex w-full gap-2 items-start justify-center'>
                                         <FormField
                                             control={form.control}

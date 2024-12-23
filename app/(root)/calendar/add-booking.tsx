@@ -252,6 +252,14 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingDetails, athlete
     const [selectedLocation, setSelectedLocation] = useState<string>("");
     const [selectedSport, setSelectedSport] = useState<string>("");
     const [filteredPrograms, setFilteredPrograms] = useState<ProgramDetails[]>([]);
+    const [filteredSports, setFilteredSports] = useState<string[]>([]);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (selectedLocation) {
+            setFilteredSports(programs.filter(p => p.branch === selectedLocation).map(p => p.sport).filter((value, index, self) => self.indexOf(value) === index))
+        }
+    }, [selectedLocation])
 
     useEffect(() => {
         if (!programs) return;
@@ -273,10 +281,14 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingDetails, athlete
         const fetchPrograms = async () => {
             setLoading(true);
             try {
-                const { data } = await getProgramsData(athlete.birthday ?? undefined);
+                const { data, error } = await getProgramsData(athlete.birthday ?? undefined);
 
                 if (data) {
                     setPrograms(data.map(p => ({ ...p, name: p.name || '' })));
+                }
+
+                if (error) {
+                    setError(error)
                 }
                 setLoading(false);
             } catch (error) {
@@ -354,6 +366,11 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingDetails, athlete
 
     return (
         <div className="space-y-4">
+            {error && (
+                <div className="bg-red-50 text-red-600 rounded-lg text-sm p-4 flex items-center justify-center">
+                    {error}
+                </div>
+            )}
             <div className="space-y-2 flex flex-col">
                 <label className="text-sm font-medium">Location</label>
                 <select
@@ -377,9 +394,10 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingDetails, athlete
                     className='px-2 py-3.5 text-sm rounded-[10px] border border-gray-500 font-inter bg-transparent'
                     onChange={(e) => setSelectedSport(e.target.value)}
                     value={selectedSport}
+                    disabled={!selectedLocation}
                 >
                     <option value="">All Sports</option>
-                    {Array.from(new Set(programs.map(p => p.sport))).map(sport => (
+                    {filteredSports.map(sport => (
                         <option key={sport} value={sport}>
                             {sport}
                         </option>
@@ -391,6 +409,7 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingDetails, athlete
                 <label className="text-sm font-medium">Program</label>
                 <select
                     className='px-2 py-3.5 text-sm rounded-[10px] border border-gray-500 font-inter bg-transparent'
+                    disabled={!selectedLocation || !selectedSport}
                     onChange={(e) => {
                         const program = programs.find(p => p.id === Number(e.target.value));
                         if (program) setSelectedProgram(program);
@@ -691,7 +710,7 @@ export default function BookingDialog({ setRefetch }: { setRefetch: React.Dispat
                 profileId: state.athlete!.id,
                 packageId: details.package.id,
                 coachId: details.coach?.id ?? undefined,
-                date: format(details.date, 'yyyy-MM-dd'),
+                date: details.date.toISOString(),
                 time: details.time
             });
 

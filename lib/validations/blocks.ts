@@ -8,6 +8,6 @@ export const createBlockSchema = z.object({
     branches: z.union([z.literal('all'), z.array(z.number())]),
     sports: z.union([z.literal('all'), z.array(z.number())]),
     packages: z.union([z.literal('all'), z.array(z.number())]),
-    coaches: z.union([z.literal('all'), z.array(z.number())]),
+    programs: z.union([z.literal('all'), z.array(z.number())]),
     note: z.string().optional(),
 })

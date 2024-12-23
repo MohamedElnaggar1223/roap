@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/select"
 import { getImageUrl, uploadImageToSupabase } from '@/lib/supabase-images'
 import { countries, nationalities } from '@/constants'
+import { DateSelector } from '@/components/shared/date-selector'
 
 type Athlete = {
     id: number
@@ -53,6 +54,12 @@ type Athlete = {
     }
 }
 
+const relationships = [
+    "Mother",
+    "Father",
+    "Other"
+]
+
 type Props = {
     athleteEdited: Athlete
 }
@@ -68,6 +75,8 @@ export default function EditAthlete({ athleteEdited }: Props) {
     const certificateInputRef = useRef<HTMLInputElement>(null)
 
     const [editOpen, setEditOpen] = useState(false)
+    const [showOtherFirstGuardian, setShowOtherFirstGuardian] = useState(false)
+    const [showOtherSecondGuardian, setShowOtherSecondGuardian] = useState(false)
     const [loading, setLoading] = useState(false)
     const [athleteType, setAthleteType] = useState<'primary' | 'fellow'>(athleteEdited.type)
     const [selectedImage, setSelectedImage] = useState<FileState>({
@@ -402,6 +411,49 @@ export default function EditAthlete({ athleteEdited }: Props) {
                                             </FormItem>
                                         )}
                                     />
+                                    <div className="flex gap-4">
+
+                                        <div className='flex w-full gap-2 items-start justify-center'>
+                                            <FormField
+                                                control={form.control}
+                                                name='gender'
+                                                render={({ field }) => (
+                                                    <FormItem className='flex-1'>
+                                                        <FormLabel>Gender</FormLabel>
+                                                        <Select onValueChange={field.onChange} value={field.value}>
+                                                            <FormControl>
+                                                                <SelectTrigger className='px-2 h-12 rounded-[10px] border border-gray-500 font-inter'>
+                                                                    <SelectValue placeholder="Select gender" />
+                                                                </SelectTrigger>
+                                                            </FormControl>
+                                                            <SelectContent className='!bg-[#F1F2E9]'>
+                                                                <SelectItem value="male">Male</SelectItem>
+                                                                <SelectItem value="female">Female</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
+
+                                        <div className='flex w-full gap-2 items-start justify-center'>
+                                            <FormField
+                                                control={form.control}
+                                                name='birthday'
+                                                render={({ field }) => (
+                                                    <FormItem className='flex-1'>
+                                                        <FormLabel>Date of Birth</FormLabel>
+                                                        <FormControl>
+                                                            <DateSelector field={field} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+
+                                        </div>
+                                    </div>
                                     <>
                                         <div className='flex w-full gap-2 items-start justify-center'>
                                             <FormField
@@ -419,13 +471,43 @@ export default function EditAthlete({ athleteEdited }: Props) {
                                             />
                                             <FormField
                                                 control={form.control}
-                                                name='firstGuardianRelationship'
+                                                name="firstGuardianRelationship"
                                                 render={({ field }) => (
-                                                    <FormItem className='flex-1'>
+                                                    <FormItem className="flex-1">
                                                         <FormLabel>First Guardian Relationship*</FormLabel>
-                                                        <FormControl>
-                                                            <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
-                                                        </FormControl>
+                                                        <Select
+                                                            onValueChange={(value) => {
+                                                                if (value === "Other") {
+                                                                    setShowOtherFirstGuardian(true)
+                                                                    field.onChange("")
+                                                                } else {
+                                                                    setShowOtherFirstGuardian(false)
+                                                                    field.onChange(value)
+                                                                }
+                                                            }}
+                                                        >
+                                                            <FormControl>
+                                                                <SelectTrigger className="px-2 py-6 rounded-[10px] border border-gray-500 font-inter">
+                                                                    <SelectValue placeholder="Select relationship" />
+                                                                </SelectTrigger>
+                                                            </FormControl>
+                                                            <SelectContent>
+                                                                {relationships.map((relationship) => (
+                                                                    <SelectItem key={relationship} value={relationship}>
+                                                                        {relationship}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                        {showOtherFirstGuardian && (
+                                                            <FormControl>
+                                                                <Input
+                                                                    {...field}
+                                                                    placeholder="Please specify relationship"
+                                                                    className="mt-2 px-2 py-6 rounded-[10px] border border-gray-500 font-inter"
+                                                                />
+                                                            </FormControl>
+                                                        )}
                                                         <FormMessage />
                                                     </FormItem>
                                                 )}
@@ -477,13 +559,43 @@ export default function EditAthlete({ athleteEdited }: Props) {
                                             />
                                             <FormField
                                                 control={form.control}
-                                                name='secondGuardianRelationship'
+                                                name="secondGuardianRelationship"
                                                 render={({ field }) => (
-                                                    <FormItem className='flex-1'>
-                                                        <FormLabel>Second Guardian Relationship (Optional)</FormLabel>
-                                                        <FormControl>
-                                                            <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
-                                                        </FormControl>
+                                                    <FormItem className="flex-1">
+                                                        <FormLabel>Second Guardian Relationship*</FormLabel>
+                                                        <Select
+                                                            onValueChange={(value) => {
+                                                                if (value === "Other") {
+                                                                    setShowOtherSecondGuardian(true)
+                                                                    field.onChange("")
+                                                                } else {
+                                                                    setShowOtherSecondGuardian(false)
+                                                                    field.onChange(value)
+                                                                }
+                                                            }}
+                                                        >
+                                                            <FormControl>
+                                                                <SelectTrigger className="px-2 py-6 rounded-[10px] border border-gray-500 font-inter">
+                                                                    <SelectValue placeholder="Select relationship" />
+                                                                </SelectTrigger>
+                                                            </FormControl>
+                                                            <SelectContent>
+                                                                {relationships.map((relationship) => (
+                                                                    <SelectItem key={relationship} value={relationship}>
+                                                                        {relationship}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                        {showOtherSecondGuardian && (
+                                                            <FormControl>
+                                                                <Input
+                                                                    {...field}
+                                                                    placeholder="Please specify relationship"
+                                                                    className="mt-2 px-2 py-6 rounded-[10px] border border-gray-500 font-inter"
+                                                                />
+                                                            </FormControl>
+                                                        )}
                                                         <FormMessage />
                                                     </FormItem>
                                                 )}
@@ -522,55 +634,7 @@ export default function EditAthlete({ athleteEdited }: Props) {
 
 
 
-                                    <div className="flex gap-4">
 
-                                        <div className='flex w-full gap-2 items-start justify-center'>
-                                            <FormField
-                                                control={form.control}
-                                                name='gender'
-                                                render={({ field }) => (
-                                                    <FormItem className='flex-1'>
-                                                        <FormLabel>Gender</FormLabel>
-                                                        <Select onValueChange={field.onChange} value={field.value}>
-                                                            <FormControl>
-                                                                <SelectTrigger className='px-2 h-12 rounded-[10px] border border-gray-500 font-inter'>
-                                                                    <SelectValue placeholder="Select gender" />
-                                                                </SelectTrigger>
-                                                            </FormControl>
-                                                            <SelectContent className='!bg-[#F1F2E9]'>
-                                                                <SelectItem value="male">Male</SelectItem>
-                                                                <SelectItem value="female">Female</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </div>
-
-                                        <div className='flex w-full gap-2 items-start justify-center'>
-                                            <FormField
-                                                control={form.control}
-                                                name='birthday'
-                                                render={({ field }) => (
-                                                    <FormItem className='flex-1'>
-                                                        <FormLabel>Date of Birth</FormLabel>
-                                                        <FormControl>
-                                                            <Input
-                                                                type="date"
-                                                                {...field}
-                                                                value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
-                                                                onChange={(e) => field.onChange(new Date(e.target.value))}
-                                                                className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
-                                                            />
-                                                        </FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-
-                                        </div>
-                                    </div>
                                     <div className='flex w-full gap-2 items-start justify-center'>
                                         <FormField
                                             control={form.control}

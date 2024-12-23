@@ -67,7 +67,7 @@ const calculateAge = (birthDate: string): number => {
     const totalMonths = years * 12 + months + (days / 30); // Average days in a month.
     console.log(totalMonths)
 
-    return (totalMonths / 12);
+    return parseFloat((totalMonths / 12).toFixed(1));
 };
 
 interface Discount {
@@ -125,6 +125,7 @@ interface Package {
     entryFeesExplanation?: string
     entryFeesAppliedUntil?: string[]
     id?: number
+    capacity: number
 }
 
 interface Schedule {
@@ -427,6 +428,12 @@ export default function EditProgram({ branches, sports, programEdited, academySp
             prev.includes(gender) ? prev.filter(g => g !== gender) : [...prev, gender]
         )
     }
+
+    useEffect(() => {
+        if (!editPackageOpen) {
+            setEditedPackage(null)
+        }
+    }, [editPackageOpen])
 
     return (
         <>

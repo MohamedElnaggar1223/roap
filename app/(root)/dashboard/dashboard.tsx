@@ -16,12 +16,12 @@ type DashboardStats = {
     currentMonthCount: number
     lastMonthCount: number
     totalBookings: number
-    timeTraffic: Array<{ hour: string; count: number }>
-    packageTraffic: Array<{ name: string | null; count: number; branchName?: string; sportName?: string; programName?: string | null }>
-    programTraffic: Array<{ name: string | null; count: number; branchName?: string; sportName?: string; programName?: string | null }>
-    coachTraffic: Array<{ name: string | null; count: number; branchName?: string; sportName?: string; programName?: string | null }>
-    sportTraffic: Array<{ name: string; count: number; branchName?: string; sportName?: string; programName?: string | null }>
-    branchTraffic: Array<{ name: string; count: number; branchName?: string; sportName?: string; programName?: string | null }>
+    timeTraffic: Array<{ hour: string; count: number; date: string }>
+    packageTraffic: Array<{ name: string | null; count: number; branchName?: string; sportName?: string; programName?: string | null; date: string; genders: string }>
+    programTraffic: Array<{ name: string | null; count: number; branchName?: string; sportName?: string; programName?: string | null; date: string; genders: string }>
+    coachTraffic: Array<{ name: string | null; count: number; branchName?: string; sportName?: string; programName?: string | null; date: string }>
+    sportTraffic: Array<{ name: string; count: number; branchName?: string; sportName?: string; programName?: string | null; date: string }>
+    branchTraffic: Array<{ name: string; count: number; branchName?: string; sportName?: string; programName?: string | null; date: string }>
 }
 
 const formatTime = (time: string) => {
@@ -39,7 +39,7 @@ const formatTime = (time: string) => {
 
 const COLORS = ['#AA7CBF', '#87B28A', '#87B2B2', '#E5DCAE']
 
-const CustomPieChart = ({ data, title, isTime = false }: {
+const CustomPieChart = ({ data, title, isTime }: {
     data: Array<{ name: string | null; count: number }>,
     title: string,
     isTime?: boolean
@@ -129,6 +129,7 @@ export function DashboardClient({ stats }: { stats: DashboardStats }) {
     const [selectedSport, setSelectedSport] = useState<string | null>(null)
     const [selectedProgram, setSelectedProgram] = useState<string | null>(null)
     const [selectedGender, setSelectedGender] = useState<string | null>(null)
+    const [selectedDate, setSelectedDate] = useState<string>('none');
     const [filteredStats, setFilteredStats] = useState<DashboardStats>(stats)
 
     const getUniqueValues = (key: 'branchName' | 'sportName' | 'programName'): string[] => {
@@ -139,21 +140,42 @@ export function DashboardClient({ stats }: { stats: DashboardStats }) {
         return Array.from(new Set(allValues))
     }
 
+    const filterByDate = (data: any[]) => {
+        const now = new Date();
+        const oneDay = 24 * 60 * 60 * 1000;
+        const oneWeek = 7 * oneDay;
+        const oneMonth = 30 * oneDay;
+
+        return data.filter(item => {
+            const itemDate = new Date(item.date);
+            switch (selectedDate) {
+                case 'today':
+                    return now.toDateString() === itemDate.toDateString();
+                case 'last week':
+                    return (now.getTime() - itemDate.getTime()) <= oneWeek;
+                case 'last month':
+                    return (now.getTime() - itemDate.getTime()) <= oneMonth;
+                default:
+                    return true;
+            }
+        });
+    };
+
+
     const locations = getUniqueValues('branchName')
     const sports = getUniqueValues('sportName')
     const programs = getUniqueValues('programName')
-    const genders = ['Male', 'Female', 'Mixed']
 
     useEffect(() => {
         const filterData = (data: any[]) => {
-            return data.filter(item => {
-                const locationMatch = !selectedLocation || item.branchName === selectedLocation
-                const sportMatch = !selectedSport || item.sportName === selectedSport
-                const programMatch = !selectedProgram || item.programName === selectedProgram
-                const genderMatch = !selectedGender || (item.gender && item.gender === selectedGender)
-                return locationMatch && sportMatch && programMatch && genderMatch
-            })
-        }
+            return filterByDate(data.filter(item => {
+                const locationMatch = !selectedLocation || item.branchName === selectedLocation;
+                const sportMatch = !selectedSport || item.sportName === selectedSport;
+                const programMatch = !selectedProgram || item.programName === selectedProgram;
+                const genderMatch = !selectedGender || (item.genders && item.genders.includes(selectedGender));
+                return locationMatch && sportMatch && programMatch && genderMatch;
+            }));
+        };
 
         const newFilteredStats: DashboardStats = {
             ...stats,
@@ -166,7 +188,7 @@ export function DashboardClient({ stats }: { stats: DashboardStats }) {
         }
 
         setFilteredStats(newFilteredStats)
-    }, [selectedLocation, selectedSport, selectedProgram, selectedGender, stats])
+    }, [selectedLocation, selectedSport, selectedProgram, selectedGender, selectedDate, stats])
 
     const percentageChange = ((filteredStats.currentMonthCount - filteredStats.lastMonthCount) / filteredStats.lastMonthCount) * 100
 
@@ -194,6 +216,9 @@ export function DashboardClient({ stats }: { stats: DashboardStats }) {
         ]
     }
 
+    const availableGenders = useMemo(() => {
+        return [...stats.programTraffic.map(item => item.genders.split(',')).flat().filter(Boolean), ...stats.packageTraffic.map(item => item.genders.split(',')).flat().filter(Boolean)].filter(value => value !== '').filter((value, index, self) => self.indexOf(value) === index)
+    }, [stats]);
 
     const transformedTimeTraffic = useMemo(() => transformData(filteredStats.timeTraffic, 'hour'), [filteredStats.timeTraffic])
     const transformedPackageTraffic = useMemo(() => transformData(filteredStats.packageTraffic, 'name'), [filteredStats.packageTraffic])
@@ -206,7 +231,32 @@ export function DashboardClient({ stats }: { stats: DashboardStats }) {
         <div className="space-y-8 p-6 font-inter">
             {/* Filters Section */}
             <div className="flex flex-wrap items-center gap-2 mb-4">
+
                 <span className="text-sm font-medium">Filters:</span>
+
+                {/* Date Filter */}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="gap-2 rounded-xl border border-none shadow-none hover:bg-transparent bg-transparent">
+                            {selectedDate === 'none' ? 'Date' : selectedDate}
+                            <ChevronDown className="w-4 h-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className='bg-[#F1F2E9]'>
+                        <DropdownMenuItem onClick={() => setSelectedDate('none')}>
+                            None
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setSelectedDate('today')}>
+                            Today
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setSelectedDate('last week')}>
+                            Last Week
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setSelectedDate('last month')}>
+                            Last Month
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
 
                 {/* Location Filter */}
                 <DropdownMenu>
@@ -281,7 +331,7 @@ export function DashboardClient({ stats }: { stats: DashboardStats }) {
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
-                            {selectedGender || 'Gender'}
+                            {selectedGender || 'For'}
                             <ChevronDown className="w-4 h-4" />
                         </Button>
                     </DropdownMenuTrigger>
@@ -289,7 +339,7 @@ export function DashboardClient({ stats }: { stats: DashboardStats }) {
                         <DropdownMenuItem onClick={() => setSelectedGender(null)}>
                             All Genders
                         </DropdownMenuItem>
-                        {genders.map(gender => (
+                        {availableGenders.map(gender => (
                             <DropdownMenuItem
                                 key={gender}
                                 onClick={() => setSelectedGender(gender)}
@@ -299,6 +349,8 @@ export function DashboardClient({ stats }: { stats: DashboardStats }) {
                         ))}
                     </DropdownMenuContent>
                 </DropdownMenu>
+
+
             </div>
             {/* Top Section */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

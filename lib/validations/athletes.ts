@@ -12,7 +12,7 @@ export const addAthleteSchema = z.object({
     type: z.enum(['primary', 'fellow']),
     firstGuardianName: z.string().optional(),
     firstGuardianRelationship: z.string().optional(),
-    firstGuardianPhone: z.string().optional(),
+    firstGuardianPhone: z.string(),
     firstGuardianEmail: z.string().optional(),
     secondGuardianName: z.string().optional(),
     secondGuardianRelationship: z.string().optional(),
