@@ -53,13 +53,14 @@ type PaginationMeta = {
 	totalPages: number
 }
 
-const AcademicsTable = ({ academics, selectedRows, onSelectRow, onSelectAll, handleChange }: {
+const AcademicsTable = ({ academics, selectedRows, onSelectRow, onSelectAll, handleChange, setRefetch }: {
 	academics: Academic[]
 	selectedRows: number[]
 	onSelectRow: (id: number) => void
 	onSelectAll: () => void
 	statusFilter: string
 	handleChange: (academyId: string) => Promise<void>
+	setRefetch: React.Dispatch<React.SetStateAction<boolean>>
 }) => {
 	const router = useRouter()
 	const [acceptAcademicLoading, setAcceptAcademicLoading] = useState<number | null>(null)
@@ -72,6 +73,7 @@ const AcademicsTable = ({ academics, selectedRows, onSelectRow, onSelectAll, han
 		await acceptAcademic(academicId)
 		setAcceptAcademicLoading(null)
 		router.refresh()
+		setRefetch((prev) => !prev)
 	}
 
 	const handleRejectAcademic = async () => {
@@ -80,6 +82,7 @@ const AcademicsTable = ({ academics, selectedRows, onSelectRow, onSelectAll, han
 		await rejectAcademic(rejectAcademicId)
 		setRejectAcademicLoading(false)
 		router.refresh()
+		setRefetch((prev) => !prev)
 	}
 
 	return (
@@ -197,6 +200,7 @@ export default function AcademicsContainer() {
 	const [statusFilter, setStatusFilter] = useState<string>('all')
 	const [activeTab, setActiveTab] = useState('all')
 	const [loading, setLoading] = useState(false)
+	const [refetch, setRefetch] = useState(false)
 	const router = useRouter()
 
 	const fetchAcademics = (page: number, pageSize: number) => {
@@ -209,7 +213,7 @@ export default function AcademicsContainer() {
 
 	useEffect(() => {
 		fetchAcademics(meta.page, meta.pageSize)
-	}, [])
+	}, [refetch])
 
 	const handlePageChange = (newPage: number) => {
 		fetchAcademics(newPage, meta.pageSize)
@@ -313,6 +317,7 @@ export default function AcademicsContainer() {
 							onSelectAll={handleSelectAll}
 							statusFilter={statusFilter}
 							handleChange={handleChange}
+							setRefetch={setRefetch}
 						/>
 					</TabsContent>
 					<TabsContent value="onboarded" className="mt-6">
@@ -323,6 +328,7 @@ export default function AcademicsContainer() {
 							onSelectAll={handleSelectAll}
 							statusFilter={statusFilter}
 							handleChange={handleChange}
+							setRefetch={setRefetch}
 						/>
 					</TabsContent>
 				</Tabs>
