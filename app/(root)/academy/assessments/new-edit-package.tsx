@@ -216,7 +216,8 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                     entryFeesStartDate: values.type !== "Monthly" && showEntryFeesFields ?
                         values.entryFeesStartDate : undefined,
                     entryFeesEndDate: values.type !== "Monthly" && showEntryFeesFields ?
-                        values.entryFeesEndDate : undefined
+                        values.entryFeesEndDate : undefined,
+                    capacity: 99999999999999
                 })
 
                 if (result.error) {
