@@ -691,7 +691,7 @@ const MonthView = ({ events, currentDate, setSelectedGroupedEvent }: { events: E
 										}}
 									>
 										<div className="font-bold uppercase text-[10px] text-[#1F441F]">
-											• {groupedEvent.packageName} ({groupedEvent.count})
+											• {groupedEvent.programName} ({groupedEvent.count})
 										</div>
 									</div>
 								))}
