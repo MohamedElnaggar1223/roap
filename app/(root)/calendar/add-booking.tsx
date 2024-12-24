@@ -299,12 +299,17 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingDetails, athlete
         fetchPrograms();
     }, []);
 
-    const disabledDays = (date: Date, startDate: Date) => {
+    const disabledDays = (date: Date, startDate: Date, packageData: PackageDetails) => {
+        const packageName = packageData.name.toLowerCase();
+        const isMonthly = packageName.startsWith('monthly');
         const schedules = selectedPackage?.schedules.map(schedule => ({ ...schedule, day: days[schedule.day.toLowerCase() as keyof typeof days] }));
         if (!schedules || !selectedPackage?.schedules) return true;
 
         const today = new Date(startDate);
         today.setHours(0, 0, 0, 0);
+
+        const formattedDate = format(date, 'MMMM yyyy');
+        if (isMonthly && !packageData.months?.includes(formattedDate)) return true;
 
         if (isBefore(date, today)) return true;
 
@@ -493,7 +498,7 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingDetails, athlete
                             mode="single"
                             selected={date}
                             onSelect={(date) => date && setDate(date)}
-                            disabled={(date) => disabledDays(date, new Date(selectedPackage?.startDate!))}
+                            disabled={(date) => disabledDays(date, new Date(selectedPackage?.startDate!), selectedPackage!)}
                             initialFocus
                         />
                     </PopoverContent>
@@ -502,7 +507,7 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingDetails, athlete
 
             <div className="space-y-2 flex flex-col">
                 <label className="text-sm font-medium">End Date</label>
-                <p>{selectedPackage?.endDate ? format(selectedPackage.endDate, "PPP") : "No end date"}</p>
+                <p>{selectedPackage?.name.includes('Monthly') ? format((new Date()).setMonth(new Date().getMonth() + 1), "PPP") : selectedPackage?.endDate ? format(selectedPackage.endDate, "PPP") : "No end date"}</p>
             </div>
             <div className="space-y-2 flex flex-col">
                 <label className="text-sm font-medium">Sessions</label>
@@ -744,7 +749,7 @@ export default function BookingDialog({ setRefetch }: { setRefetch: React.Dispat
                 </Button>
             </DialogTrigger>
 
-            <DialogContent className="sm:max-w-[580px] bg-[#F1F2E9] border border-[#868685] !rounded-3xl">
+            <DialogContent className="sm:max-w-[580px] bg-[#F1F2E9] border border-[#868685] !rounded-3xl max-h-[720px] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="text-[#1F441F] text-xl flex items-center justify-between pr-6">
                         <p className="text-sm text-black font-inter font-normal">

@@ -9,86 +9,40 @@ import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
 
 interface Schedule {
-    id: number
+    id?: number
     day: string
     from: string
     to: string
     memo: string | undefined
 }
 
-export async function getProgramPackages(url: string | null, programId: number) {
-    if (!url) return { data: null, error: null }
-    const session = await auth()
+function getFirstAndLastDayOfMonths(months: string[]) {
+    if (!months.length) return { startDate: new Date(), endDate: new Date() }
 
-    if (!session?.user) {
-        return { error: 'You are not authorized to perform this action', field: null, data: [] }
-    }
+    // Sort months chronologically
+    const sortedMonths = [...months].sort((a, b) => {
+        const dateA = new Date(a);
+        const dateB = new Date(b);
+        return dateA.getTime() - dateB.getTime();
+    });
 
-    const cookieStore = await cookies()
-    const impersonatedId = session.user.role === 'admin'
-        ? cookieStore.get('impersonatedAcademyId')?.value
-        : null
+    // Get first day of first month
+    const firstMonth = new Date(sortedMonths[0]);
+    const startDate = new Date(firstMonth.getFullYear(), firstMonth.getMonth(), 1);
 
-    // Build the where condition based on user role and impersonation
-    const academicId = session.user.role === 'admin' && impersonatedId
-        ? parseInt(impersonatedId)
-        : parseInt(session.user.id)
+    // Get last day of last month
+    const lastMonth = new Date(sortedMonths[sortedMonths.length - 1]);
+    const endDate = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0);
 
-    // If not admin and not academic, return error
-    if (session.user.role !== 'admin' && session.user.role !== 'academic') {
-        return { error: 'You are not authorized to perform this action', field: null, data: [] }
-    }
-
-    const packagesWithSchedules = await db
-        .select({
-            id: packages.id,
-            name: packages.name,
-            price: packages.price,
-            startDate: packages.startDate,
-            endDate: packages.endDate,
-            memo: packages.memo,
-            entryFees: packages.entryFees,
-            entryFeesExplanation: packages.entryFeesExplanation,
-            entryFeesAppliedUntil: packages.entryFeesAppliedUntil,
-            entryFeesStartDate: packages.entryFeesStartDate,
-            entryFeesEndDate: packages.entryFeesEndDate,
-            capacity: packages.capacity,
-            schedules: sql<Schedule[]>`json_agg(
-                json_build_object(
-                    'id', ${schedules.id},
-                    'day', ${schedules.day},
-                    'from', ${schedules.from},
-                    'to', ${schedules.to},
-                    'memo', ${schedules.memo}
-                )
-                ORDER BY ${schedules.createdAt} ASC
-            )`
-        })
-        .from(packages)
-        .leftJoin(schedules, eq(packages.id, schedules.packageId))
-        .where(eq(packages.programId, programId))
-        .groupBy(packages.id)
-        .orderBy(asc(packages.createdAt))
-        .then(results =>
-            results.map(pkg => ({
-                ...pkg,
-                schedules: pkg.schedules?.[0]?.id === null ? [] : pkg.schedules,
-                type: pkg.name.startsWith('Term') ? 'Term' as const :
-                    pkg.name.toLowerCase().includes('monthly') ? 'Monthly' as const :
-                        'Full Season' as const,
-                termNumber: pkg.name.startsWith('Term') ?
-                    parseInt(pkg.name.split(' ')[1]) : undefined
-            }))
-        )
-
-    return { data: packagesWithSchedules, error: null }
+    return { startDate, endDate };
 }
 
 export async function createPackage(data: {
     name: string
     price: number
-    startDate: Date
-    endDate: Date
+    startDate?: Date
+    endDate?: Date
+    months?: string[]
     programId: number
     memo?: string | null
     entryFees: number
@@ -96,13 +50,9 @@ export async function createPackage(data: {
     entryFeesAppliedUntil?: string[]
     entryFeesStartDate?: Date
     entryFeesEndDate?: Date
-    schedules: {
-        day: string
-        from: string
-        to: string
-        memo: string | null
-    }[]
+    schedules: Schedule[]
     capacity: number
+    type: 'Monthly' | 'Term' | 'Full Season' | 'Assessment'
 }) {
     const session = await auth()
 
@@ -110,19 +60,26 @@ export async function createPackage(data: {
         return { error: 'Unauthorized' }
     }
 
-    console.log('Entry fees:', data.entryFees)
-    console.log('Entry fees explanation:', data.entryFeesExplanation)
-    console.log('Entry fees applied until:', data.entryFeesAppliedUntil)
-
     try {
         return await db.transaction(async (tx) => {
+            // For Monthly packages, calculate start and end dates from months
+            let startDate = data.startDate;
+            let endDate = data.endDate;
+
+            if (data.type === 'Monthly' && data.months && data.months.length > 0) {
+                const dates = getFirstAndLastDayOfMonths(data.months);
+                startDate = dates.startDate;
+                endDate = dates.endDate;
+            }
+
             const [newPackage] = await tx
                 .insert(packages)
                 .values({
                     name: data.name,
                     price: data.price,
-                    startDate: formatDateForDB(data.startDate),
-                    endDate: formatDateForDB(data.endDate),
+                    startDate: formatDateForDB(startDate!),
+                    endDate: formatDateForDB(endDate!),
+                    months: data.type === 'Monthly' ? data.months : null,
                     programId: data.programId,
                     memo: data.memo,
                     entryFees: data.entryFees,
@@ -168,22 +125,18 @@ export async function createPackage(data: {
 export async function updatePackage(id: number, data: {
     name: string
     price: number
-    startDate: Date
-    endDate: Date
+    startDate?: Date
+    endDate?: Date
+    months?: string[]
     memo?: string | null
     entryFees: number
     entryFeesExplanation?: string
     entryFeesAppliedUntil?: string[]
     entryFeesStartDate?: Date
     entryFeesEndDate?: Date
-    schedules: {
-        id?: number
-        day: string
-        from: string
-        to: string
-        memo: string | null
-    }[]
+    schedules: Schedule[]
     capacity: number
+    type: 'Monthly' | 'Term' | 'Full Season' | 'Assessment'
 }) {
     const session = await auth()
 
@@ -191,17 +144,26 @@ export async function updatePackage(id: number, data: {
         return { error: 'Unauthorized' }
     }
 
-    console.log(data)
-
     try {
         await db.transaction(async (tx) => {
+            // For Monthly packages, calculate start and end dates from months
+            let startDate = data.startDate;
+            let endDate = data.endDate;
+
+            if (data.type === 'Monthly' && data.months && data.months.length > 0) {
+                const dates = getFirstAndLastDayOfMonths(data.months);
+                startDate = dates.startDate;
+                endDate = dates.endDate;
+            }
+
             await tx
                 .update(packages)
                 .set({
                     name: data.name,
                     price: data.price,
-                    startDate: formatDateForDB(data.startDate),
-                    endDate: formatDateForDB(data.endDate),
+                    startDate: formatDateForDB(startDate!),
+                    endDate: formatDateForDB(endDate!),
+                    months: data.type === 'Monthly' ? data.months : null,
                     memo: data.memo,
                     entryFees: data.entryFees,
                     entryFeesExplanation: data.entryFeesExplanation,
@@ -275,19 +237,69 @@ export async function updatePackage(id: number, data: {
     }
 }
 
-export async function deletePackage(id: number) {
+export async function getProgramPackages(url: string | null, programId: number) {
+    if (!url) return { data: null, error: null }
     const session = await auth()
 
-    if (!session?.user || session.user.role !== 'academic') {
-        return { error: 'Unauthorized' }
+    if (!session?.user) {
+        return { error: 'You are not authorized to perform this action', field: null, data: [] }
     }
 
-    try {
-        await db.delete(packages).where(eq(packages.id, id))
-        revalidatePath('/academy/programs')
-        return { success: true }
-    } catch (error) {
-        console.error('Error deleting package:', error)
-        return { error: 'Failed to delete package' }
+    const cookieStore = await cookies()
+    const impersonatedId = session.user.role === 'admin'
+        ? cookieStore.get('impersonatedAcademyId')?.value
+        : null
+
+    const academicId = session.user.role === 'admin' && impersonatedId
+        ? parseInt(impersonatedId)
+        : parseInt(session.user.id)
+
+    if (session.user.role !== 'admin' && session.user.role !== 'academic') {
+        return { error: 'You are not authorized to perform this action', field: null, data: [] }
     }
+
+    const packagesWithSchedules = await db
+        .select({
+            id: packages.id,
+            name: packages.name,
+            price: packages.price,
+            startDate: packages.startDate,
+            endDate: packages.endDate,
+            months: packages.months,
+            memo: packages.memo,
+            entryFees: packages.entryFees,
+            entryFeesExplanation: packages.entryFeesExplanation,
+            entryFeesAppliedUntil: packages.entryFeesAppliedUntil,
+            entryFeesStartDate: packages.entryFeesStartDate,
+            entryFeesEndDate: packages.entryFeesEndDate,
+            capacity: packages.capacity,
+            schedules: sql<Schedule[]>`json_agg(
+                json_build_object(
+                    'id', ${schedules.id},
+                    'day', ${schedules.day},
+                    'from', ${schedules.from},
+                    'to', ${schedules.to},
+                    'memo', ${schedules.memo}
+                )
+                ORDER BY ${schedules.createdAt} ASC
+            )`
+        })
+        .from(packages)
+        .leftJoin(schedules, eq(packages.id, schedules.packageId))
+        .where(eq(packages.programId, programId))
+        .groupBy(packages.id)
+        .orderBy(asc(packages.createdAt))
+        .then(results =>
+            results.map(pkg => ({
+                ...pkg,
+                schedules: pkg.schedules?.[0]?.id === null ? [] : pkg.schedules,
+                type: pkg.name.startsWith('Term') ? 'Term' as const :
+                    pkg.name.toLowerCase().includes('monthly') ? 'Monthly' as const :
+                        'Full Season' as const,
+                termNumber: pkg.name.startsWith('Term') ?
+                    parseInt(pkg.name.split(' ')[1]) : undefined
+            }))
+        )
+
+    return { data: packagesWithSchedules, error: null }
 }

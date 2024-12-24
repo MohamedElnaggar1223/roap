@@ -98,6 +98,7 @@ interface Package {
     entryFeesAppliedUntil?: string[]
     id?: number
     capacity: number
+    months?: string[] | null
 }
 
 interface Schedule {
@@ -764,74 +765,6 @@ export default function AddNewProgram({ branches, sports, academySports }: Props
                                     />
 
                                     <div className="w-full max-w-screen-2xl overflow-x-auto mx-auto">
-                                        <div className="min-w-full grid grid-cols-[0.75fr,auto,auto,auto,auto] gap-y-2 text-nowrap">
-                                            {/* Header */}
-                                            <div className="contents">
-                                                <div />
-                                                <div />
-                                                <div />
-                                                <div />
-                                                <div className="py-4 flex items-center justify-center">
-                                                    <button
-                                                        type='button'
-                                                        onClick={() => setDiscountsOpen(true)}
-                                                        className='flex text-main-yellow text-nowrap items-center justify-center gap-2 rounded-3xl px-4 py-2 bg-main-green text-sm'
-                                                    >
-                                                        Add New Discount
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div className="contents">
-                                                <div className="py-4 px-4 rounded-l-[20px] bg-[#E0E4D9]">Value</div>
-                                                <div className="py-4 px-4 bg-[#E0E4D9]">Start Date</div>
-                                                <div className="py-4 px-4 bg-[#E0E4D9]">End Date</div>
-                                                <div className="py-4 px-4 bg-[#E0E4D9]">Packages</div>
-                                                <div className="py-4 px-4 rounded-r-[20px] bg-[#E0E4D9]"></div>
-                                            </div>
-
-                                            {/* Rows */}
-                                            {createdDiscounts.map((discount, index) => (
-                                                <Fragment key={index}>
-                                                    <div className="py-4 px-4 bg-main-white rounded-l-[20px] flex items-center justify-start font-bold font-inter">
-                                                        {discount.type === 'percentage' ? `${discount.value}%` : `${discount.value} AED`}
-                                                    </div>
-                                                    <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                                        {discount.startDate.toLocaleDateString()}
-                                                    </div>
-                                                    <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                                        {discount.endDate.toLocaleDateString()}
-                                                    </div>
-                                                    <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                                        {discount.packageIds.length}
-                                                    </div>
-                                                    <div className="py-4 px-4 bg-main-white gap-4 rounded-r-[20px] flex items-center justify-end font-bold font-inter">
-                                                        <Button
-                                                            type='button'
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => {
-                                                                setEditedDiscount({ editedDiscount: discount, index });
-                                                                setEditDiscountOpen(true);
-                                                            }}
-                                                        >
-                                                            <Image
-                                                                src='/images/edit.svg'
-                                                                alt='Edit'
-                                                                width={20}
-                                                                height={20}
-                                                            />
-                                                        </Button>
-                                                        <TrashIcon
-                                                            className="h-4 w-4 cursor-pointer"
-                                                            onClick={() => setCreatedDiscounts(createdDiscounts.filter((_, i) => i !== index))}
-                                                        />
-                                                    </div>
-                                                </Fragment>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div className="w-full max-w-screen-2xl overflow-x-auto mx-auto">
                                         <div className="min-w-full grid grid-cols-[auto,0.75fr,auto,auto,auto,auto,auto] gap-y-2 text-nowrap">
                                             {/* Header */}
                                             <div className="contents">
@@ -904,6 +837,74 @@ export default function AddNewProgram({ branches, sports, academySports }: Props
                                                         <TrashIcon
                                                             className="h-4 w-4 cursor-pointer"
                                                             onClick={() => setCreatedPackages(createdPackages.filter((_, i) => i !== index))}
+                                                        />
+                                                    </div>
+                                                </Fragment>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="w-full max-w-screen-2xl overflow-x-auto mx-auto">
+                                        <div className="min-w-full grid grid-cols-[0.75fr,auto,auto,auto,auto] gap-y-2 text-nowrap">
+                                            {/* Header */}
+                                            <div className="contents">
+                                                <div />
+                                                <div />
+                                                <div />
+                                                <div />
+                                                <div className="py-4 flex items-center justify-center">
+                                                    <button
+                                                        type='button'
+                                                        onClick={() => setDiscountsOpen(true)}
+                                                        className='flex text-main-yellow text-nowrap items-center justify-center gap-2 rounded-3xl px-4 py-2 bg-main-green text-sm'
+                                                    >
+                                                        Add New Discount
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div className="contents">
+                                                <div className="py-4 px-4 rounded-l-[20px] bg-[#E0E4D9]">Value</div>
+                                                <div className="py-4 px-4 bg-[#E0E4D9]">Start Date</div>
+                                                <div className="py-4 px-4 bg-[#E0E4D9]">End Date</div>
+                                                <div className="py-4 px-4 bg-[#E0E4D9]">Packages</div>
+                                                <div className="py-4 px-4 rounded-r-[20px] bg-[#E0E4D9]"></div>
+                                            </div>
+
+                                            {/* Rows */}
+                                            {createdDiscounts.map((discount, index) => (
+                                                <Fragment key={index}>
+                                                    <div className="py-4 px-4 bg-main-white rounded-l-[20px] flex items-center justify-start font-bold font-inter">
+                                                        {discount.type === 'percentage' ? `${discount.value}%` : `${discount.value} AED`}
+                                                    </div>
+                                                    <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                                        {discount.startDate.toLocaleDateString()}
+                                                    </div>
+                                                    <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                                        {discount.endDate.toLocaleDateString()}
+                                                    </div>
+                                                    <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                                        {discount.packageIds.length}
+                                                    </div>
+                                                    <div className="py-4 px-4 bg-main-white gap-4 rounded-r-[20px] flex items-center justify-end font-bold font-inter">
+                                                        <Button
+                                                            type='button'
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => {
+                                                                setEditedDiscount({ editedDiscount: discount, index });
+                                                                setEditDiscountOpen(true);
+                                                            }}
+                                                        >
+                                                            <Image
+                                                                src='/images/edit.svg'
+                                                                alt='Edit'
+                                                                width={20}
+                                                                height={20}
+                                                            />
+                                                        </Button>
+                                                        <TrashIcon
+                                                            className="h-4 w-4 cursor-pointer"
+                                                            onClick={() => setCreatedDiscounts(createdDiscounts.filter((_, i) => i !== index))}
                                                         />
                                                     </div>
                                                 </Fragment>

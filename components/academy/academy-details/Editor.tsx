@@ -69,7 +69,7 @@ const TipTapEditor = forwardRef<HTMLDivElement, TipTapEditorProps>(({ value, onV
         editorProps: {
             attributes: {
                 class: cn(
-                    'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl focus:outline-none min-h-[150px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+                    'prose prose-sm sm:prose bg-transparent lg:prose-lg xl:prose-2xl focus:outline-none min-h-[150px] w-full rounded-md border border-input px-3 py-2 text-sm ring-black placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
                     className
                 ),
             },

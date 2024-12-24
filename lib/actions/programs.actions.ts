@@ -280,6 +280,36 @@ interface Package {
     entryFeesExplanation?: string
     entryFeesAppliedUntil?: string[]
     id?: number
+    months?: string[] | null
+}
+interface ProgramDiscountData {
+    id?: number
+    type: 'fixed' | 'percentage'
+    value: number
+    startDate: Date
+    endDate: Date
+    packageIds: number[]
+}
+
+function getFirstAndLastDayOfMonths(months: string[]) {
+    if (!months.length) return { startDate: new Date(), endDate: new Date() }
+
+    // Sort months chronologically
+    const sortedMonths = [...months].sort((a, b) => {
+        const dateA = new Date(a);
+        const dateB = new Date(b);
+        return dateA.getTime() - dateB.getTime();
+    });
+
+    // Get first day of first month
+    const firstMonth = new Date(sortedMonths[0]);
+    const startDate = new Date(firstMonth.getFullYear(), firstMonth.getMonth(), 1);
+
+    // Get last day of last month
+    const lastMonth = new Date(sortedMonths[sortedMonths.length - 1]);
+    const endDate = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0);
+
+    return { startDate, endDate };
 }
 
 export async function createProgram(data: {
@@ -308,12 +338,10 @@ export async function createProgram(data: {
         ? cookieStore.get('impersonatedAcademyId')?.value
         : null
 
-    // Build the where condition based on user role and impersonation
     const academicId = session.user.role === 'admin' && impersonatedId
         ? parseInt(impersonatedId)
         : parseInt(session.user.id)
 
-    // If not admin and not academic, return error
     if (session.user.role !== 'admin' && session.user.role !== 'academic') {
         return { error: 'You are not authorized to perform this action', field: null, data: [] }
     }
@@ -327,7 +355,6 @@ export async function createProgram(data: {
 
     try {
         return await db.transaction(async (tx) => {
-
             if (!academy) return { error: 'Academy not found', field: 'root' }
 
             const [program] = await tx
@@ -350,6 +377,7 @@ export async function createProgram(data: {
                 })
 
             await Promise.all([
+                // Handle coaches
                 data.coaches.length > 0 ?
                     tx.insert(coachProgram)
                         .values(
@@ -361,16 +389,28 @@ export async function createProgram(data: {
                             }))
                         ) : Promise.resolve(),
 
+                // Handle packages
                 data.packagesData.length > 0 ?
                     Promise.all(data.packagesData.map(async (packageData) => {
+                        // For Monthly packages, calculate start and end dates from months
+                        let startDate = packageData.startDate;
+                        let endDate = packageData.endDate;
+
+                        if (packageData.type === 'Monthly' && packageData.months && packageData.months.length > 0) {
+                            const dates = getFirstAndLastDayOfMonths(packageData.months);
+                            startDate = dates.startDate;
+                            endDate = dates.endDate;
+                        }
+
                         const [newPackage] = await tx
                             .insert(packages)
                             .values({
                                 programId: program.id,
                                 name: packageData.name,
                                 price: packageData.price,
-                                startDate: formatDateForDB(packageData.startDate),
-                                endDate: formatDateForDB(packageData.endDate),
+                                startDate: formatDateForDB(startDate),
+                                endDate: formatDateForDB(endDate),
+                                months: packageData.type === 'Monthly' ? packageData.months : null,
                                 memo: packageData.memo,
                                 sessionPerWeek: packageData.schedules.length,
                                 entryFees: packageData.entryFees ?? 0,
@@ -398,6 +438,8 @@ export async function createProgram(data: {
                                 )
                         }
                     })) : Promise.resolve(),
+
+                // Handle discounts
                 data.discountsData.length > 0 ?
                     Promise.all(data.discountsData.map(async (discountData) => {
                         const [newDiscount] = await tx
@@ -440,14 +482,6 @@ export async function createProgram(data: {
     }
 }
 
-interface ProgramDiscountData {
-    id?: number
-    type: 'fixed' | 'percentage'
-    value: number
-    startDate: Date
-    endDate: Date
-    packageIds: number[]
-}
 
 export async function updateProgram(id: number, data: {
     name: string
@@ -552,14 +586,24 @@ export async function updateProgram(id: number, data: {
 
                 packagesToAdd.length > 0 ?
                     Promise.all(packagesToAdd.map(async (packageData) => {
+                        let startDate = packageData.startDate;
+                        let endDate = packageData.endDate;
+
+                        if (packageData.type === 'Monthly' && packageData.months && packageData.months.length > 0) {
+                            const dates = getFirstAndLastDayOfMonths(packageData.months);
+                            startDate = dates.startDate;
+                            endDate = dates.endDate;
+                        }
+
                         const [newPackage] = await tx
                             .insert(packages)
                             .values({
                                 programId: id,
                                 name: packageData.name,
                                 price: packageData.price,
-                                startDate: formatDateForDB(packageData.startDate),
-                                endDate: formatDateForDB(packageData.endDate),
+                                startDate: formatDateForDB(startDate),
+                                endDate: formatDateForDB(endDate),
+                                months: packageData.type === 'Monthly' ? packageData.months : null,
                                 sessionPerWeek: packageData.schedules.length,
                                 memo: packageData.memo,
                                 entryFees: packageData.entryFees ?? 0,
@@ -597,14 +641,24 @@ export async function updateProgram(id: number, data: {
 
                 packagesToUpdate.length > 0 ?
                     Promise.all(packagesToUpdate.map(async (packageData) => {
+                        let startDate = packageData.startDate;
+                        let endDate = packageData.endDate;
+
+                        if (packageData.type === 'Monthly' && packageData.months && packageData.months.length > 0) {
+                            const dates = getFirstAndLastDayOfMonths(packageData.months);
+                            startDate = dates.startDate;
+                            endDate = dates.endDate;
+                        }
+
                         await tx.transaction(async (innerTx) => {
                             await innerTx
                                 .update(packages)
                                 .set({
                                     name: packageData.name,
                                     price: packageData.price,
-                                    startDate: formatDateForDB(packageData.startDate),
-                                    endDate: formatDateForDB(packageData.endDate),
+                                    startDate: formatDateForDB(startDate),
+                                    endDate: formatDateForDB(endDate),
+                                    months: packageData.type === 'Monthly' ? packageData.months : null,
                                     sessionPerWeek: packageData.schedules.length,
                                     memo: packageData.memo,
                                     entryFees: packageData.entryFees ?? 0,

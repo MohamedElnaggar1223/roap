@@ -169,6 +169,7 @@ export default function AddNewAthlete({ addNewAthleteOpen, setAddNewAthleteOpen,
 
             const result = await createAthlete({
                 ...values,
+                email: values.email || '',
                 name: values.firstName + ' ' + values.lastName,
                 image: imagePath || '',
                 certificate: certificatePath || ''
@@ -391,6 +392,60 @@ export default function AddNewAthlete({ addNewAthleteOpen, setAddNewAthleteOpen,
                                             </FormItem>
                                         )}
                                     />
+                                    <div className='flex w-full gap-2 items-start justify-center'>
+                                        <FormField
+                                            control={form.control}
+                                            name='nationality'
+                                            render={({ field }) => (
+                                                <FormItem className='flex-1'>
+                                                    <FormLabel>Nationality</FormLabel>
+                                                    <Select onValueChange={field.onChange} value={field.value}>
+                                                        <FormControl>
+                                                            <SelectTrigger className='px-2 h-12 rounded-[10px] border border-gray-500 font-inter'>
+                                                                <SelectValue placeholder="Select nationality" />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent className='!bg-[#F1F2E9]'>
+                                                            {nationalities.map((nationality) => (
+                                                                <SelectItem key={nationality} value={nationality}>
+                                                                    {nationality}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name='country'
+                                            render={({ field }) => (
+                                                <FormItem className='flex-1'>
+                                                    <FormLabel>Country</FormLabel>
+                                                    <Select onValueChange={field.onChange} value={field.value}>
+                                                        <FormControl>
+                                                            <SelectTrigger className='px-2 h-12 rounded-[10px] border border-gray-500 font-inter'>
+                                                                <SelectValue placeholder="Select country" />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent className='!bg-[#F1F2E9]'>
+                                                            {/* {countries.map((country) => (
+                                                                <SelectItem key={country} value={country}>
+                                                                    {country}
+                                                                </SelectItem>
+                                                            ))} */}
+                                                            <SelectItem key={'UAE'} value={'UAE'}>
+                                                                {'UAE'}
+                                                            </SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
+                                    </div>
                                     <>
                                         <div className='flex w-full gap-2 items-start justify-center'>
                                             <FormField
@@ -615,60 +670,7 @@ export default function AddNewAthlete({ addNewAthleteOpen, setAddNewAthleteOpen,
                                             )}
                                         />
                                     </div>
-                                    <div className='flex w-full gap-2 items-start justify-center'>
-                                        <FormField
-                                            control={form.control}
-                                            name='nationality'
-                                            render={({ field }) => (
-                                                <FormItem className='flex-1'>
-                                                    <FormLabel>Nationality</FormLabel>
-                                                    <Select onValueChange={field.onChange} value={field.value}>
-                                                        <FormControl>
-                                                            <SelectTrigger className='px-2 h-12 rounded-[10px] border border-gray-500 font-inter'>
-                                                                <SelectValue placeholder="Select nationality" />
-                                                            </SelectTrigger>
-                                                        </FormControl>
-                                                        <SelectContent className='!bg-[#F1F2E9]'>
-                                                            {nationalities.map((nationality) => (
-                                                                <SelectItem key={nationality} value={nationality}>
-                                                                    {nationality}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name='country'
-                                            render={({ field }) => (
-                                                <FormItem className='flex-1'>
-                                                    <FormLabel>Country</FormLabel>
-                                                    <Select onValueChange={field.onChange} value={field.value}>
-                                                        <FormControl>
-                                                            <SelectTrigger className='px-2 h-12 rounded-[10px] border border-gray-500 font-inter'>
-                                                                <SelectValue placeholder="Select country" />
-                                                            </SelectTrigger>
-                                                        </FormControl>
-                                                        <SelectContent className='!bg-[#F1F2E9]'>
-                                                            {/* {countries.map((country) => (
-                                                                <SelectItem key={country} value={country}>
-                                                                    {country}
-                                                                </SelectItem>
-                                                            ))} */}
-                                                            <SelectItem key={'UAE'} value={'UAE'}>
-                                                                {'UAE'}
-                                                            </SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
 
-                                    </div>
 
                                     <div className='flex w-full gap-2 items-start justify-center'>
                                         <FormField

@@ -1,9 +1,8 @@
 'use client'
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { updatePackage } from '@/lib/actions/packages.actions';
-import { Loader2, Pencil, TrashIcon } from 'lucide-react';
+import { Loader2, TrashIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { z } from 'zod';
@@ -19,16 +18,19 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
-import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useOnboarding } from '@/providers/onboarding-provider';
 import { DateSelector } from '@/components/shared/date-selector';
+
+const formatTimeValue = (value: string) => {
+    if (!value) return '';
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!timeRegex.test(value)) return '';
+    return value;
+};
 
 const packageSchema = z.object({
     type: z.enum(["Term", "Monthly", "Full Season", "Assessment"]),
@@ -37,10 +39,11 @@ const packageSchema = z.object({
     price: z.string().min(1, "Price is required"),
     startDate: z.date({
         required_error: "Start date is required",
-    }),
+    }).optional(),
     endDate: z.date({
         required_error: "End date is required",
-    }),
+    }).optional(),
+    months: z.array(z.string()).optional(),
     memo: z.string(),
     entryFees: z.string().default("0"),
     entryFeesExplanation: z.string().optional(),
@@ -62,13 +65,16 @@ const packageSchema = z.object({
     if (data.type === "Monthly" && parseFloat(data.entryFees) > 0 && data.entryFeesAppliedUntil?.length === 0) {
         return false;
     }
-    if (data.type !== "Monthly" && parseFloat(data.entryFees) > 0 && (!data.entryFeesStartDate || !data.entryFeesEndDate)) {
+    if (data.type === "Monthly" && (!data.months || data.months.length === 0)) {
+        return false;
+    }
+    if (data.type !== "Monthly" && (!data.startDate || !data.endDate)) {
         return false;
     }
     return true;
 }, {
-    message: "Required fields missing for entry fees configuration",
-    path: ["entryFeesExplanation"]
+    message: "Required fields missing",
+    path: ["months"]
 });
 
 interface Package {
@@ -78,6 +84,7 @@ interface Package {
     price: number
     startDate: Date
     endDate: Date
+    months?: string[] | null
     schedules: Schedule[]
     memo: string | null
     entryFees: number
@@ -122,42 +129,40 @@ const days = {
     sat: "Saturday"
 }
 
-const months = [
-    { label: "January", value: 1 },
-    { label: "February", value: 2 },
-    { label: "March", value: 3 },
-    { label: "April", value: 4 },
-    { label: "May", value: 5 },
-    { label: "June", value: 6 },
-    { label: "July", value: 7 },
-    { label: "August", value: 8 },
-    { label: "September", value: 9 },
-    { label: "October", value: 10 },
-    { label: "November", value: 11 },
-    { label: "December", value: 12 }
-];
+const getMonthsInRange = (startDate: Date, endDate: Date) => {
+    const months: Array<{ label: string, value: string }> = [];
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    let current = new Date(start);
+    current.setDate(1);
+
+    while (current <= end) {
+        const monthLabel = format(current, "MMMM yyyy");
+        const monthValue = monthLabel;
+        months.push({ label: monthLabel, value: monthValue });
+        current.setMonth(current.getMonth() + 1);
+    }
+
+    return months;
+};
 
 export default function EditPackage({ packageEdited, open, onOpenChange, mutate, setEditedPackage, setCreatedPackages, index }: Props) {
     const router = useRouter()
-
     const { mutate: mutatePackage } = useOnboarding()
-
     const [loading, setLoading] = useState(false)
-    const [selectedMonths, setSelectedMonths] = useState<number[]>(() => {
-        const startMonth = new Date(packageEdited.startDate).getMonth() + 1;
-        const endMonth = new Date(packageEdited.endDate).getMonth() + 1;
-        return Array.from(
-            { length: endMonth - startMonth + 1 },
-            (_, i) => startMonth + i
-        );
-    });
     const [availableMonths, setAvailableMonths] = useState<Array<{ label: string, value: string }>>([])
+    const [yearOptions] = useState(() => {
+        const currentYear = new Date().getFullYear();
+        return Array.from({ length: 5 }, (_, i) => currentYear + i);
+    });
 
     const form = useForm<z.infer<typeof packageSchema>>({
         resolver: zodResolver(packageSchema),
         defaultValues: {
-            type: packageEdited.name.startsWith('Assessment') ? 'Assessment' : packageEdited.name.startsWith('Term') ? 'Term' :
-                packageEdited.name.includes('Monthly') ? 'Monthly' : 'Full Season',
+            type: packageEdited.name.startsWith('Assessment') ? 'Assessment' :
+                packageEdited.name.startsWith('Term') ? 'Term' :
+                    packageEdited.name.includes('Monthly') ? 'Monthly' : 'Full Season',
             termNumber: packageEdited.name.startsWith('Term') ?
                 packageEdited.name.split(' ')[1] : undefined,
             name: packageEdited.name.startsWith('Term') ? '' :
@@ -166,9 +171,10 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
             price: packageEdited.price.toString(),
             startDate: new Date(packageEdited.startDate),
             endDate: new Date(packageEdited.endDate),
+            months: packageEdited.months || [],
             schedules: packageEdited.schedules?.length > 0 ?
-                packageEdited.schedules as Schedule[] :
-                [{ day: '', from: '', to: '', memo: '' }] as Schedule[],
+                packageEdited.schedules :
+                [{ day: '', from: '', to: '', memo: '' }],
             memo: packageEdited.memo ?? '',
             entryFees: (packageEdited.entryFees ?? 0).toString(),
             entryFeesExplanation: packageEdited.entryFeesExplanation,
@@ -186,29 +192,32 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
         name: "schedules"
     })
 
-    const getMonthsInRange = (startDate: Date, endDate: Date) => {
-        const months: Array<{ label: string, value: string }> = [];
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-
-        let current = new Date(start);
-        current.setDate(1); // Set to first day of month to avoid skipping months
-
-        while (current <= end) {
-            const monthLabel = format(current, "MMMM yyyy");
-            const monthValue = monthLabel; // Using the same format for value and label
-            months.push({ label: monthLabel, value: monthValue });
-            current.setMonth(current.getMonth() + 1);
-        }
-
-        return months;
-    };
-
     const packageType = form.watch("type")
     const entryFees = parseFloat(form.watch("entryFees") || "0")
     const showEntryFeesFields = entryFees > 0
     const startDate = form.watch("startDate")
     const endDate = form.watch("endDate")
+    const months = form.watch("months") || []
+
+    const addMonth = () => {
+        const newMonthEntry = {
+            month: '',
+            year: new Date().getFullYear().toString()
+        };
+        form.setValue('months', [...months, `${newMonthEntry.month} ${newMonthEntry.year}`]);
+    };
+
+    const removeMonth = (index: number) => {
+        const newMonths = [...months];
+        newMonths.splice(index, 1);
+        form.setValue('months', newMonths);
+    };
+
+    const updateMonth = (index: number, month: string, year: string) => {
+        const newMonths = [...months];
+        newMonths[index] = `${month} ${year}`;
+        form.setValue('months', newMonths);
+    };
 
     useEffect(() => {
         if (startDate && endDate) {
@@ -232,6 +241,8 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                     price: parseFloat(values.price),
                     startDate: values.startDate,
                     endDate: values.endDate,
+                    months: values.months,
+                    type: values.type,
                     schedules: values.schedules.map(schedule => ({
                         id: (schedule as any).id,
                         day: schedule.day,
@@ -266,8 +277,9 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                         ...packageEdited,
                         name: packageName!,
                         price: parseFloat(values.price),
-                        startDate: values.startDate,
-                        endDate: values.endDate,
+                        startDate: values.startDate!,
+                        endDate: values.endDate!,
+                        months: values.months,
                         schedules: values.schedules,
                         memo: values.memo,
                         type: values.type,
@@ -299,8 +311,9 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                         ...packageData,
                         name: packageName!,
                         price: parseFloat(values.price),
-                        startDate: values.startDate,
-                        endDate: values.endDate,
+                        startDate: values.startDate!,
+                        endDate: values.endDate!,
+                        months: values.months,
                         schedules: values.schedules,
                         memo: values.memo,
                         type: values.type,
@@ -311,7 +324,8 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                         entryFeesStartDate: values.type !== "Monthly" && showEntryFeesFields ?
                             values.entryFeesStartDate : undefined,
                         entryFeesEndDate: values.type !== "Monthly" && showEntryFeesFields ?
-                            values.entryFeesEndDate : undefined
+                            values.entryFeesEndDate : undefined,
+                        capacity: parseInt(values.capacity)
                     } : packageData
                 ))
 
@@ -320,8 +334,9 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                         ...packageEdited,
                         name: packageName!,
                         price: parseFloat(values.price),
-                        startDate: values.startDate,
-                        endDate: values.endDate,
+                        startDate: values.startDate!,
+                        endDate: values.endDate!,
+                        months: values.months,
                         schedules: values.schedules,
                         memo: values.memo,
                         type: values.type
@@ -341,46 +356,6 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
             setLoading(false)
         }
     }
-
-    const handleMonthSelect = (monthValue: number, isChecked: boolean) => {
-        const currentYear = new Date().getFullYear();
-
-        if (isChecked) {
-            if (selectedMonths.length === 0) {
-                setSelectedMonths([monthValue]);
-                form.setValue("startDate", new Date(currentYear, monthValue - 1, 1));
-                form.setValue("endDate", new Date(currentYear, monthValue - 1, 1));
-                return;
-            }
-
-            const allMonths = [...selectedMonths, monthValue];
-            const firstMonth = Math.min(...allMonths);
-            const lastMonth = Math.max(...allMonths);
-
-            const monthsInRange = Array.from(
-                { length: lastMonth - firstMonth + 1 },
-                (_, i) => firstMonth + i
-            );
-            setSelectedMonths(monthsInRange);
-
-            form.setValue("startDate", new Date(currentYear, firstMonth - 1, 1));
-            form.setValue("endDate", new Date(currentYear, lastMonth - 1, 1));
-        } else {
-            const newSelectedMonths = selectedMonths.filter(m => m < monthValue);
-            setSelectedMonths(newSelectedMonths);
-
-            if (newSelectedMonths.length > 0) {
-                const firstMonth = Math.min(...newSelectedMonths);
-                const lastMonth = Math.max(...newSelectedMonths);
-                form.setValue("startDate", new Date(currentYear, firstMonth - 1, 1));
-                form.setValue("endDate", new Date(currentYear, lastMonth - 1, 1));
-            } else {
-                const defaultDate = new Date(currentYear, 0, 1);
-                form.setValue("startDate", defaultDate);
-                form.setValue("endDate", defaultDate);
-            }
-        }
-    };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -438,7 +413,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                             </FormItem>
                                         )}
                                     />
-                                ) : packageType === 'Full Season' ? (
+                                ) : packageType === 'Full Season' || packageType === 'Monthly' ? (
                                     <FormField
                                         control={form.control}
                                         name="name"
@@ -487,33 +462,104 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                     )}
                                 />
 
+                                {packageType === "Monthly" ? (
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <FormLabel>Package Months</FormLabel>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                className="text-main-green"
+                                                onClick={addMonth}
+                                            >
+                                                Add Month
+                                            </Button>
+                                        </div>
 
-                                <div className="flex gap-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="startDate"
-                                        render={({ field }) => (
-                                            <FormItem className="flex-1">
-                                                <FormLabel>Start Date</FormLabel>
-                                                <DateSelector field={field} />
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
+                                        {months.map((monthValue, index) => {
+                                            const [month, year] = monthValue.split(' ');
+                                            return (
+                                                <div key={index} className="flex gap-4 items-center">
+                                                    <Select
+                                                        value={month}
+                                                        onValueChange={(value) => updateMonth(index, value, year)}
+                                                    >
+                                                        <SelectTrigger className="w-[180px]">
+                                                            <SelectValue placeholder="Select month" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="January">January</SelectItem>
+                                                            <SelectItem value="February">February</SelectItem>
+                                                            <SelectItem value="March">March</SelectItem>
+                                                            <SelectItem value="April">April</SelectItem>
+                                                            <SelectItem value="May">May</SelectItem>
+                                                            <SelectItem value="June">June</SelectItem>
+                                                            <SelectItem value="July">July</SelectItem>
+                                                            <SelectItem value="August">August</SelectItem>
+                                                            <SelectItem value="September">September</SelectItem>
+                                                            <SelectItem value="October">October</SelectItem>
+                                                            <SelectItem value="November">November</SelectItem>
+                                                            <SelectItem value="December">December</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
 
-                                    <FormField
-                                        control={form.control}
-                                        name="endDate"
-                                        render={({ field }) => (
-                                            <FormItem className="flex-1">
-                                                <FormLabel>End Date</FormLabel>
-                                                <DateSelector field={field} />
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
+                                                    <Select
+                                                        value={year}
+                                                        onValueChange={(value) => updateMonth(index, month, value)}
+                                                    >
+                                                        <SelectTrigger className="w-[120px]">
+                                                            <SelectValue placeholder="Select year" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {yearOptions.map((year) => (
+                                                                <SelectItem key={year} value={year.toString()}>
+                                                                    {year}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
 
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => removeMonth(index)}
+                                                    >
+                                                        <TrashIcon className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            );
+                                        })}
+                                        <FormMessage />
+                                    </div>
+                                ) : (
+                                    <div className="flex gap-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="startDate"
+                                            render={({ field }) => (
+                                                <FormItem className="flex-1">
+                                                    <FormLabel>Start Date</FormLabel>
+                                                    <DateSelector field={field} />
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
+                                        <FormField
+                                            control={form.control}
+                                            name="endDate"
+                                            render={({ field }) => (
+                                                <FormItem className="flex-1">
+                                                    <FormLabel>End Date</FormLabel>
+                                                    <DateSelector field={field} />
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                )}
 
                                 <FormField
                                     control={form.control}
@@ -634,7 +680,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                     </div>
 
                                     {fields.map((field, index) => (
-                                        <div key={field.id} className="space-y-4 p-4 border rounded-[10px] relative pt-8 bg-[#E0E4D9] overflow-hidden">
+                                        <div key={field.id} className="space-y-4 p-4 border rounded-lg relative pt-8 bg-[#E0E4D9] overflow-hidden">
                                             <p className='text-xs'>Session {index + 1}</p>
                                             {fields.length > 1 && (
                                                 <Button
@@ -683,7 +729,17 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                                                 <Input
                                                                     {...field}
                                                                     type="time"
-                                                                    step="60"
+                                                                    value={formatTimeValue(field.value)}
+                                                                    onChange={(e) => {
+                                                                        const newValue = e.target.value;
+                                                                        if (newValue === '' || /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(newValue)) {
+                                                                            field.onChange(newValue);
+                                                                        }
+                                                                    }}
+                                                                    onBlur={(e) => {
+                                                                        field.onChange(formatTimeValue(e.target.value));
+                                                                        field.onBlur();
+                                                                    }}
                                                                     className="px-2 py-6 rounded-[10px] border border-gray-500 font-inter"
                                                                 />
                                                             </FormControl>
@@ -702,7 +758,17 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                                                 <Input
                                                                     {...field}
                                                                     type="time"
-                                                                    step="60"
+                                                                    value={formatTimeValue(field.value)}
+                                                                    onChange={(e) => {
+                                                                        const newValue = e.target.value;
+                                                                        if (newValue === '' || /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(newValue)) {
+                                                                            field.onChange(newValue);
+                                                                        }
+                                                                    }}
+                                                                    onBlur={(e) => {
+                                                                        field.onChange(formatTimeValue(e.target.value));
+                                                                        field.onBlur();
+                                                                    }}
                                                                     className="px-2 py-6 rounded-[10px] border border-gray-500 font-inter"
                                                                 />
                                                             </FormControl>
@@ -754,5 +820,5 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                 </Form>
             </DialogContent>
         </Dialog>
-    )
+    );
 }

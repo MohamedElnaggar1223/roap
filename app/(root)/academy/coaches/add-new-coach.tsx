@@ -283,7 +283,7 @@ export default function AddNewCoach({ sports, languages, academySports }: Props)
                                             name='title'
                                             render={({ field }) => (
                                                 <FormItem className='flex-1'>
-                                                    <FormLabel>Title</FormLabel>
+                                                    <FormLabel>Job Title</FormLabel>
                                                     <FormControl>
                                                         <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                     </FormControl>

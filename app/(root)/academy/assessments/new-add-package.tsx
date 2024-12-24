@@ -199,7 +199,8 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                         to: schedule.to,
                         memo: schedule.memo
                     })),
-                    capacity: 99999999999999
+                    capacity: 99999999999999,
+                    type: values.type
                 })
 
                 if (result?.error) {

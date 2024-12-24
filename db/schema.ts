@@ -789,6 +789,7 @@ export const packages = pgTable("packages", {
     price: doublePrecision().notNull(),
     startDate: date("start_date").notNull(),
     endDate: date("end_date").notNull(),
+    months: text("months").array(),
     sessionPerWeek: integer("session_per_week").default(0).notNull(),
     sessionDuration: integer("session_duration"),
     capacity: integer("capacity").default(0).notNull(),

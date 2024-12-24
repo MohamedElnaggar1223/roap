@@ -108,7 +108,7 @@ const EventDetailsDialog = ({
 			<DialogContent className="bg-[#F1F2E9] border border-[#868685]">
 				<DialogHeader>
 					<DialogTitle className="text-[#1F441F]">
-						{groupedEvent.packageName} - {groupedEvent.coachName}
+						{groupedEvent.programName} {groupedEvent.coachName !== 'No Coach' ? " - " + groupedEvent.coachName : ''}
 					</DialogTitle>
 				</DialogHeader>
 				<div className="space-y-4">

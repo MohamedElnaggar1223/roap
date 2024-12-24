@@ -203,6 +203,7 @@ export async function getProgramDetails(programId: number): Promise<ProgramDetai
                     entryFees: pkg.entryFees ? Number(pkg.entryFees) : null,
                     sessionPerWeek: pkg.sessionPerWeek,
                     sessionDuration: pkg.sessionDuration,
+                    months: pkg.months,
                     schedules: pkg.schedules.map(s => ({
                         id: s.id,
                         day: s.day,
@@ -263,13 +264,22 @@ export async function calculateSessionsAndPrice(
         });
     } else if (isMonthly) {
         // For monthly packages, only generate sessions until end of current month
-        const endDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
+        const selectedMonthYear = format(selectedDate, 'MMMM yyyy');
+
+        // Check if this month is in the package's months array
+        if (!packageDetails.months?.includes(selectedMonthYear)) {
+            throw new Error('Selected month is not available in this package');
+        }
+
+        // Generate sessions only for the selected month
+        const monthStartDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+        const monthEndDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
 
         // Get all possible sessions for this month
         const allSessions = generateSessionsFromSchedules(
             schedules,
-            new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1), // Start of month
-            endDate
+            monthStartDate,
+            monthEndDate
         );
 
         // Calculate price per session for the month
@@ -281,15 +291,9 @@ export async function calculateSessionsAndPrice(
         );
 
         deductions = missedSessions.length * pricePerSession;
-        console.log("Missed sessions", missedSessions)
-        console.log("Price per session", pricePerSession)
-        console.log("Deductions", deductions)
-        console.log("Total price", totalPrice)
-        console.log("All sessions", allSessions)
         sessions.push(...allSessions.filter(
             session => session.date >= selectedDate
         ));
-        console.log("Sessions", sessions)
     } else {
         // For term and full season packages
         const packageStartDate = new Date(packageDetails.startDate);

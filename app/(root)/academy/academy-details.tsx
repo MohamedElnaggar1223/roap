@@ -335,7 +335,12 @@ export default function AcademyDetails({ academyDetails, sports }: Props) {
                         <FormItem>
                             <FormLabel>Academy Name</FormLabel>
                             <FormControl>
-                                <Input disabled={loading} {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
+                                <Input
+                                    disabled={loading}
+                                    {...field}
+                                    onChange={(e) => field.onChange(e.target.value?.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" "))}
+                                    className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
+                                />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -498,7 +503,7 @@ export default function AcademyDetails({ academyDetails, sports }: Props) {
                         <p className='text-xs'>
                             Gallery
                             {" "}
-                            <span className='text-[10px] text-red-500'>jpeg, png, svg, webp, mp4</span>
+                            <span className='text-[10px] text-red-500'>jpeg, png, svg, webp, for video(s) mp4</span>
                         </p>
                         <Button
                             variant="default"

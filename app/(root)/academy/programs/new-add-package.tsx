@@ -29,6 +29,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useOnboarding } from '@/providers/onboarding-provider';
 import { DateSelector } from '@/components/shared/date-selector';
 
+const formatTimeValue = (value: string) => {
+    if (!value) return '';
+    // Ensure the value is in HH:mm format
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!timeRegex.test(value)) return '';
+    return value;
+};
+
 const packageSchema = z.object({
     type: z.enum(["Term", "Monthly", "Full Season", "Assessment"]),
     termNumber: z.string().optional(),
@@ -36,10 +44,11 @@ const packageSchema = z.object({
     price: z.string().min(1, "Price is required"),
     startDate: z.date({
         required_error: "Start date is required",
-    }),
+    }).optional(),
     endDate: z.date({
         required_error: "End date is required",
-    }),
+    }).optional(),
+    months: z.array(z.string()).optional(),
     memo: z.string(),
     entryFees: z.string().default("0"),
     entryFeesExplanation: z.string().optional(),
@@ -61,10 +70,16 @@ const packageSchema = z.object({
     if (data.type === "Monthly" && parseFloat(data.entryFees) > 0 && data.entryFeesAppliedUntil?.length === 0) {
         return false;
     }
+    if (data.type === "Monthly" && (!data.months || data.months.length === 0)) {
+        return false;
+    }
+    if (data.type !== "Monthly" && (!data.startDate || !data.endDate)) {
+        return false;
+    }
     return true;
 }, {
-    message: "Required fields missing for entry fees configuration",
-    path: ["entryFeesExplanation"]
+    message: "Required fields missing",
+    path: ["months"]
 });
 
 interface Package {
@@ -73,6 +88,7 @@ interface Package {
     name: string
     price: number
     startDate: Date
+    months?: string[] | null
     endDate: Date
     schedules: Schedule[]
     memo: string | null
@@ -133,6 +149,10 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
     const { mutate } = useOnboarding()
     const [loading, setLoading] = useState(false)
     const [availableMonths, setAvailableMonths] = useState<Array<{ label: string, value: string }>>([])
+    const [yearOptions] = useState(() => {
+        const currentYear = new Date().getFullYear();
+        return Array.from({ length: 5 }, (_, i) => currentYear + i);
+    });
 
     const form = useForm<z.infer<typeof packageSchema>>({
         resolver: zodResolver(packageSchema),
@@ -144,7 +164,8 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
             schedules: [{ day: '', from: '', to: '', memo: '' }],
             entryFeesStartDate: undefined,
             entryFeesEndDate: undefined,
-            capacity: '0'
+            capacity: '0',
+            months: [],
         }
     })
 
@@ -158,6 +179,29 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
     const showEntryFeesFields = entryFees > 0
     const startDate = form.watch("startDate")
     const endDate = form.watch("endDate")
+    const months = form.watch("months") || []
+
+    const addMonth = () => {
+        const newMonthEntry = {
+            month: '',
+            year: new Date().getFullYear().toString()
+        };
+        form.setValue('months', [...months, `${newMonthEntry.month} ${newMonthEntry.year}`]);
+    };
+
+    // Function to remove a month
+    const removeMonth = (index: number) => {
+        const newMonths = [...months];
+        newMonths.splice(index, 1);
+        form.setValue('months', newMonths);
+    };
+
+    // Function to update a month
+    const updateMonth = (index: number, month: string, year: string) => {
+        const newMonths = [...months];
+        newMonths[index] = `${month} ${year}`;
+        form.setValue('months', newMonths);
+    };
 
     useEffect(() => {
         if (startDate && endDate) {
@@ -181,6 +225,8 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                     price: parseFloat(values.price),
                     startDate: values.startDate,
                     endDate: values.endDate,
+                    months: values.months,
+                    type: values.type,
                     programId,
                     memo: values.memo,
                     entryFees: parseFloat(values.entryFees),
@@ -222,8 +268,10 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                 setCreatedPackages(prev => [...prev, {
                     name: packageName ?? '',
                     price: parseFloat(values.price),
-                    startDate: values.startDate,
-                    endDate: values.endDate,
+                    startDate: values.startDate ?? new Date(),
+                    months: values.months,
+                    type: values.type,
+                    endDate: values.endDate ?? new Date(),
                     schedules: values.schedules,
                     memo: values.memo,
                     entryFees: parseFloat(values.entryFees),
@@ -234,7 +282,6 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                         values.entryFeesStartDate : undefined,
                     entryFeesEndDate: values.type !== "Monthly" && showEntryFeesFields ?
                         values.entryFeesEndDate : undefined,
-                    type: values.type,
                     capacity: parseInt(values.capacity)
                 }])
                 onOpenChange(false)
@@ -355,31 +402,104 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                     )}
                                 />
 
-                                <div className="flex gap-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="startDate"
-                                        render={({ field }) => (
-                                            <FormItem className="flex-1">
-                                                <FormLabel>Start Date</FormLabel>
-                                                <DateSelector field={field} />
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
+                                {packageType === "Monthly" ? (
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <FormLabel>Package Months</FormLabel>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                className="text-main-green"
+                                                onClick={addMonth}
+                                            >
+                                                Add Month
+                                            </Button>
+                                        </div>
 
-                                    <FormField
-                                        control={form.control}
-                                        name="endDate"
-                                        render={({ field }) => (
-                                            <FormItem className="flex-1">
-                                                <FormLabel>End Date</FormLabel>
-                                                <DateSelector field={field} />
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
+                                        {months.map((monthValue, index) => {
+                                            const [month, year] = monthValue.split(' ');
+                                            return (
+                                                <div key={index} className="flex gap-4 items-center">
+                                                    <Select
+                                                        value={month}
+                                                        onValueChange={(value) => updateMonth(index, value, year)}
+                                                    >
+                                                        <SelectTrigger className="w-[180px]">
+                                                            <SelectValue placeholder="Select month" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="January">January</SelectItem>
+                                                            <SelectItem value="February">February</SelectItem>
+                                                            <SelectItem value="March">March</SelectItem>
+                                                            <SelectItem value="April">April</SelectItem>
+                                                            <SelectItem value="May">May</SelectItem>
+                                                            <SelectItem value="June">June</SelectItem>
+                                                            <SelectItem value="July">July</SelectItem>
+                                                            <SelectItem value="August">August</SelectItem>
+                                                            <SelectItem value="September">September</SelectItem>
+                                                            <SelectItem value="October">October</SelectItem>
+                                                            <SelectItem value="November">November</SelectItem>
+                                                            <SelectItem value="December">December</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+
+                                                    <Select
+                                                        value={year}
+                                                        onValueChange={(value) => updateMonth(index, month, value)}
+                                                    >
+                                                        <SelectTrigger className="w-[120px]">
+                                                            <SelectValue placeholder="Select year" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {yearOptions.map((year) => (
+                                                                <SelectItem key={year} value={year.toString()}>
+                                                                    {year}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => removeMonth(index)}
+                                                    >
+                                                        <TrashIcon className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            );
+                                        })}
+                                        <FormMessage />
+                                    </div>
+                                ) : (
+                                    <div className="flex gap-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="startDate"
+                                            render={({ field }) => (
+                                                <FormItem className="flex-1">
+                                                    <FormLabel>Start Date</FormLabel>
+                                                    <DateSelector field={field} />
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
+                                        <FormField
+                                            control={form.control}
+                                            name="endDate"
+                                            render={({ field }) => (
+                                                <FormItem className="flex-1">
+                                                    <FormLabel>End Date</FormLabel>
+                                                    <DateSelector field={field} />
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                )}
 
                                 <FormField
                                     control={form.control}
@@ -547,7 +667,19 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                                                 <Input
                                                                     {...field}
                                                                     type="time"
-                                                                    step="60"
+                                                                    value={formatTimeValue(field.value)}
+                                                                    onChange={(e) => {
+                                                                        const newValue = e.target.value;
+                                                                        // Only update if it's a valid time format
+                                                                        if (newValue === '' || /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(newValue)) {
+                                                                            field.onChange(newValue);
+                                                                        }
+                                                                    }}
+                                                                    onBlur={(e) => {
+                                                                        // Format on blur to ensure consistent value
+                                                                        field.onChange(formatTimeValue(e.target.value));
+                                                                        field.onBlur();
+                                                                    }}
                                                                     className="px-2 py-6 rounded-[10px] border border-gray-500 font-inter"
                                                                 />
                                                             </FormControl>
@@ -566,7 +698,19 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                                                 <Input
                                                                     {...field}
                                                                     type="time"
-                                                                    step="60"
+                                                                    value={formatTimeValue(field.value)}
+                                                                    onChange={(e) => {
+                                                                        const newValue = e.target.value;
+                                                                        // Only update if it's a valid time format
+                                                                        if (newValue === '' || /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(newValue)) {
+                                                                            field.onChange(newValue);
+                                                                        }
+                                                                    }}
+                                                                    onBlur={(e) => {
+                                                                        // Format on blur to ensure consistent value
+                                                                        field.onChange(formatTimeValue(e.target.value));
+                                                                        field.onBlur();
+                                                                    }}
                                                                     className="px-2 py-6 rounded-[10px] border border-gray-500 font-inter"
                                                                 />
                                                             </FormControl>

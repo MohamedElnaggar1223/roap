@@ -67,6 +67,7 @@ export interface PackageDetails {
     schedules: Schedule[];
     endDate: string | null;
     startDate: string | null;
+    months: string[] | null;
 }
 
 export interface CoachDetails {
