@@ -140,7 +140,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
     const { mutate: mutateAssessment } = useOnboarding()
 
     const { data: packagesData, isLoading, isValidating, mutate } = useSWR(
-        'assessment-packages',
+        `assessment-packages ${assessment.id}`,
         () => getProgramPackages('packages', assessment.id),
         {
             refreshWhenHidden: true
@@ -186,7 +186,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
             startAge: assessment.startDateOfBirth ? calculateAge(assessment.startDateOfBirth) < 1 ? calculateAge(assessment.startDateOfBirth) * 12 : calculateAge(assessment.startDateOfBirth) : 0,
             startAgeUnit: assessment.startDateOfBirth ? calculateAge(assessment.startDateOfBirth) < 1 ? 'months' : 'years' : 'years',
             endAge: assessment.endDateOfBirth ? calculateAge(assessment.endDateOfBirth) < 0 ? undefined : calculateAge(assessment.endDateOfBirth) : 100,
-            endAgeUnit: assessment.endDateOfBirth ? calculateAge(assessment.endDateOfBirth) < 0 ? 'unlimited' : 'years' : 'unlimited',
+            endAgeUnit: assessment.endDateOfBirth ? calculateAge(assessment.endDateOfBirth) >= 100 ? 'unlimited' : 'years' : 'unlimited',
             assessmentDeductedFromProgram: assessment.assessmentDeductedFromProgram
         }
     })
@@ -265,7 +265,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
             if (values.endAgeUnit === 'unlimited') {
                 // Set a very large date for "unlimited" (e.g., 100 years from now)
                 endDate = new Date();
-                endDate.setFullYear(endDate.getFullYear() + 100);
+                endDate.setFullYear(endDate.getFullYear() - 100);
             } else {
                 if (values.endAge === null) {
                     return form.setError('endAge', {

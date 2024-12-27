@@ -6,6 +6,7 @@ import { and, eq, inArray, not, sql } from 'drizzle-orm'
 import { revalidateTag, unstable_cache } from 'next/cache'
 import { slugify } from '../utils'
 import { cookies } from 'next/headers'
+import { fetchPlaceInformation } from './reviews.actions'
 
 const getLocationsAction = async (academicId: number) => {
     return unstable_cache(async (academicId: number) => {
@@ -183,6 +184,8 @@ export async function createLocation(data: {
                     .where(eq(branches.academicId, academy.id))
             }
 
+            const ratesAndReviews = await fetchPlaceInformation(data.nameInGoogleMap)
+
             const [branch] = await db
                 .insert(branches)
                 .values({
@@ -193,6 +196,8 @@ export async function createLocation(data: {
                     academicId: academy.id,
                     latitude: data.latitude ?? '',
                     longitude: data.longitude ?? '',
+                    rate: ratesAndReviews?.rating ?? null,
+                    reviews: ratesAndReviews?.reviews?.length ?? null,
                 })
                 .returning({
                     id: branches.id,
@@ -291,6 +296,8 @@ export async function updateLocation(id: number, data: {
 
     if (!academy) return { error: 'Academy not found' }
 
+    const ratesAndReviews = await fetchPlaceInformation(data.nameInGoogleMap)
+
     try {
         await Promise.all([
             data.isDefault ? db
@@ -311,6 +318,8 @@ export async function updateLocation(id: number, data: {
                     updatedAt: sql`now()`,
                     latitude: data.latitude,
                     longitude: data.longitude,
+                    rate: ratesAndReviews?.rating ?? null,
+                    reviews: ratesAndReviews?.reviews?.length ?? null,
                 })
                 .where(eq(branches.id, id)),
 

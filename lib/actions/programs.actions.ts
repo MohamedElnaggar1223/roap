@@ -140,20 +140,13 @@ export const getProgramsData = async (birthday?: string) => {
 
     const finalProgramsDataArray = birthday
         ? finalProgramsData.filter(program => {
-            const birthDate = new Date(birthday)
-            const startDate = program.startDateOfBirth ? new Date(program.startDateOfBirth) : null
-            const endDate = program.endDateOfBirth ? new Date(program.endDateOfBirth) : null
+            const birthDate = new Date(birthday);
+            const startDate = program.startDateOfBirth ? new Date(program.startDateOfBirth) : null;
+            const endDate = program.endDateOfBirth ? new Date(program.endDateOfBirth) : null;
 
-            // If either date is missing, include the program
-            if (!startDate || !endDate) return true
+            if (!startDate || !endDate) return true;
 
-            // Check if birthday falls within the program's date range
-            console.log("Birthday", birthDate)
-            console.log("Start Date", startDate)
-            console.log("End Date", endDate)
-            console.log("Birthday >= Start Date", birthDate >= startDate)
-            console.log("Birthday <= End Date", birthDate <= endDate)
-            return birthDate <= startDate && birthDate <= endDate
+            return birthDate <= startDate && birthDate >= endDate;
         })
         : finalProgramsData
 

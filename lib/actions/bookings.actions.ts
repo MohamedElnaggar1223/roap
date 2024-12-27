@@ -2,7 +2,7 @@
 import { auth } from "@/auth"
 import { db } from "@/db"
 import { academicAthletic, blockPrograms, blocks, bookings, bookingSessions, branchTranslations, coaches, entryFeesHistory, packageDiscount, packages, profiles, programs, sports, sportTranslations, users } from "@/db/schema"
-import { and, eq, inArray, or, sql } from "drizzle-orm"
+import { and, desc, eq, inArray, or, sql } from "drizzle-orm"
 import { revalidateTag } from "next/cache"
 import { revalidatePath } from 'next/cache'
 import { createBookingSchema } from '../validations/bookings'
@@ -363,29 +363,96 @@ export const getSportIdFromName = async (sportName: string) => {
     return sport[0]?.id;
 }
 
+export async function checkAssessmentDeduction(
+    profileId: number,
+    sportId: number,
+    programId: number,
+    packageDetails: any,
+    startDate: string
+): Promise<{ shouldPay: boolean; amount: number, assessmentBookingId?: number }> {
+    const program = await db.query.programs.findFirst({
+        where: eq(programs.id, programId),
+        with: {
+            branch: true
+        }
+    });
+    const assessmentBookings = await db.query.bookings.findMany({
+        where: and(
+            eq(bookings.profileId, profileId),
+            eq(bookings.status, 'success'),
+            sql`${bookings.id} NOT IN (
+                SELECT assessment_deduction_id 
+                FROM ${bookings} 
+                WHERE assessment_deduction_id IS NOT NULL
+            )`
+        ),
+        with: {
+            package: {
+                with: {
+                    program: {
+                        columns: {
+                            assessmentDeductedFromProgram: true,
+                            id: true
+                        },
+                        with: {
+                            sport: true,
+                            branch: true
+                        }
+                    }
+                }
+            }
+        },
+        orderBy: [desc(bookings.createdAt)] // Get most recent first
+    });
+
+    console.log("Eligible assessment bookings", assessmentBookings.map(booking => `Assessment Deducted: ${booking.package?.program?.assessmentDeductedFromProgram}\nBranch: ${booking.package?.program?.branch?.id}\nSport: ${booking.package?.program?.sport?.id}\nPackage: ${booking.package?.name}\nPrice: ${booking.price}`))
+    console.log("Current sport ID", sportId)
+    console.log("Current branch ID", program?.branch?.id)
+    // Find the most recent eligible assessment
+    const eligibleAssessment = assessmentBookings.find(booking =>
+        booking.package?.program?.assessmentDeductedFromProgram &&
+        booking.package.program.sport?.id === sportId &&
+        booking.package.name.toLowerCase().startsWith('assessment') &&
+        booking.package.program.branch?.id === program?.branch?.id
+    );
+
+    console.log("Eligible assessment", eligibleAssessment)
+    console.log(packageDetails.entryFees - Number(eligibleAssessment?.price))
+
+    if (eligibleAssessment) {
+        return {
+            shouldPay: true,
+            amount: packageDetails.entryFees - Number(eligibleAssessment.price),
+            assessmentBookingId: eligibleAssessment.id
+        };
+    }
+    return {
+        shouldPay: false,
+        amount: 0
+    };
+}
+
 export async function checkEntryFees(
     profileId: number,
     sportId: number,
     programId: number,
     packageDetails: any,
     startDate: string
-): Promise<{ shouldPay: boolean; amount: number }> {
+): Promise<{ shouldPay: boolean; amount: number, assessmentBookingId?: number }> {
     const currentDate = new Date(startDate);
     const entryFeesStartDate = packageDetails.entryFeesStartDate ? new Date(packageDetails.entryFeesStartDate) : null;
     const entryFeesEndDate = packageDetails.entryFeesEndDate ? new Date(packageDetails.entryFeesEndDate) : null;
 
-    console.log("Entry fees", packageDetails.entryFees)
+    // Get the current program's branch
 
-    // If there are entry fees dates defined and we're not within the range, no entry fees should be charged
+
     if (entryFeesStartDate && currentDate < entryFeesStartDate) {
-        console.log("Entry fees start date", entryFeesStartDate)
         return { shouldPay: false, amount: 0 };
     }
     if (entryFeesEndDate && currentDate > entryFeesEndDate) {
-        console.log("Entry fees end date", entryFeesEndDate)
         return { shouldPay: false, amount: 0 };
     }
-    // Check if entry fees already paid for this season
+
     const existingFees = await db.query.entryFeesHistory.findFirst({
         where: and(
             eq(entryFeesHistory.profileId, profileId),
@@ -408,36 +475,8 @@ export async function checkEntryFees(
         }
     }
 
-    // Check if there's an assessment that can be deducted
-    if (packageDetails?.program?.assessmentDeductedFromProgram) {
-        const assessmentBooking = await db.query.bookings.findFirst({
-            where: and(
-                eq(bookings.profileId, profileId),
-                eq(bookings.status, 'success'),
-            ),
-            with: {
-                package: {
-                    with: {
-                        program: {
-                            with: {
-                                sport: true
-                            }
-                        }
-                    }
-                }
-            }
-        });
+    // Get ALL assessment bookings that are eligible
 
-        if (assessmentBooking?.package?.program?.sport?.id === sportId &&
-            assessmentBooking.package.name.toLowerCase().startsWith('assessment')) {
-            return {
-                shouldPay: true,
-                amount: packageDetails.entryFees - Number(assessmentBooking.price)
-            };
-        }
-    }
-
-    console.log(" Entry fees: ", packageDetails.entryFees)
 
     return {
         shouldPay: true,
@@ -483,7 +522,8 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
             with: {
                 program: {
                     with: {
-                        sport: true
+                        sport: true,
+                        branch: true
                     }
                 },
                 schedules: true
@@ -517,6 +557,15 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
                 validatedInput.date
             );
 
+        const { shouldPay: shouldPayAssessmentDeduction, amount: assessmentDeductionAmount, assessmentBookingId } =
+            await checkAssessmentDeduction(
+                validatedInput.profileId,
+                packageDetails.program.sport.id,
+                packageDetails.program.id,
+                packageDetails,
+                validatedInput.date
+            );
+
         // Get active discounts
         const discountedPrice = await getPriceAfterActiveDiscounts(validatedInput, totalPrice, deductions);
 
@@ -527,12 +576,13 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
                 profileId: validatedInput.profileId,
                 packageId: validatedInput.packageId,
                 coachId: validatedInput.coachId || null,
-                price: discountedPrice + (shouldPayEntryFees ? entryFeesAmount : 0),
+                price: discountedPrice + (shouldPayEntryFees ? entryFeesAmount : 0) + (shouldPayAssessmentDeduction ? assessmentDeductionAmount : 0),
                 packagePrice: packageDetails.price,
                 status: 'success',
                 academyPolicy: false,
                 roapPolicy: false,
                 entryFeesPaid: shouldPayEntryFees,
+                assessmentDeductionId: assessmentBookingId || null,
                 createdAt: sql`now()`,
                 updatedAt: sql`now()`
             }).returning();

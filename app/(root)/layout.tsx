@@ -17,6 +17,7 @@ import { Inter } from 'next/font/google'
 import { checkAcademyStatus } from "@/lib/actions/check-academy-status";
 import { OnboardingProvider } from "@/providers/onboarding-provider";
 import { OnboardingSaveProvider } from "@/providers/onboarding-save-provider";
+import { fetchPlaceInformation } from "@/lib/actions/reviews.actions";
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
@@ -33,7 +34,6 @@ export default async function RootLayout({
 	if (status.shouldRedirect) {
 		redirect(status.redirectTo!)
 	}
-
 	// if (!status.isOnboarded) {
 	// 	redirect('/on-boarding')
 	// }

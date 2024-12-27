@@ -32,7 +32,7 @@ import type {
     BookingConfirmationData,
     Schedule
 } from '@/lib/validations/bookings';
-import { searchAthletes, getProgramDetails, createBooking, checkEntryFees, getSportIdFromName, calculateSessionsAndPrice, getPriceAfterActiveDiscounts } from '@/lib/actions/bookings.actions';
+import { searchAthletes, getProgramDetails, createBooking, checkEntryFees, getSportIdFromName, calculateSessionsAndPrice, getPriceAfterActiveDiscounts, checkAssessmentDeduction } from '@/lib/actions/bookings.actions';
 import { getProgramsData } from '@/lib/actions/programs.actions';
 import Image from 'next/image';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -549,6 +549,7 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
     const [entryFeesDetails, setEntryFeesDetails] = useState<{ shouldPay: boolean; amount: number }>({ shouldPay: false, amount: 0 });
     const [sessionsAndPrice, setSessionsAndPrice] = useState<{ sessions: { date: Date; from: string; to: string; }[]; totalPrice: number; deductions: number; }>();
     const [discountedPrice, setDiscountedPrice] = useState<number>(0);
+    const [assessmentResult, setAssessmentResult] = useState<{ shouldPay: boolean; amount: number }>({ shouldPay: false, amount: 0 });
 
     useEffect(() => {
         const checkFees = async () => {
@@ -558,7 +559,7 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
             if (!sportId) return;
 
 
-            const [result, sessionsAndPrice] = await Promise.all(
+            const [result, sessionsAndPrice, assessmentResult] = await Promise.all(
                 [
                     checkEntryFees(
                         bookingDetails.athlete.id,
@@ -572,9 +573,19 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
                         bookingDetails.date,
                         bookingDetails.package.schedules,
                         bookingDetails.time
-                    )
+                    ),
+                    checkAssessmentDeduction(
+                        bookingDetails.athlete.id,
+                        sportId,
+                        bookingDetails.program.id,
+                        bookingDetails.package,
+                        bookingDetails.date.toISOString()
+                    ),
                 ]
             );
+
+
+            console.log("Entry fees details", result)
 
             const discountedPrice = await getPriceAfterActiveDiscounts(
                 { ...bookingDetails, profileId: bookingDetails.athlete.id, packageId: bookingDetails.package.id, coachId: bookingDetails.coach?.id, date: bookingDetails.date.toISOString(), time: bookingDetails.time },
@@ -584,6 +595,7 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
             setEntryFeesDetails(result);
             setSessionsAndPrice(sessionsAndPrice);
             setDiscountedPrice(discountedPrice);
+            setAssessmentResult(assessmentResult);
         };
 
         checkFees();
@@ -620,28 +632,28 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
 
                 <div className="space-y-4 text-sm">
                     <div className='flex flex-col items-start justify-center gap-2'>
-                        <p className='text-xs text-gray-500'>Branch</p>
-                        <p className='font-semibold'>{bookingDetails.program.branch}</p>
-                    </div>
-                    <div className='flex flex-col items-start justify-center gap-2'>
                         <p className='text-xs text-gray-500'>Sport</p>
                         <p className='font-semibold'>{bookingDetails.program.sport}</p>
+                    </div>
+                    <div className='flex flex-col items-start justify-center gap-2'>
+                        <p className='text-xs text-gray-500'>Program</p>
+                        <p className='font-semibold'>{bookingDetails.program.name}</p>
                     </div>
                     <div className='flex flex-col items-start justify-center gap-2'>
                         <p className='text-xs text-gray-500'>Package</p>
                         <p className='font-semibold'>{bookingDetails.package.name}</p>
                     </div>
                     <div className='flex flex-col items-start justify-center gap-2'>
-                        <p className='text-xs text-gray-500'>Start Date & Time</p>
-                        <p className='font-semibold'>{format(bookingDetails.date, "PPP")} , {" "}
-                            <span className='font-normal'>
-                                {
-                                    format(new Date(`2000-01-01T${bookingDetails.time.split(' ')[0]}`), 'h:mm a')
-                                }
-                                {" - "}
-                                {format(new Date(`2000-01-01T${bookingDetails.time.split(' ')[1]}`), 'h:mm a')}
-                            </span>
-                        </p>
+                        <p className='text-xs text-gray-500'>Branch</p>
+                        <p className='font-semibold'>{bookingDetails.program.branch}</p>
+                    </div>
+                    <div className='flex flex-col items-start justify-center gap-2'>
+                        <p className='text-xs text-gray-500'>Start Date</p>
+                        <p className='font-semibold'>{format(bookingDetails.date, "PPP")}</p>
+                    </div>
+                    <div className='flex flex-col items-start justify-center gap-2'>
+                        <p className='text-xs text-gray-500'>Training Days and Time</p>
+                        <p className='font-semibold'>{bookingDetails.package.schedules.map(s => <p>{days[s.day as keyof typeof days].slice(0, 1).toUpperCase() + days[s.day as keyof typeof days].slice(1)} {format(new Date(`2000-01-01T${s.from}`), 'h:mm a')} - {format(new Date(`2000-01-01T${s.to}`), 'h:mm a')}<br /></p>)}</p>
                     </div>
                 </div>
             </div>
@@ -662,9 +674,16 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
                     </div>
                 )}
 
+                {assessmentResult.shouldPay && (
+                    <div className="flex justify-between gap-4">
+                        <div className='min-w-[140px] text-sm'>Assessment Deduction</div>
+                        <div className='flex-1 text-sm'>{assessmentResult.amount} AED</div>
+                    </div>
+                )}
+
                 <div className="flex justify-between items-center font-medium text-lg">
                     <div className='min-w-[140px] text-sm font-semibold'>Total</div>
-                    <div className='font-semibold flex-1'>{(discountedPrice + (entryFeesDetails.shouldPay ? bookingDetails.package.entryFees ?? 0 : 0)).toFixed(2)} AED</div>
+                    <div className='font-semibold flex-1'>{(discountedPrice + (entryFeesDetails.shouldPay ? bookingDetails.package.entryFees ?? 0 : 0) + (assessmentResult.shouldPay ? assessmentResult.amount : 0)).toFixed(2)} AED</div>
                 </div>
             </div>
 

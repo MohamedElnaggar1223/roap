@@ -129,9 +129,10 @@ type Props = {
     branches: Branch[]
     sports: Sport[]
     academySports?: { id: number }[]
+    takenColors: string[]
 }
 
-const ColorSelector = ({ form, disabled = false }: { form: any; disabled?: boolean }) => {
+const ColorSelector = ({ form, takenColors, disabled = false }: { form: any; takenColors: string[]; disabled?: boolean }) => {
     return (
         <FormField
             control={form.control}
@@ -151,7 +152,7 @@ const ColorSelector = ({ form, disabled = false }: { form: any; disabled?: boole
                                 </SelectTrigger>
                             </FormControl>
                             <SelectContent className='!bg-[#F1F2E9]'>
-                                {calendarColors.map((color) => (
+                                {calendarColors.filter(color => !takenColors.includes(color.value)).map((color) => (
                                     <SelectItem
                                         key={color.value}
                                         value={color.value}
@@ -195,7 +196,7 @@ const calendarColors = [
     { name: 'Light Pink', value: '#FFB6C1', textColor: '#000000' }
 ];
 
-export default function AddNewProgram({ branches, sports, academySports }: Props) {
+export default function AddNewProgram({ branches, sports, academySports, takenColors }: Props) {
     const router = useRouter()
 
     const { mutate } = useOnboarding()
@@ -297,7 +298,7 @@ export default function AddNewProgram({ branches, sports, academySports }: Props
             if (values.endAgeUnit === 'unlimited') {
                 // Set a very large date for "unlimited" (e.g., 100 years from now)
                 endDate = new Date();
-                endDate.setFullYear(endDate.getFullYear() + 100);
+                endDate.setFullYear(endDate.getFullYear() - 100);
             } else {
                 if (values.endAge === null) {
                     return form.setError('endAge', {
@@ -696,7 +697,7 @@ export default function AddNewProgram({ branches, sports, academySports }: Props
                                             </div>
                                         </div>
 
-                                        <ColorSelector form={form} disabled={loading} />
+                                        <ColorSelector form={form} disabled={loading} takenColors={takenColors} />
                                     </div>
 
                                     <div className="flex w-full gap-4 items-start justify-between">

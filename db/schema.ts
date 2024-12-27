@@ -755,6 +755,7 @@ export const academicAthletic = pgTable("academic_athletic", {
     userId: bigint("user_id", { mode: "number" }).notNull(),
     // You can use { mode: "bigint" } if numbers are exceeding js number limitations
     profileId: bigint("profile_id", { mode: "number" }),
+    sportId: bigint("sport_id", { mode: "number" }),
     certificate: varchar({ length: 255 }).default(sql`NULL`),
     createdAt: timestamp("created_at", { mode: 'string' }),
     updatedAt: timestamp("updated_at", { mode: 'string' }),
@@ -778,6 +779,11 @@ export const academicAthletic = pgTable("academic_athletic", {
             columns: [table.userId],
             foreignColumns: [users.id],
             name: "academic_athletic_user_id_foreign"
+        }),
+        academicAthleticSportIdForeign: foreignKey({
+            columns: [table.sportId],
+            foreignColumns: [sports.id],
+            name: "academic_athletic_sport_id_foreign"
         }),
     }
 });
@@ -1414,6 +1420,7 @@ export const sportsRelations = relations(sports, ({ many }) => ({
     academicSports: many(academicSport),
     programs: many(programs),
     coachSports: many(coachSport),
+    academicAthletics: many(academicAthletic),
 }));
 
 export const blockSportsRelations = relations(blockSports, ({ one }) => ({
@@ -1555,6 +1562,10 @@ export const academicAthleticRelations = relations(academicAthletic, ({ one }) =
     user: one(users, {
         fields: [academicAthletic.userId],
         references: [users.id]
+    }),
+    sport: one(sports, {
+        fields: [academicAthletic.sportId],
+        references: [sports.id]
     }),
 }));
 

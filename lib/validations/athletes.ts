@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 export const addAthleteSchema = z.object({
-    email: z.string().email().optional(),
+    email: z.string().optional(),
     phoneNumber: z.string().optional(),
     firstName: z.string().min(1, "First Name is required"),
     lastName: z.string().min(1, "Last Name is required"),

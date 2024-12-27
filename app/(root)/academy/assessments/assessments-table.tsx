@@ -62,6 +62,8 @@ interface AssessmentsTableProps {
 export function AssessmentsTable({ data, branches, sports, academySports }: AssessmentsTableProps) {
     const router = useRouter()
 
+    console.log("Assessments Data", data)
+
     const [selectedSport, setSelectedSport] = useState<string | null>(null)
     const [selectedGender, setSelectedGender] = useState<string | null>(null)
     const [selectedBranch, setSelectedBranch] = useState<string | null>(null)

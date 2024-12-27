@@ -158,6 +158,7 @@ export function ProgramsDataTable({ data, branches, sports, academySports }: Pro
                         branches={branches}
                         sports={sports}
                         academySports={academySports}
+                        takenColors={data.map(program => program.color).filter(color => color !== null)}
                     />
                     <div className="flex items-center gap-2">
                         <span className="text-sm">Filters:</span>
@@ -350,6 +351,7 @@ export function ProgramsDataTable({ data, branches, sports, academySports }: Pro
                                         branches={branches}
                                         sports={sports}
                                         academySports={academySports}
+                                        takenColors={data.filter(p => program.id !== p.id).map(program => program.color).filter(color => color !== null)}
                                     />
                                 </div>
                             </Fragment>

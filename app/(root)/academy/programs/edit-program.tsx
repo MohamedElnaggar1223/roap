@@ -159,9 +159,10 @@ type Props = {
     sports: Sport[]
     programEdited: Program
     academySports?: { id: number }[]
+    takenColors: string[]
 }
 
-const ColorSelector = ({ form, disabled = false }: { form: any; disabled?: boolean }) => {
+const ColorSelector = ({ form, takenColors, disabled = false }: { form: any; takenColors: string[]; disabled?: boolean }) => {
     return (
         <FormField
             control={form.control}
@@ -184,7 +185,7 @@ const ColorSelector = ({ form, disabled = false }: { form: any; disabled?: boole
                                 <SelectItem value="select" disabled className="flex items-center gap-2">
                                     Select a color
                                 </SelectItem>
-                                {calendarColors.map((color) => (
+                                {calendarColors.filter(color => !takenColors.includes(color.value)).map((color) => (
                                     <SelectItem
                                         key={color.value}
                                         value={color.value}
@@ -228,7 +229,7 @@ const calendarColors = [
     { name: 'Light Pink', value: '#FFB6C1', textColor: '#000000' }
 ];
 
-export default function EditProgram({ branches, sports, programEdited, academySports }: Props) {
+export default function EditProgram({ branches, sports, programEdited, academySports, takenColors }: Props) {
     const router = useRouter()
 
     const { mutate: mutateProgram } = useOnboarding()
@@ -278,7 +279,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
             startAge: programEdited.startDateOfBirth ? calculateAge(programEdited.startDateOfBirth) < 1 ? parseFloat((calculateAge(programEdited.startDateOfBirth) * 12).toFixed(1)) : calculateAge(programEdited.startDateOfBirth) : 0,
             startAgeUnit: programEdited.startDateOfBirth ? calculateAge(programEdited.startDateOfBirth) < 1 ? 'months' : 'years' : 'years',
             endAge: programEdited.endDateOfBirth ? calculateAge(programEdited.endDateOfBirth) < 0 ? undefined : calculateAge(programEdited.endDateOfBirth) : 100,
-            endAgeUnit: programEdited.endDateOfBirth ? calculateAge(programEdited.endDateOfBirth) < 0 ? 'unlimited' : 'years' : 'unlimited',
+            endAgeUnit: programEdited.endDateOfBirth ? calculateAge(programEdited.endDateOfBirth) >= 100 ? 'unlimited' : 'years' : 'unlimited',
             color: programEdited.color ?? '',
         }
     })
@@ -356,7 +357,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
             if (values.endAgeUnit === 'unlimited') {
                 // Set a very large date for "unlimited" (e.g., 100 years from now)
                 endDate = new Date();
-                endDate.setFullYear(endDate.getFullYear() + 100);
+                endDate.setFullYear(endDate.getFullYear() - 100);
             } else {
                 if (values.endAge === null) {
                     return form.setError('endAge', {
@@ -768,7 +769,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                     </div>
 
                                     <div className="flex w-full gap-4 items-start justify-between">
-                                        <ColorSelector form={form} disabled={loading} />
+                                        <ColorSelector form={form} disabled={loading} takenColors={takenColors} />
                                     </div>
 
                                     <div className="flex w-full gap-4 items-start justify-between">

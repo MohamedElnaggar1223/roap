@@ -187,7 +187,7 @@ export default function AddNewLocation({ sports, academySports }: Props) {
                                         control={form.control}
                                         name='nameInGoogleMap'
                                         render={({ field }) => (
-                                            <FormItem className='hidden absolute'>
+                                            <FormItem className=''>
                                                 <FormLabel>Name in google map</FormLabel>
                                                 <FormControl>
                                                     <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
