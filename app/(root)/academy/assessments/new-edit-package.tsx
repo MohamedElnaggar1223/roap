@@ -85,6 +85,7 @@ interface Package {
     entryFeesStartDate?: Date
     entryFeesEndDate?: Date
     id?: number
+    capacity?: number
 }
 
 interface Schedule {
@@ -238,9 +239,14 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                         price: parseFloat(values.price),
                         startDate: values.startDate,
                         endDate: values.endDate,
-                        schedules: values.schedules,
+                        schedules: values.schedules.map(schedule => ({
+                            id: (schedule as any).id,
+                            day: schedule.day,
+                            from: schedule.from,
+                            to: schedule.to,
+                            memo: schedule.memo
+                        })),
                         memo: values.memo,
-                        type: values.type,
                         entryFees: parseFloat(values.entryFees),
                         entryFeesExplanation: showEntryFeesFields ? values.entryFeesExplanation : undefined,
                         entryFeesAppliedUntil: values.type === "Monthly" && showEntryFeesFields ?
@@ -248,7 +254,9 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                         entryFeesStartDate: values.type !== "Monthly" && showEntryFeesFields ?
                             values.entryFeesStartDate : undefined,
                         entryFeesEndDate: values.type !== "Monthly" && showEntryFeesFields ?
-                            values.entryFeesEndDate : undefined
+                            values.entryFeesEndDate : undefined,
+                        capacity: 9999,
+                        type: values.type
                     }
                 })
 
