@@ -260,6 +260,34 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                     }
                 })
 
+                if (setCreatedPackages) setCreatedPackages(prev => prev.map((packageData, i) =>
+                    i === index ? {
+                        ...packageEdited,
+                        name: packageName!,
+                        price: parseFloat(values.price),
+                        startDate: values.startDate,
+                        endDate: values.endDate,
+                        schedules: values.schedules.map(schedule => ({
+                            id: (schedule as any).id,
+                            day: schedule.day,
+                            from: schedule.from,
+                            to: schedule.to,
+                            memo: schedule.memo
+                        })),
+                        memo: values.memo,
+                        entryFees: parseFloat(values.entryFees),
+                        entryFeesExplanation: showEntryFeesFields ? values.entryFeesExplanation : undefined,
+                        entryFeesAppliedUntil: values.type === "Monthly" && showEntryFeesFields ?
+                            values.entryFeesAppliedUntil : undefined,
+                        entryFeesStartDate: values.type !== "Monthly" && showEntryFeesFields ?
+                            values.entryFeesStartDate : undefined,
+                        entryFeesEndDate: values.type !== "Monthly" && showEntryFeesFields ?
+                            values.entryFeesEndDate : undefined,
+                        capacity: 9999,
+                        type: values.type
+                    } : packageData
+                ))
+
                 onOpenChange(false)
                 mutatePackage()
                 router.refresh()
@@ -273,14 +301,19 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
 
                 setCreatedPackages(prev => prev.map((packageData, i) =>
                     i === index ? {
-                        ...packageData,
+                        ...packageEdited,
                         name: packageName!,
                         price: parseFloat(values.price),
                         startDate: values.startDate,
                         endDate: values.endDate,
-                        schedules: values.schedules,
+                        schedules: values.schedules.map(schedule => ({
+                            id: (schedule as any).id,
+                            day: schedule.day,
+                            from: schedule.from,
+                            to: schedule.to,
+                            memo: schedule.memo
+                        })),
                         memo: values.memo,
-                        type: values.type,
                         entryFees: parseFloat(values.entryFees),
                         entryFeesExplanation: showEntryFeesFields ? values.entryFeesExplanation : undefined,
                         entryFeesAppliedUntil: values.type === "Monthly" && showEntryFeesFields ?
@@ -288,7 +321,9 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                         entryFeesStartDate: values.type !== "Monthly" && showEntryFeesFields ?
                             values.entryFeesStartDate : undefined,
                         entryFeesEndDate: values.type !== "Monthly" && showEntryFeesFields ?
-                            values.entryFeesEndDate : undefined
+                            values.entryFeesEndDate : undefined,
+                        capacity: 9999,
+                        type: values.type
                     } : packageData
                 ))
 
