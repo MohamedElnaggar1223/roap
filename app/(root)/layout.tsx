@@ -18,6 +18,8 @@ import { checkAcademyStatus } from "@/lib/actions/check-academy-status";
 import { OnboardingProvider } from "@/providers/onboarding-provider";
 import { OnboardingSaveProvider } from "@/providers/onboarding-save-provider";
 import { fetchPlaceInformation } from "@/lib/actions/reviews.actions";
+import { ProgramsStoreProvider } from "@/providers/store-provider";
+import { DataPrefetcher } from "@/providers/data-prefetcher";
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
@@ -43,21 +45,25 @@ export default async function RootLayout({
 			<body
 				className={cn(`antialiased bg-[#E0E4D9]`, inter.variable)}
 			>
-				<OnboardingProvider onboarded={!!status.isOnboarded} isAdmin={!!status.isAdmin} academyName={status.isAdmin ? status.academyName : ''}>
-					<OnboardingSaveProvider>
-						<SidebarProvider className='font-inter bg-[#E0E4D9]'>
-							<AcademySidebar onboarded={!!status.isOnboarded} />
-							<main className='flex flex-col flex-1 font-inter bg-[#E0E4D9]'>
-								<AcademyHeader academyId={status.academyId!}>
-									<section className='p-4 bg-[#E0E4D9] h-full'>
-										{children}
-										<Toaster />
-									</section>
-								</AcademyHeader>
-							</main>
-						</SidebarProvider>
-					</OnboardingSaveProvider>
-				</OnboardingProvider>
+				<ProgramsStoreProvider>
+					<DataPrefetcher>
+						<OnboardingProvider onboarded={!!status.isOnboarded} isAdmin={!!status.isAdmin} academyName={status.isAdmin ? status.academyName : ''}>
+							<OnboardingSaveProvider>
+								<SidebarProvider className='font-inter bg-[#E0E4D9]'>
+									<AcademySidebar onboarded={!!status.isOnboarded} />
+									<main className='flex flex-col flex-1 font-inter bg-[#E0E4D9]'>
+										<AcademyHeader academyId={status.academyId!}>
+											<section className='p-4 bg-[#E0E4D9] h-full'>
+												{children}
+												<Toaster />
+											</section>
+										</AcademyHeader>
+									</main>
+								</SidebarProvider>
+							</OnboardingSaveProvider>
+						</OnboardingProvider>
+					</DataPrefetcher>
+				</ProgramsStoreProvider>
 			</body>
 		</html>
 	)

@@ -29,6 +29,9 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { DateSelector } from '@/components/shared/date-selector'
+import { Discount, Package } from '@/stores/programs-store'
+import { useProgramsStore } from '@/providers/store-provider'
+import { v4 as uuid } from 'uuid';
 
 const addDiscountSchema = z.object({
     type: z.enum(['fixed', 'percentage']),
@@ -42,45 +45,17 @@ const addDiscountSchema = z.object({
     packageIds: z.array(z.number()).min(1, "Select at least one package"),
 })
 
-interface Schedule {
-    day: string
-    from: string
-    to: string
-    memo: string | undefined
-}
-
-interface Package {
-    type: "Term" | "Monthly" | "Full Season" | 'Assessment'
-    termNumber?: number
-    name: string
-    price: number
-    startDate: Date
-    endDate: Date
-    schedules: Schedule[]
-    memo: string | null
-    entryFees: number
-    entryFeesExplanation?: string
-    entryFeesAppliedUntil?: string[]
-    id?: number
-}
-
 interface AddDiscountProps {
     open: boolean
     onOpenChange: (open: boolean) => void
-    setCreatedDiscounts: React.Dispatch<React.SetStateAction<Discount[]>>
-    packages: Package[]
+    programId: number
 }
 
-interface Discount {
-    type: 'fixed' | 'percentage'
-    value: number
-    startDate: Date
-    endDate: Date
-    packageIds: number[]
-}
-
-export default function AddDiscount({ open, onOpenChange, setCreatedDiscounts, packages }: AddDiscountProps) {
+export default function AddDiscount({ open, onOpenChange, programId }: AddDiscountProps) {
     const [loading, setLoading] = useState(false)
+
+    const addDiscount = useProgramsStore((state) => state.addDiscount)
+    const program = useProgramsStore((state) => state.programs.find(p => p.id === programId))
 
     const form = useForm<z.infer<typeof addDiscountSchema>>({
         resolver: zodResolver(addDiscountSchema),
@@ -111,13 +86,17 @@ export default function AddDiscount({ open, onOpenChange, setCreatedDiscounts, p
                 return
             }
 
-            setCreatedDiscounts(prev => [...prev, {
+            addDiscount({
+                id: undefined,
                 type: values.type,
                 value: parseFloat(values.value),
-                startDate: values.startDate,
-                endDate: values.endDate,
-                packageIds: values.packageIds,
-            }])
+                startDate: format(values.startDate, 'yyyy-MM-dd'),
+                endDate: format(values.endDate, 'yyyy-MM-dd'),
+                packageDiscounts: values.packageIds.map((id) => ({ packageId: id })),
+                programId,
+                createdAt: new Date().toString(),
+                updatedAt: new Date().toString(),
+            })
 
             onOpenChange(false)
         } catch (error) {
@@ -229,7 +208,7 @@ export default function AddDiscount({ open, onOpenChange, setCreatedDiscounts, p
                                         <FormItem>
                                             <FormLabel>Select Packages</FormLabel>
                                             <div className="grid grid-cols-2 gap-4 border rounded-[10px] p-4">
-                                                {packages.map((pkg) => (
+                                                {program?.packages?.filter(p => p.id).map((pkg) => (
                                                     <FormField
                                                         key={pkg.id}
                                                         control={form.control}

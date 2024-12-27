@@ -24,11 +24,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { useOnboarding } from '@/providers/onboarding-provider';
 import { DateSelector } from '@/components/shared/date-selector';
+import { Package } from '@/stores/programs-store';
+import { useProgramsStore } from '@/providers/store-provider';
 
 const formatTimeValue = (value: string) => {
     if (!value) return '';
+    const valueSplitted = value.split(':').length >= 3 ? value.split(':')[0] + ':' + value.split(':')[1] : value
     const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    if (!timeRegex.test(value)) return '';
+    console.log(valueSplitted)
+    if (!timeRegex.test(valueSplitted)) return '';
     return value;
 };
 
@@ -77,36 +81,30 @@ const packageSchema = z.object({
     path: ["months"]
 });
 
-interface Package {
-    type: "Term" | "Monthly" | "Full Season" | 'Assessment'
-    termNumber?: number
-    name: string
-    price: number
-    startDate: Date
-    endDate: Date
-    months?: string[] | null
-    schedules: Schedule[]
-    memo: string | null
-    entryFees: number
-    entryFeesExplanation?: string
-    entryFeesAppliedUntil?: string[]
-    entryFeesStartDate?: Date
-    entryFeesEndDate?: Date
-    id?: number
-    capacity: number
-}
-
-interface Schedule {
-    day: string
-    from: string
-    to: string
-    memo: string | undefined
-    id?: number
-}
-
 type EditedPackage = {
     editedPackage: Package
     index?: number
+}
+
+function getFirstAndLastDayOfMonths(months: string[]) {
+    if (!months.length) return { startDate: new Date(), endDate: new Date() }
+
+    // Sort months chronologically
+    const sortedMonths = [...months].sort((a, b) => {
+        const dateA = new Date(a);
+        const dateB = new Date(b);
+        return dateA.getTime() - dateB.getTime();
+    });
+
+    // Get first day of first month
+    const firstMonth = new Date(sortedMonths[0]);
+    const startDate = new Date(firstMonth.getFullYear(), firstMonth.getMonth(), 1);
+
+    // Get last day of last month
+    const lastMonth = new Date(sortedMonths[sortedMonths.length - 1]);
+    const endDate = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0);
+
+    return { startDate, endDate };
 }
 
 interface Props {
@@ -116,7 +114,7 @@ interface Props {
     setEditedPackage: (editedPackage: EditedPackage) => void
     mutate?: () => void
     index?: number
-    setCreatedPackages?: React.Dispatch<React.SetStateAction<Package[]>>
+    programId: number
 }
 
 const days = {
@@ -147,7 +145,7 @@ const getMonthsInRange = (startDate: Date, endDate: Date) => {
     return months;
 };
 
-export default function EditPackage({ packageEdited, open, onOpenChange, mutate, setEditedPackage, setCreatedPackages, index }: Props) {
+export default function EditPackage({ packageEdited, open, onOpenChange, mutate, setEditedPackage, programId, index }: Props) {
     const router = useRouter()
     const { mutate: mutatePackage } = useOnboarding()
     const [loading, setLoading] = useState(false)
@@ -157,35 +155,82 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
         return Array.from({ length: 5 }, (_, i) => currentYear + i);
     });
 
+    const program = useProgramsStore((state) => state.programs.find(p => p.id === programId))
+    const editPackage = useProgramsStore((state) => state.editPackage)
+
+    console.log(program?.packages)
+
+    const packageData = program?.packages.find(p => {
+        if (packageEdited.id) {
+            return p.id === packageEdited.id;
+        }
+        if (packageEdited.tempId) {
+            return p.tempId === packageEdited.tempId;
+        }
+        return false;
+    })
+
+    console.log(packageData, packageEdited)
+
     const form = useForm<z.infer<typeof packageSchema>>({
         resolver: zodResolver(packageSchema),
         defaultValues: {
-            type: packageEdited.name.startsWith('Assessment') ? 'Assessment' :
-                packageEdited.name.startsWith('Term') ? 'Term' :
-                    packageEdited.name.includes('Monthly') ? 'Monthly' : 'Full Season',
-            termNumber: packageEdited.name.startsWith('Term') ?
-                packageEdited.name.split(' ')[1] : undefined,
-            name: packageEdited.name.startsWith('Term') ? '' :
-                packageEdited.name.startsWith('Monthly') ?
-                    packageEdited.name.split(' ')[1] : packageEdited.name.split(' ')[1],
-            price: packageEdited.price.toString(),
-            startDate: new Date(packageEdited.startDate),
-            endDate: new Date(packageEdited.endDate),
-            months: packageEdited.months || [],
-            schedules: packageEdited.schedules?.length > 0 ?
-                packageEdited.schedules :
+            type: packageData?.name.startsWith('Assessment') ? 'Assessment' :
+                packageData?.name.startsWith('Term') ? 'Term' :
+                    packageData?.name.includes('Monthly') ? 'Monthly' : 'Full Season',
+            termNumber: packageData?.name.startsWith('Term') ?
+                packageData?.name.split(' ')[1] : undefined,
+            name: packageData?.name.startsWith('Term') ? '' :
+                packageData?.name.startsWith('Monthly') ?
+                    packageData?.name.split(' ')[1] : packageData?.name.split(' ')[1],
+            price: packageData?.price.toString(),
+            startDate: new Date(packageData?.startDate ?? ''),
+            endDate: new Date(packageData?.endDate ?? ''),
+            months: packageData?.months || [],
+            schedules: (packageData?.schedules ?? []).length > 0 ?
+                packageData?.schedules.map(s => ({ ...s, memo: s.memo ?? '', from: s.from.split(':').length >= 3 ? s.from.split(':')[0] + ':' + s.from.split(':')[1] : s.from, to: s.to.split(':').length >= 3 ? s.to.split(':')[0] + ':' + s.to.split(':')[1] : s.to })) :
                 [{ day: '', from: '', to: '', memo: '' }],
-            memo: packageEdited.memo ?? '',
-            entryFees: (packageEdited.entryFees ?? 0).toString(),
-            entryFeesExplanation: packageEdited.entryFeesExplanation,
-            entryFeesAppliedUntil: packageEdited.entryFeesAppliedUntil,
-            entryFeesStartDate: packageEdited.entryFeesStartDate ?
-                new Date(packageEdited.entryFeesStartDate) : undefined,
-            entryFeesEndDate: packageEdited.entryFeesEndDate ?
-                new Date(packageEdited.entryFeesEndDate) : undefined,
-            capacity: packageEdited.capacity.toString()
+            memo: packageData?.memo ?? '',
+            entryFees: (packageData?.entryFees ?? 0).toString(),
+            entryFeesExplanation: packageData?.entryFeesExplanation ?? undefined,
+            entryFeesAppliedUntil: packageData?.entryFeesAppliedUntil ?? [],
+            entryFeesStartDate: packageData?.entryFeesStartDate ?
+                new Date(packageData?.entryFeesStartDate) : undefined,
+            entryFeesEndDate: packageData?.entryFeesEndDate ?
+                new Date(packageData?.entryFeesEndDate) : undefined,
+            capacity: packageData?.capacity.toString()
         }
     })
+
+    useEffect(() => {
+        if (!open) {
+            setEditedPackage({
+                editedPackage: {
+                    name: '',
+                    price: 0,
+                    startDate: new Date().toString(),
+                    endDate: new Date().toString(),
+                    schedules: [],
+                    memo: '',
+                    entryFees: 0,
+                    entryFeesExplanation: '',
+                    entryFeesAppliedUntil: [],
+                    entryFeesStartDate: new Date().toString(),
+                    entryFeesEndDate: new Date().toString(),
+                    capacity: 0,
+                    tempId: undefined,
+                    createdAt: new Date().toString(),
+                    updatedAt: new Date().toString(),
+                    id: undefined,
+                    programId: programId,
+                    months: [],
+                    sessionPerWeek: 0,
+                    sessionDuration: 60,
+                }
+            })
+            form.reset()
+        }
+    }, [open])
 
     const { fields, append, remove } = useFieldArray({
         control: form.control,
@@ -226,9 +271,12 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
         }
     }, [startDate, endDate])
 
+    console.log(form.formState)
+
     const onSubmit = async (values: z.infer<typeof packageSchema>) => {
         try {
-            if (packageEdited.id) {
+            console.log(packageData?.tempId)
+            if (packageData?.id || packageData?.tempId) {
                 setLoading(true)
                 const packageName = values.type === "Term" ?
                     `Term ${values.termNumber}` :
@@ -236,115 +284,72 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                         `Monthly ${values.name}` :
                         `Full Season ${values.name ?? ''}`
 
-                const result = await updatePackage(packageEdited.id, {
+                let startDate = values.startDate;
+                let endDate = values.endDate;
+
+                if (values.type === "Monthly" && values.months && values.months.length > 0) {
+                    const dates = getFirstAndLastDayOfMonths(values.months);
+                    startDate = dates.startDate;
+                    endDate = dates.endDate;
+                }
+
+                editPackage({
+                    ...packageData,
                     name: packageName!,
                     price: parseFloat(values.price),
-                    startDate: values.startDate,
-                    endDate: values.endDate,
-                    months: values.months,
-                    type: values.type,
-                    schedules: values.schedules.map(schedule => ({
-                        id: (schedule as any).id,
-                        day: schedule.day,
-                        from: schedule.from,
-                        to: schedule.to,
-                        memo: schedule.memo
-                    })),
+                    startDate: (startDate!).toLocaleString(),
+                    endDate: (endDate!).toLocaleString(),
+                    months: values.months ?? [],
+                    schedules: values.schedules.map(s => ({ ...s, createdAt: new Date().toLocaleString(), updatedAt: new Date().toLocaleString(), id: undefined, packageId: undefined })),
                     memo: values.memo,
                     entryFees: parseFloat(values.entryFees),
-                    entryFeesExplanation: showEntryFeesFields ? values.entryFeesExplanation : undefined,
+                    entryFeesExplanation: showEntryFeesFields ? values.entryFeesExplanation ?? '' : null,
                     entryFeesAppliedUntil: values.type === "Monthly" && showEntryFeesFields ?
-                        values.entryFeesAppliedUntil : undefined,
+                        values.entryFeesAppliedUntil ?? [] : null,
                     entryFeesStartDate: values.type !== "Monthly" && showEntryFeesFields ?
-                        values.entryFeesStartDate : undefined,
+                        values.entryFeesStartDate?.toLocaleString() ?? '' : null,
                     entryFeesEndDate: values.type !== "Monthly" && showEntryFeesFields ?
-                        values.entryFeesEndDate : undefined,
-                    capacity: parseInt(values.capacity)
+                        values.entryFeesEndDate?.toLocaleString() ?? '' : null,
+                    capacity: parseInt(values.capacity),
+                    createdAt: new Date().toLocaleString(),
+                    updatedAt: new Date().toLocaleString(),
+                    sessionPerWeek: packageData?.sessionPerWeek ?? 0,
+                    sessionDuration: packageData?.sessionDuration ?? 60,
+                    programId: packageData?.programId as number
                 })
-
-                if (result.error) {
-                    form.setError('root', {
-                        type: 'custom',
-                        message: result.error
-                    })
-                    return
-                }
 
                 if (mutate) await mutate()
 
                 setEditedPackage({
                     editedPackage: {
-                        ...packageEdited,
+                        ...packageData,
                         name: packageName!,
                         price: parseFloat(values.price),
-                        startDate: values.startDate!,
-                        endDate: values.endDate!,
-                        months: values.months,
-                        schedules: values.schedules,
+                        startDate: (startDate!).toLocaleString(),
+                        endDate: (endDate!).toLocaleString(),
+                        months: values.months ?? [],
+                        schedules: values.schedules.map(s => ({ ...s, createdAt: new Date().toLocaleString(), updatedAt: new Date().toLocaleString(), id: undefined, packageId: undefined })),
                         memo: values.memo,
-                        type: values.type,
                         entryFees: parseFloat(values.entryFees),
-                        entryFeesExplanation: showEntryFeesFields ? values.entryFeesExplanation : undefined,
+                        entryFeesExplanation: showEntryFeesFields ? values.entryFeesExplanation ?? '' : null,
                         entryFeesAppliedUntil: values.type === "Monthly" && showEntryFeesFields ?
-                            values.entryFeesAppliedUntil : undefined,
+                            values.entryFeesAppliedUntil ?? [] : null,
                         entryFeesStartDate: values.type !== "Monthly" && showEntryFeesFields ?
-                            values.entryFeesStartDate : undefined,
+                            values.entryFeesStartDate?.toLocaleString() ?? '' : null,
                         entryFeesEndDate: values.type !== "Monthly" && showEntryFeesFields ?
-                            values.entryFeesEndDate : undefined,
-                        capacity: parseInt(values.capacity)
+                            values.entryFeesEndDate?.toLocaleString() ?? '' : null,
+                        capacity: parseInt(values.capacity),
+                        createdAt: new Date().toLocaleString(),
+                        updatedAt: new Date().toLocaleString(),
+                        sessionPerWeek: packageData?.sessionPerWeek ?? 0,
+                        sessionDuration: packageData?.sessionDuration ?? 60,
+                        programId: packageData?.programId as number
                     }
                 })
 
                 onOpenChange(false)
                 mutatePackage()
                 router.refresh()
-            }
-            else if (setCreatedPackages) {
-                const packageName = values.type === "Term" ?
-                    `Term ${values.termNumber}` :
-                    values.type === "Monthly" ?
-                        `Monthly ${values.name}` :
-                        `Full Season ${values.name ?? ''}`
-
-                setCreatedPackages(prev => prev.map((packageData, i) =>
-                    i === index ? {
-                        ...packageData,
-                        name: packageName!,
-                        price: parseFloat(values.price),
-                        startDate: values.startDate!,
-                        endDate: values.endDate!,
-                        months: values.months,
-                        schedules: values.schedules,
-                        memo: values.memo,
-                        type: values.type,
-                        entryFees: parseFloat(values.entryFees),
-                        entryFeesExplanation: showEntryFeesFields ? values.entryFeesExplanation : undefined,
-                        entryFeesAppliedUntil: values.type === "Monthly" && showEntryFeesFields ?
-                            values.entryFeesAppliedUntil : undefined,
-                        entryFeesStartDate: values.type !== "Monthly" && showEntryFeesFields ?
-                            values.entryFeesStartDate : undefined,
-                        entryFeesEndDate: values.type !== "Monthly" && showEntryFeesFields ?
-                            values.entryFeesEndDate : undefined,
-                        capacity: parseInt(values.capacity)
-                    } : packageData
-                ))
-
-                setEditedPackage({
-                    editedPackage: {
-                        ...packageEdited,
-                        name: packageName!,
-                        price: parseFloat(values.price),
-                        startDate: values.startDate!,
-                        endDate: values.endDate!,
-                        months: values.months,
-                        schedules: values.schedules,
-                        memo: values.memo,
-                        type: values.type
-                    },
-                    index
-                })
-
-                onOpenChange(false)
             }
         } catch (error) {
             console.error('Error updating package:', error)
@@ -363,7 +368,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full'>
                         <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>
-                            <DialogTitle className='font-normal text-base'>Edit Package</DialogTitle>
+                            <DialogTitle className='font-normal text-base'>Edit Package {packageData?.tempId}</DialogTitle>
                             <div className='flex items-center gap-2'>
                                 <button disabled={loading} type='submit' className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5'>
                                     {loading && <Loader2 className='h-5 w-5 animate-spin' />}

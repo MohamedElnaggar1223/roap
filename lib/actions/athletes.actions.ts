@@ -256,7 +256,7 @@ export async function createAthlete(data: {
                 .where(eq(users.email, data.email))
                 .limit(1)
 
-            if (existingUser.length > 0) {
+            if (existingUser.length > 0 && data.email) {
                 return { error: 'User with this email already exists', field: 'email', data: null }
             }
 

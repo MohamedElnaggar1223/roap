@@ -29,6 +29,8 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { DateSelector } from '@/components/shared/date-selector'
+import { Discount } from '@/stores/programs-store'
+import { useProgramsStore } from '@/providers/store-provider'
 
 const editDiscountSchema = z.object({
     type: z.enum(['fixed', 'percentage']),
@@ -42,45 +44,13 @@ const editDiscountSchema = z.object({
     packageIds: z.array(z.number()).min(1, "Select at least one package"),
 })
 
-interface Schedule {
-    day: string
-    from: string
-    to: string
-    memo: string | undefined
-}
-
-interface Package {
-    type: "Term" | "Monthly" | "Full Season" | 'Assessment'
-    termNumber?: number
-    name: string
-    price: number
-    startDate: Date
-    endDate: Date
-    schedules: Schedule[]
-    memo: string | null
-    entryFees: number
-    entryFeesExplanation?: string
-    entryFeesAppliedUntil?: string[]
-    id?: number
-}
-
-interface Discount {
-    type: 'fixed' | 'percentage'
-    value: number
-    startDate: Date
-    endDate: Date
-    packageIds: number[]
-    id?: number
-}
-
 interface EditDiscountProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     setEditedDiscount: (editedDiscount: { editedDiscount: Discount, index?: number } | null) => void
     discountEdited: Discount
     index?: number
-    packages: Package[]
-    setCreatedDiscounts?: React.Dispatch<React.SetStateAction<Discount[]>>
+    programId: number
 }
 
 export default function EditDiscount({
@@ -89,19 +59,22 @@ export default function EditDiscount({
     setEditedDiscount,
     discountEdited,
     index,
-    packages,
-    setCreatedDiscounts
+    programId,
 }: EditDiscountProps) {
     const [loading, setLoading] = useState(false)
+
+    const program = useProgramsStore((state) => state.programs.find(p => p.id === programId))
+    const editDiscount = useProgramsStore((state) => state.editDiscount)
+    const discountData = program?.discounts.find(d => d.id === discountEdited.id)
 
     const form = useForm<z.infer<typeof editDiscountSchema>>({
         resolver: zodResolver(editDiscountSchema),
         defaultValues: {
-            type: discountEdited.type,
-            value: discountEdited.value.toString(),
-            startDate: discountEdited.startDate,
-            endDate: discountEdited.endDate,
-            packageIds: discountEdited.packageIds,
+            type: discountData?.type,
+            value: discountData?.value.toString(),
+            startDate: new Date(discountData?.startDate ?? ''),
+            endDate: new Date(discountData?.endDate ?? ''),
+            packageIds: discountData?.packageDiscounts.map(pd => pd.packageId),
         }
     })
 
@@ -126,19 +99,19 @@ export default function EditDiscount({
             }
 
             const updatedDiscount = {
-                ...discountEdited,
+                ...discountData,
                 type: values.type,
                 value: parseFloat(values.value),
-                startDate: values.startDate,
-                endDate: values.endDate,
-                packageIds: values.packageIds,
+                startDate: values.startDate.toString(),
+                endDate: values.endDate.toString(),
+                packageDiscounts: values.packageIds.map(id => ({ packageId: id })),
+                createdAt: discountData?.createdAt ?? new Date().toString(),
+                updatedAt: discountData?.updatedAt ?? new Date().toString(),
+                id: discountData?.id as number,
+                programId: discountData?.programId as number,
             }
 
-            if (setCreatedDiscounts && typeof index !== 'undefined') {
-                setCreatedDiscounts(prev => prev.map((discount, i) =>
-                    i === index ? updatedDiscount : discount
-                ))
-            }
+            editDiscount(updatedDiscount)
 
             setEditedDiscount({
                 editedDiscount: updatedDiscount,
@@ -253,7 +226,7 @@ export default function EditDiscount({
                                         <FormItem>
                                             <FormLabel>Select Packages</FormLabel>
                                             <div className="grid grid-cols-2 gap-4 border rounded-[10px] p-4">
-                                                {packages.map((pkg) => (
+                                                {program?.packages?.map((pkg) => (
                                                     <FormField
                                                         key={pkg.id}
                                                         control={form.control}

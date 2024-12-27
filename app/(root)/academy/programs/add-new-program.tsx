@@ -5,7 +5,7 @@ import { createProgram } from '@/lib/actions/programs.actions';
 import { Loader2, Plus, X } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr'
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -41,6 +41,9 @@ import AutoGrowingTextarea from '@/components/ui/autogrowing-textarea';
 import { useOnboarding } from '@/providers/onboarding-provider';
 import AddDiscount from './add-discount';
 import EditDiscount from './edit-discount';
+import { useProgramsStore } from '@/providers/store-provider';
+import { v4 as uuid } from 'uuid';
+import { Discount, Package } from '@/stores/programs-store';
 
 const addProgramSchema = z.object({
     name: z.string().min(1, "Name is required"),
@@ -55,15 +58,6 @@ const addProgramSchema = z.object({
     type: z.enum(["TEAM", "PRIVATE"]),
     color: z.string().min(1, "Color is required"),
 })
-
-interface Discount {
-    type: 'fixed' | 'percentage'
-    value: number
-    startDate: Date
-    endDate: Date
-    packageIds: number[]
-    id?: number
-}
 
 interface Branch {
     id: number
@@ -84,52 +78,12 @@ interface Sport {
     locale: string
 }
 
-interface Package {
-    type: "Term" | "Monthly" | "Full Season" | 'Assessment'
-    termNumber?: number
-    name: string
-    price: number
-    startDate: Date
-    endDate: Date
-    schedules: Schedule[]
-    memo: string | null
-    entryFees: number
-    entryFeesExplanation?: string
-    entryFeesAppliedUntil?: string[]
-    id?: number
-    capacity: number
-    months?: string[] | null
-}
-
-interface Schedule {
-    day: string
-    from: string
-    to: string
-    memo: string | undefined
-}
-
-interface Program {
-    coaches: string[];
-    packages: string[];
-    id: number;
-    name: string | null;
-    description: string | null;
-    type: string | null;
-    numberOfSeats: number | null;
-    branchId: number | null;
-    sportId: number | null;
-    gender: string | null;
-    startDateOfBirth: string | null;
-    endDateOfBirth: string | null;
-    branchName: string;
-    sportName: string;
-}
-
 type Props = {
     branches: Branch[]
     sports: Sport[]
     academySports?: { id: number }[]
     takenColors: string[]
+    academicId: number
 }
 
 const ColorSelector = ({ form, takenColors, disabled = false }: { form: any; takenColors: string[]; disabled?: boolean }) => {
@@ -196,7 +150,7 @@ const calendarColors = [
     { name: 'Light Pink', value: '#FFB6C1', textColor: '#000000' }
 ];
 
-export default function AddNewProgram({ branches, sports, academySports, takenColors }: Props) {
+export default function AddNewProgram({ branches, sports, academySports, takenColors, academicId }: Props) {
     const router = useRouter()
 
     const { mutate } = useOnboarding()
@@ -204,19 +158,26 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
     const [addNewProgramOpen, setAddNewProgramOpen] = useState(false)
     const { data: coachesData } = useSWR(addNewProgramOpen ? 'coaches' : null, getAllCoaches)
 
+    const programId = useMemo(() => parseInt(uuid().split('-')[0], 16), [addNewProgramOpen])
+
     const [selectedCoaches, setSelectedCoaches] = useState<number[]>([])
     const [selectedGenders, setSelectedGenders] = useState<string[]>([])
     const [loading, setLoading] = useState(false)
     const [coachesOpen, setCoachesOpen] = useState(false)
     const [packagesOpen, setPackagesOpen] = useState(false);
-    const [createdPackages, setCreatedPackages] = useState<Package[]>([]);
     const [gendersOpen, setGendersOpen] = useState(false);
     const [editPackageOpen, setEditPackageOpen] = useState(false);
     const [editedPackage, setEditedPackage] = useState<{ editedPackage: Package, index?: number } | null>(null);
     const [discountsOpen, setDiscountsOpen] = useState(false);
-    const [createdDiscounts, setCreatedDiscounts] = useState<Discount[]>([]);
     const [editDiscountOpen, setEditDiscountOpen] = useState(false);
     const [editedDiscount, setEditedDiscount] = useState<{ editedDiscount: Discount, index?: number } | null>(null);
+
+    const program = useProgramsStore((state) => state.programs.find(p => p.id === programId))
+    const addProgram = useProgramsStore((state) => state.addProgram)
+    const deleteDiscount = useProgramsStore((state) => state.deleteDiscount)
+    const deletePackage = useProgramsStore((state) => state.deletePackage)
+    const addTempProgram = useProgramsStore((state) => state.addTempProgram)
+    const removeTempPrograms = useProgramsStore((state) => state.removeTempPrograms)
 
     const dateToAge = (date: Date) => {
         const today = new Date()
@@ -241,9 +202,39 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
         }
     })
 
+    useEffect(() => {
+        if (addNewProgramOpen) {
+            addTempProgram({
+                name: '',
+                description: '',
+                branchId: 0,
+                sportId: 0,
+                gender: '',
+                startDateOfBirth: new Date().toLocaleString(),
+                endDateOfBirth: new Date().toLocaleString(),
+                numberOfSeats: 0,
+                type: 'TEAM',
+                coachPrograms: [],
+                packages: [],
+                color: '',
+                discounts: [],
+                id: programId,
+                tempId: parseInt(uuid().split('-')[0], 16),
+                createdAt: new Date().toLocaleString(),
+                updatedAt: new Date().toLocaleString(),
+                assessmentDeductedFromProgram: false,
+                academicId: 0,
+            })
+        }
+        else {
+            removeTempPrograms()
+            form.reset()
+        }
+    }, [addNewProgramOpen])
+
     const onSubmit = async (values: z.infer<typeof addProgramSchema>) => {
         try {
-            setLoading(true)
+            // setLoading(true)
 
             if (!selectedGenders.length) return form.setError('root', {
                 type: 'custom',
@@ -311,39 +302,44 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                     calculateDateFromYears(values.endAge!, values.endAgeUnit);
             }
 
-            const result = await createProgram({
+            addProgram({
                 name: values.name,
                 description: values.description,
                 branchId: parseInt(values.branchId),
                 sportId: parseInt(values.sportId),
                 gender: selectedGenders.join(','),
-                startDateOfBirth: startDate,
-                endDateOfBirth: endDate,
+                startDateOfBirth: startDate.toLocaleString(),
+                endDateOfBirth: endDate.toLocaleString(),
                 numberOfSeats: 0,
                 type: values.type,
-                coaches: selectedCoaches,
-                packagesData: createdPackages,
+                coachPrograms: selectedCoaches.map(coachId => ({ coach: { id: coachId }, id: parseInt(uuid().replace(/-/g, '')) })),
+                packages: program?.packages || [],
                 color: values.color,
-                discountsData: createdDiscounts
+                discounts: program?.discounts || [],
+                id: parseInt(uuid().split('-')[0], 16),
+                createdAt: new Date().toLocaleString(),
+                updatedAt: new Date().toLocaleString(),
+                assessmentDeductedFromProgram: false,
+                academicId
             })
 
-            if (result.error) {
-                if (result?.field) {
-                    form.setError(result.field as any, {
-                        type: 'custom',
-                        message: result.error
-                    })
-                    return
-                }
-                form.setError('root', {
-                    type: 'custom',
-                    message: result.error
-                })
-                return
-            }
+            // if (result.error) {
+            //     if (result?.field) {
+            //         form.setError(result.field as any, {
+            //             type: 'custom',
+            //             message: result.error
+            //         })
+            //         return
+            //     }
+            //     form.setError('root', {
+            //         type: 'custom',
+            //         message: result.error
+            //     })
+            //     return
+            // }
 
             setAddNewProgramOpen(false)
-            mutate()
+            // mutate()
             router.refresh()
         } catch (error) {
             console.error('Error creating program:', error)
@@ -369,6 +365,8 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
             prev.includes(gender) ? prev.filter(g => g !== gender) : [...prev, gender]
         )
     }
+
+    console.log("Edited Package Temp id", editedPackage?.editedPackage.tempId)
 
     return (
         <>
@@ -796,7 +794,7 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                                             </div>
 
                                             {/* Rows */}
-                                            {createdPackages.map((packageData, index) => (
+                                            {program?.packages?.map((packageData, index) => (
                                                 <Fragment key={index}>
                                                     <div className="py-4 px-2 bg-main-white flex items-center justify-center">
                                                         {!packageData.id && (
@@ -805,15 +803,17 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
                                                         {packageData.name}
+                                                        {packageData.tempId}
+                                                        {packageData.id}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
                                                         {packageData.price}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                                        {packageData.startDate.toLocaleDateString()}
+                                                        {new Date(packageData.startDate).toLocaleDateString()}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                                        {packageData.endDate.toLocaleDateString()}
+                                                        {new Date(packageData.endDate).toLocaleDateString()}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
                                                         {packageData.schedules.length}
@@ -837,75 +837,7 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                                                         </Button>
                                                         <TrashIcon
                                                             className="h-4 w-4 cursor-pointer"
-                                                            onClick={() => setCreatedPackages(createdPackages.filter((_, i) => i !== index))}
-                                                        />
-                                                    </div>
-                                                </Fragment>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div className="w-full max-w-screen-2xl overflow-x-auto mx-auto">
-                                        <div className="min-w-full grid grid-cols-[0.75fr,auto,auto,auto,auto] gap-y-2 text-nowrap">
-                                            {/* Header */}
-                                            <div className="contents">
-                                                <div />
-                                                <div />
-                                                <div />
-                                                <div />
-                                                <div className="py-4 flex items-center justify-center">
-                                                    <button
-                                                        type='button'
-                                                        onClick={() => setDiscountsOpen(true)}
-                                                        className='flex text-main-yellow text-nowrap items-center justify-center gap-2 rounded-3xl px-4 py-2 bg-main-green text-sm'
-                                                    >
-                                                        Add New Discount
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div className="contents">
-                                                <div className="py-4 px-4 rounded-l-[20px] bg-[#E0E4D9]">Value</div>
-                                                <div className="py-4 px-4 bg-[#E0E4D9]">Start Date</div>
-                                                <div className="py-4 px-4 bg-[#E0E4D9]">End Date</div>
-                                                <div className="py-4 px-4 bg-[#E0E4D9]">Packages</div>
-                                                <div className="py-4 px-4 rounded-r-[20px] bg-[#E0E4D9]"></div>
-                                            </div>
-
-                                            {/* Rows */}
-                                            {createdDiscounts.map((discount, index) => (
-                                                <Fragment key={index}>
-                                                    <div className="py-4 px-4 bg-main-white rounded-l-[20px] flex items-center justify-start font-bold font-inter">
-                                                        {discount.type === 'percentage' ? `${discount.value}%` : `${discount.value} AED`}
-                                                    </div>
-                                                    <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                                        {discount.startDate.toLocaleDateString()}
-                                                    </div>
-                                                    <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                                        {discount.endDate.toLocaleDateString()}
-                                                    </div>
-                                                    <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                                        {discount.packageIds.length}
-                                                    </div>
-                                                    <div className="py-4 px-4 bg-main-white gap-4 rounded-r-[20px] flex items-center justify-end font-bold font-inter">
-                                                        <Button
-                                                            type='button'
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => {
-                                                                setEditedDiscount({ editedDiscount: discount, index });
-                                                                setEditDiscountOpen(true);
-                                                            }}
-                                                        >
-                                                            <Image
-                                                                src='/images/edit.svg'
-                                                                alt='Edit'
-                                                                width={20}
-                                                                height={20}
-                                                            />
-                                                        </Button>
-                                                        <TrashIcon
-                                                            className="h-4 w-4 cursor-pointer"
-                                                            onClick={() => setCreatedDiscounts(createdDiscounts.filter((_, i) => i !== index))}
+                                                            onClick={() => deletePackage(packageData)}
                                                         />
                                                     </div>
                                                 </Fragment>
@@ -918,25 +850,8 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                     </Form>
                 </DialogContent>
             </Dialog>
-            <AddDiscount
-                onOpenChange={setDiscountsOpen}
-                open={discountsOpen}
-                setCreatedDiscounts={setCreatedDiscounts}
-                packages={createdPackages.filter(p => p.id)}
-            />
-            {editedDiscount && (
-                <EditDiscount
-                    onOpenChange={setEditDiscountOpen}
-                    open={editDiscountOpen}
-                    setEditedDiscount={setEditedDiscount}
-                    discountEdited={editedDiscount.editedDiscount}
-                    index={editedDiscount.index}
-                    setCreatedDiscounts={setCreatedDiscounts}
-                    packages={createdPackages.filter(p => p.id)}
-                />
-            )}
-            <AddPackage onOpenChange={setPackagesOpen} open={packagesOpen} setCreatedPackages={setCreatedPackages} />
-            {editedPackage?.editedPackage.id ? <EditPackage setEditedPackage={setEditedPackage} open={editPackageOpen} onOpenChange={setEditPackageOpen} packageEdited={editedPackage?.editedPackage} /> : editedPackage?.editedPackage ? <EditPackage setEditedPackage={setEditedPackage} index={editedPackage?.index} packageEdited={editedPackage?.editedPackage} open={editPackageOpen} onOpenChange={setEditPackageOpen} setCreatedPackages={setCreatedPackages} /> : null}
+            <AddPackage onOpenChange={setPackagesOpen} open={packagesOpen} programId={programId} />
+            {editedPackage?.editedPackage.id ? <EditPackage key={JSON.stringify(editedPackage)} setEditedPackage={setEditedPackage} open={editPackageOpen} onOpenChange={setEditPackageOpen} packageEdited={editedPackage?.editedPackage} programId={programId} /> : editedPackage?.editedPackage ? <EditPackage key={JSON.stringify(editedPackage)} onOpenChange={setEditPackageOpen} setEditedPackage={setEditedPackage} index={editedPackage?.index} packageEdited={editedPackage?.editedPackage} open={editPackageOpen} programId={programId} /> : null}
         </>
     )
 }

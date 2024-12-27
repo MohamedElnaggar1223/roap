@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Fragment } from 'react'
+import { useState, Fragment, useEffect } from 'react'
 import { ChevronDown, Loader2, SearchIcon, Trash2Icon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,6 +19,9 @@ import { deletePrograms } from '@/lib/actions/programs.actions'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import Image from 'next/image'
 import { useOnboarding } from '@/providers/onboarding-provider'
+import { useProgramsStore } from '@/providers/store-provider'
+import { Program } from '@/stores/programs-store'
+import { cn } from '@/lib/utils'
 
 interface Branch {
     id: number
@@ -39,35 +42,24 @@ interface Sport {
     locale: string
 }
 
-interface Program {
-    coaches: string[];
-    packages: string[];
-    id: number;
-    name: string | null;
-    description: string | null;
-    type: string | null;
-    numberOfSeats: number | null;
-    branchId: number | null;
-    sportId: number | null;
-    gender: string | null;
-    startDateOfBirth: string | null;
-    endDateOfBirth: string | null;
-    branchName: string;
-    sportName: string;
-    color: string | null;
-}
-
 interface ProgramsDataTableProps {
-    data: Program[]
     branches: Branch[]
     sports: Sport[]
     academySports?: { id: number }[]
+    academicId: number
 }
 
-export function ProgramsDataTable({ data, branches, sports, academySports }: ProgramsDataTableProps) {
+export function ProgramsDataTable({ branches, sports, academySports, academicId }: ProgramsDataTableProps) {
     const router = useRouter()
 
     const { mutate } = useOnboarding()
+
+    const data = useProgramsStore((state) => state.programs)
+    const fetched = useProgramsStore((state) => state.fetched)
+    const fetchPrograms = useProgramsStore((state) => state.fetchPrograms)
+    const deletePrograms = useProgramsStore((state) => state.deletePrograms)
+
+    console.log("data: ", data)
 
     const [selectedSport, setSelectedSport] = useState<string | null>(null)
     const [selectedGender, setSelectedGender] = useState<string | null>(null)
@@ -78,6 +70,23 @@ export function ProgramsDataTable({ data, branches, sports, academySports }: Pro
     const [selectedRows, setSelectedRows] = useState<number[]>([])
     const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false)
     const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+
+    useEffect(() => {
+        const filtered = data.filter(program => program.id !== undefined)
+            .filter(program => searchQuery ? program.name?.toLowerCase().includes(searchQuery.toLowerCase()) : true)
+            .filter((program) => selectedSport ? program.sportId === parseInt(selectedSport) : true)
+            .filter((program) => selectedGender ? program.gender?.includes(selectedGender) : true)
+            .filter((program) => selectedType ? program.type?.toLowerCase() === selectedType?.toLowerCase() : true)
+            .filter((program) => selectedBranch ? program.branchId === parseInt(selectedBranch) : true)
+
+        setFilteredData(filtered)
+    }, [data])
+
+    useEffect(() => {
+        if (!fetched) {
+            fetchPrograms()
+        }
+    }, [fetched, fetchPrograms])
 
     const handleRowSelect = (id: number) => {
         setSelectedRows(prev =>
@@ -142,11 +151,12 @@ export function ProgramsDataTable({ data, branches, sports, academySports }: Pro
     }
 
     const handleBulkDelete = async () => {
-        setBulkDeleteLoading(true)
-        await deletePrograms(selectedRows)
-        mutate()
-        router.refresh()
-        setBulkDeleteLoading(false)
+        // setBulkDeleteLoading(true)
+        deletePrograms(selectedRows)
+        setSelectedRows([])
+        // mutate()
+        // router.refresh()
+        // setBulkDeleteLoading(false)
         setBulkDeleteOpen(false)
     }
 
@@ -156,6 +166,7 @@ export function ProgramsDataTable({ data, branches, sports, academySports }: Pro
                 <div className="flex items-center gap-4 flex-wrap">
                     <AddNewProgram
                         branches={branches}
+                        academicId={academicId}
                         sports={sports}
                         academySports={academySports}
                         takenColors={data.map(program => program.color).filter(color => color !== null)}
@@ -317,42 +328,53 @@ export function ProgramsDataTable({ data, branches, sports, academySports }: Pro
                         .filter((program) => selectedBranch ? program.branchId === parseInt(selectedBranch) : true)
                         .map((program) => (
                             <Fragment key={program.id}>
-                                <div className="py-4 px-4 bg-main-white rounded-l-[20px] flex items-center justify-center font-bold font-inter">
+                                <div className={cn("py-4 px-4 bg-main-white rounded-l-[20px] flex items-center justify-center font-bold font-inter", program.pending && 'opacity-60')}>
                                     <Checkbox
                                         checked={selectedRows.includes(program.id)}
                                         onCheckedChange={() => handleRowSelect(program.id)}
                                         aria-label={`Select ${program.name}`}
                                     />
                                 </div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                <div className={cn("py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter", program.pending && 'opacity-60')}>
                                     {program.name}
                                 </div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                    {program.sportName}
+                                <div className={cn("py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter", program.pending && 'opacity-60')}>
+                                    {sports.find(s => s.id === program.sportId)?.name}
                                 </div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                    {program.branchName}
+                                <div className={cn("py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter", program.pending && 'opacity-60')}>
+                                    {branches.find(b => b.id === program.branchId)?.name}
                                 </div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                <div className={cn("py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter", program.pending && 'opacity-60')}>
                                     {program.gender}
                                 </div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                <div className={cn("py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter", program.pending && 'opacity-60')}>
                                     {calculateAge(program.startDateOfBirth!)}
                                 </div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                    {program.coaches?.length ?? 0}
+                                <div className={cn("py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter", program.pending && 'opacity-60')}>
+                                    {program.coachPrograms?.length ?? 0}
                                 </div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                <div className={cn("py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter", program.pending && 'opacity-60')}>
                                     {program.packages?.length ?? 0}
                                 </div>
-                                <div className="py-4 px-4 bg-main-white rounded-r-[20px] flex items-center justify-end font-bold font-inter">
-                                    <EditProgram
-                                        programEdited={program}
-                                        branches={branches}
-                                        sports={sports}
-                                        academySports={academySports}
-                                        takenColors={data.filter(p => program.id !== p.id).map(program => program.color).filter(color => color !== null)}
-                                    />
+                                <div className={cn("py-4 px-4 bg-main-white rounded-r-[20px] flex items-center justify-end font-bold font-inter", program.pending && 'opacity-60')}>
+                                    {program.pending ? (
+                                        <Button variant="ghost" className='cursor-default' size="icon">
+                                            <Image
+                                                src='/images/edit.svg'
+                                                alt='Edit'
+                                                width={20}
+                                                height={20}
+                                            />
+                                        </Button>
+                                    ) : (
+                                        <EditProgram
+                                            programEdited={program}
+                                            branches={branches}
+                                            sports={sports}
+                                            academySports={academySports}
+                                            takenColors={data.filter(p => program.id !== p.id).map(program => program.color).filter(color => color !== null)}
+                                        />
+                                    )}
                                 </div>
                             </Fragment>
                         ))}

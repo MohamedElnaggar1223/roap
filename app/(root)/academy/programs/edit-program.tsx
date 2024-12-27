@@ -43,6 +43,8 @@ import { useOnboarding } from '@/providers/onboarding-provider';
 import AddDiscount from './add-discount';
 import EditDiscount from './edit-discount';
 import { getProgramDiscounts } from '@/lib/actions/discounts.actions';
+import { Discount, Package, Program } from '@/stores/programs-store';
+import { useProgramsStore } from '@/providers/store-provider';
 
 const calculateAge = (birthDate: string): number => {
     const today = new Date();
@@ -69,15 +71,6 @@ const calculateAge = (birthDate: string): number => {
 
     return parseFloat((totalMonths / 12).toFixed(1));
 };
-
-interface Discount {
-    type: 'fixed' | 'percentage'
-    value: number
-    startDate: Date
-    endDate: Date
-    packageIds: number[]
-    id?: number
-}
 
 const addProgramSchema = z.object({
     name: z.string().min(1, "Name is required"),
@@ -112,47 +105,6 @@ interface Sport {
     locale: string
 }
 
-interface Package {
-    type: "Term" | "Monthly" | "Full Season" | 'Assessment'
-    termNumber?: number
-    name: string
-    price: number
-    startDate: Date
-    endDate: Date
-    schedules: Schedule[]
-    memo: string | null
-    entryFees: number
-    entryFeesExplanation?: string
-    entryFeesAppliedUntil?: string[]
-    id?: number
-    capacity: number
-    months?: string[] | null
-}
-
-interface Schedule {
-    day: string
-    from: string
-    to: string
-    memo: string | undefined
-}
-
-interface Program {
-    coaches: string[];
-    packages: string[];
-    id: number;
-    name: string | null;
-    description: string | null;
-    type: string | null;
-    numberOfSeats: number | null;
-    branchId: number | null;
-    sportId: number | null;
-    gender: string | null;
-    startDateOfBirth: string | null;
-    endDateOfBirth: string | null;
-    branchName: string;
-    sportName: string;
-    color: string | null;
-}
 
 type Props = {
     branches: Branch[]
@@ -236,36 +188,39 @@ export default function EditProgram({ branches, sports, programEdited, academySp
 
     const [editProgramOpen, setEditProgramOpen] = useState(false)
     const { data: coachesData } = useSWR(editProgramOpen ? 'coaches' : null, getAllCoaches)
-    const { data: packagesData, isLoading, isValidating, mutate } = useSWR(editProgramOpen ? 'packages' : null, (url: string | null) => getProgramPackages(url, programEdited.id), {
-        refreshWhenHidden: true
-    })
-    const { data: discountsData, isLoading: discountsLoading, isValidating: discountsValidating, mutate: mutateDiscounts } = useSWR(editProgramOpen ? 'discounts' : null, (url: string | null) => getProgramDiscounts(url, programEdited.id), {
-        refreshWhenHidden: true
-    })
+    // const { data: packagesData, isLoading, isValidating, mutate } = useSWR(editProgramOpen ? 'packages' : null, (url: string | null) => getProgramPackages(url, programEdited.id), {
+    //     refreshWhenHidden: true
+    // })
+    // const { data: discountsData, isLoading: discountsLoading, isValidating: discountsValidating, mutate: mutateDiscounts } = useSWR(editProgramOpen ? 'discounts' : null, (url: string | null) => getProgramDiscounts(url, programEdited.id), {
+    //     refreshWhenHidden: true
+    // })
 
-    const [selectedCoaches, setSelectedCoaches] = useState<number[]>(programEdited.coaches.map(coach => parseInt(coach)))
+    const [selectedCoaches, setSelectedCoaches] = useState<number[]>(programEdited.coachPrograms.map(coach => coach.coach.id))
     const [selectedGenders, setSelectedGenders] = useState<string[]>(programEdited.gender?.split(',') ?? [])
     const [loading, setLoading] = useState(false)
     const [coachesOpen, setCoachesOpen] = useState(false)
     const [packagesOpen, setPackagesOpen] = useState(false);
-    const [createdPackages, setCreatedPackages] = useState<Package[]>([]);
     const [gendersOpen, setGendersOpen] = useState(false);
     const [editPackageOpen, setEditPackageOpen] = useState(false);
     const [editedPackage, setEditedPackage] = useState<{ editedPackage: Package, index?: number } | null>(null);
     const [discountsOpen, setDiscountsOpen] = useState(false);
-    const [createdDiscounts, setCreatedDiscounts] = useState<Discount[]>([]);
     const [editDiscountOpen, setEditDiscountOpen] = useState(false);
     const [editedDiscount, setEditedDiscount] = useState<{ editedDiscount: Discount, index?: number } | null>(null);
 
-    useEffect(() => {
-        if (isLoading || isValidating) return
-        setCreatedPackages(packagesData?.data?.map(packageData => ({ ...packageData, startDate: new Date(packageData.startDate), endDate: new Date(packageData.endDate), entryFeesExplanation: packageData.entryFeesExplanation ?? undefined, entryFeesAppliedUntil: packageData.entryFeesAppliedUntil ? packageData.entryFeesAppliedUntil : undefined })) ?? [])
-    }, [isLoading, isValidating, packagesData])
+    const editProgram = useProgramsStore((state) => state.editProgram)
+    const program = useProgramsStore((state) => state.programs.find(p => p.id === programEdited.id))
+    const deleteDiscount = useProgramsStore((state) => state.deleteDiscount)
+    const deletePackage = useProgramsStore((state) => state.deletePackage)
 
-    useEffect(() => {
-        if (discountsLoading || discountsValidating) return
-        setCreatedDiscounts(discountsData?.data ?? [])
-    }, [discountsLoading, discountsValidating, discountsData])
+    // useEffect(() => {
+    //     if (isLoading || isValidating) return
+    //     setCreatedPackages(packagesData?.data?.map(packageData => ({ ...packageData, startDate: new Date(packageData.startDate), endDate: new Date(packageData.endDate), entryFeesExplanation: packageData.entryFeesExplanation ?? undefined, entryFeesAppliedUntil: packageData.entryFeesAppliedUntil ? packageData.entryFeesAppliedUntil : undefined })) ?? [])
+    // }, [isLoading, isValidating, packagesData])
+
+    // useEffect(() => {
+    //     if (discountsLoading || discountsValidating) return
+    //     setCreatedDiscounts(discountsData?.data ?? [])
+    // }, [discountsLoading, discountsValidating, discountsData])
 
     const form = useForm<z.infer<typeof addProgramSchema>>({
         resolver: zodResolver(addProgramSchema),
@@ -370,41 +325,55 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                     calculateDateFromYears(values.endAge!, values.endAgeUnit);
             }
 
-            const result = await updateProgram(programEdited.id, {
+            // const result = await updateProgram(programEdited.id, {
+            //     name: values.name,
+            //     description: values.description,
+            //     branchId: parseInt(values.branchId),
+            //     sportId: parseInt(values.sportId),
+            //     gender: selectedGenders.join(','),
+            //     startDateOfBirth: startDate,
+            //     endDateOfBirth: endDate,
+            //     numberOfSeats: 0,
+            //     type: values.type,
+            //     coaches: selectedCoaches,
+            //     packagesData: createdPackages,
+            //     color: values.color,
+            //     discountsData: createdDiscounts
+            // })
+
+            editProgram({
+                ...values,
+                ...programEdited,
+                id: programEdited.id,
                 name: values.name,
                 description: values.description,
                 branchId: parseInt(values.branchId),
                 sportId: parseInt(values.sportId),
+                createdAt: programEdited.createdAt,
+                updatedAt: programEdited.updatedAt,
                 gender: selectedGenders.join(','),
-                startDateOfBirth: startDate,
-                endDateOfBirth: endDate,
-                numberOfSeats: 0,
-                type: values.type,
-                coaches: selectedCoaches,
-                packagesData: createdPackages,
-                color: values.color,
-                discountsData: createdDiscounts
+                startDateOfBirth: startDate.toLocaleString(),
+                endDateOfBirth: endDate.toLocaleString(),
             })
 
-
-            if (result.error) {
-                console.error('Error creating program:', result.error)
-                if (result?.field) {
-                    form.setError(result.field as any, {
-                        type: 'custom',
-                        message: result.error
-                    })
-                    return
-                }
-                form.setError('root', {
-                    type: 'custom',
-                    message: result.error
-                })
-                return
-            }
+            // if (result.error) {
+            //     console.error('Error creating program:', result.error)
+            //     if (result?.field) {
+            //         form.setError(result.field as any, {
+            //             type: 'custom',
+            //             message: result.error
+            //         })
+            //         return
+            //     }
+            //     form.setError('root', {
+            //         type: 'custom',
+            //         message: result.error
+            //     })
+            //     return
+            // }
 
             setEditProgramOpen(false)
-            mutateProgram()
+            // mutateProgram()
             router.refresh()
         } catch (error) {
             console.error('Error creating program:', error)
@@ -471,7 +440,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                 <FormItem className='flex-1'>
                                                     <FormLabel>Name</FormLabel>
                                                     <FormControl>
-                                                        <Input disabled={isLoading || isValidating || loading} {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
+                                                        <Input disabled={loading} {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                     </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
@@ -484,7 +453,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                 <FormItem className='flex-1'>
                                                     <FormLabel>Description</FormLabel>
                                                     <FormControl>
-                                                        <AutoGrowingTextarea disabled={isLoading || isValidating || loading} field={{ ...field }} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
+                                                        <AutoGrowingTextarea disabled={loading} field={{ ...field }} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                     </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
@@ -500,7 +469,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                             render={({ field }) => (
                                                 <FormItem className='flex-1'>
                                                     <FormLabel>Branch</FormLabel>
-                                                    <Select disabled={isLoading || isValidating || loading} onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <Select disabled={loading} onValueChange={field.onChange} defaultValue={field.value}>
                                                         <FormControl>
                                                             <SelectTrigger className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'>
                                                                 <SelectValue placeholder="Select a branch" />
@@ -530,7 +499,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                             className="flex items-center gap-1 hover:bg-[#E0E4D9] pr-0.5 bg-[#E0E4D9] rounded-3xl text-main-green font-semibold font-inter text-sm"
                                                         >
                                                             <span className="text-xs">{gender}</span>
-                                                            <button disabled={isLoading || isValidating || loading}
+                                                            <button disabled={loading}
                                                                 onClick={() => handleSelectGender(gender)}
                                                                 className="ml-1 rounded-full p-0.5 hover:bg-secondary-foreground/20"
                                                             >
@@ -543,7 +512,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                 <Popover open={gendersOpen} onOpenChange={setGendersOpen}>
                                                     <PopoverTrigger asChild>
                                                         <Button
-                                                            variant="default" disabled={isLoading || isValidating || loading}
+                                                            variant="default" disabled={loading}
                                                             className="gap-2 hover:bg-transparent text-left flex items-center bg-transparent text-black border border-gray-500 justify-start"
                                                         >
                                                             Select genders
@@ -629,7 +598,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                                 step={0.5}
                                                                 min={0}
                                                                 max={100}
-                                                                disabled={isLoading || isValidating || loading}
+                                                                disabled={loading}
                                                                 className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
                                                             />
                                                         </FormControl>
@@ -643,7 +612,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                 render={({ field }) => (
                                                     <FormItem className="flex flex-col flex-1">
                                                         <FormLabel>Unit</FormLabel>
-                                                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading || isValidating || loading}>
+                                                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={loading}>
                                                             <FormControl>
                                                                 <SelectTrigger className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'>
                                                                     <SelectValue placeholder="Select unit" />
@@ -675,7 +644,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                                 step={0.5}
                                                                 min={0.5}
                                                                 max={100}
-                                                                disabled={isLoading || isValidating || loading || form.watch('endAgeUnit') === 'unlimited'}
+                                                                disabled={loading || form.watch('endAgeUnit') === 'unlimited'}
                                                                 className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
                                                             />
                                                         </FormControl>
@@ -689,7 +658,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                 render={({ field }) => (
                                                     <FormItem className="flex flex-col flex-1">
                                                         <FormLabel>Unit</FormLabel>
-                                                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading || isValidating || loading}>
+                                                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={loading}>
                                                             <FormControl>
                                                                 <SelectTrigger className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'>
                                                                     <SelectValue placeholder="Select unit" />
@@ -719,7 +688,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                         className="flex items-center gap-1 hover:bg-[#E0E4D9] pr-0.5 bg-[#E0E4D9] rounded-3xl text-main-green font-semibold font-inter text-sm"
                                                     >
                                                         <span className="text-xs">{coachesData?.find(c => c.id === coach)?.name}</span>
-                                                        <button disabled={isLoading || isValidating || loading}
+                                                        <button disabled={loading}
                                                             onClick={() => handleSelectCoach(coach)}
                                                             className="ml-1 rounded-full p-0.5 hover:bg-secondary-foreground/20"
                                                         >
@@ -732,7 +701,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                             <Popover open={coachesOpen} onOpenChange={setCoachesOpen}>
                                                 <PopoverTrigger asChild>
                                                     <Button
-                                                        variant="default" disabled={isLoading || isValidating || loading}
+                                                        variant="default" disabled={loading}
                                                         className="gap-2 hover:bg-transparent text-left flex items-center bg-transparent text-black border border-gray-500 justify-start"
                                                     >
                                                         Select coaches
@@ -780,7 +749,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                             render={({ field }) => (
                                                 <FormItem className='flex-1'>
                                                     <FormLabel>Sport</FormLabel>
-                                                    <Select disabled={isLoading || isValidating || loading} onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <Select disabled={loading} onValueChange={field.onChange} defaultValue={field.value}>
                                                         <FormControl>
                                                             <SelectTrigger className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'>
                                                                 <SelectValue placeholder="Select a sport" />
@@ -806,7 +775,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                 <FormItem className='flex-1'>
                                                     <FormLabel>Number of Slots</FormLabel>
                                                     <FormControl>
-                                                        <Input disabled={isLoading || isValidating || loading} {...field} type="number" min="1" className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
+                                                        <Input disabled={loading} {...field} type="number" min="1" className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                     </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
@@ -821,7 +790,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                         render={({ field }) => (
                                             <FormItem className='flex-1 hidden absolute'>
                                                 <FormLabel>Type</FormLabel>
-                                                <Select disabled={isLoading || isValidating || loading} onValueChange={field.onChange} defaultValue={field.value}>
+                                                <Select disabled={loading} onValueChange={field.onChange} defaultValue={field.value}>
                                                     <FormControl>
                                                         <SelectTrigger className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'>
                                                             <SelectValue placeholder="Select type" />
@@ -870,7 +839,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                             </div>
 
                                             {/* Rows */}
-                                            {createdPackages.map((packageData, index) => (
+                                            {program?.packages?.map((packageData, index) => (
                                                 <Fragment key={index}>
                                                     <div className="py-4 px-2 bg-main-white flex items-center justify-center">
                                                         {!packageData.id && (
@@ -878,16 +847,16 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                         )}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                                        {packageData.name}
+                                                        {packageData.name} {packageData.tempId}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
                                                         {packageData.price}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                                        {packageData.startDate.toLocaleDateString()}
+                                                        {new Date(packageData.startDate).toLocaleDateString()}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                                        {packageData.endDate.toLocaleDateString()}
+                                                        {new Date(packageData.endDate).toLocaleDateString()}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
                                                         {packageData.schedules.length}
@@ -911,7 +880,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                         </Button>
                                                         <TrashIcon
                                                             className="h-4 w-4 cursor-pointer"
-                                                            onClick={() => setCreatedPackages(createdPackages.filter((_, i) => i !== index))}
+                                                            onClick={() => deletePackage(packageData)}
                                                         />
                                                     </div>
                                                 </Fragment>
@@ -946,19 +915,19 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                             </div>
 
                                             {/* Rows */}
-                                            {createdDiscounts.map((discount, index) => (
+                                            {program?.discounts.map((discount, index) => (
                                                 <Fragment key={index}>
                                                     <div className="py-4 px-4 bg-main-white rounded-l-[20px] flex items-center justify-start font-bold font-inter">
                                                         {discount.type === 'percentage' ? `${discount.value}%` : `${discount.value} AED`}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                                        {discount.startDate.toLocaleDateString()}
+                                                        {new Date(discount.startDate).toLocaleDateString()}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                                        {discount.endDate.toLocaleDateString()}
+                                                        {new Date(discount.endDate).toLocaleDateString()}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                                        {discount.packageIds.length}
+                                                        {discount.packageDiscounts.length}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white gap-4 rounded-r-[20px] flex items-center justify-end font-bold font-inter">
                                                         <Button
@@ -979,7 +948,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                         </Button>
                                                         <TrashIcon
                                                             className="h-4 w-4 cursor-pointer"
-                                                            onClick={() => setCreatedDiscounts(createdDiscounts.filter((_, i) => i !== index))}
+                                                            onClick={() => deleteDiscount(discount)}
                                                         />
                                                     </div>
                                                 </Fragment>
@@ -995,8 +964,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
             <AddDiscount
                 onOpenChange={setDiscountsOpen}
                 open={discountsOpen}
-                setCreatedDiscounts={setCreatedDiscounts}
-                packages={createdPackages.filter(p => p.id)}
+                programId={program?.id!}
             />
             {editedDiscount && (
                 <EditDiscount
@@ -1005,12 +973,11 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                     setEditedDiscount={setEditedDiscount}
                     discountEdited={editedDiscount.editedDiscount}
                     index={editedDiscount.index}
-                    setCreatedDiscounts={setCreatedDiscounts}
-                    packages={createdPackages.filter(p => p.id)}
+                    programId={program?.id!}
                 />
             )}
-            <AddPackage onOpenChange={setPackagesOpen} open={packagesOpen} setCreatedPackages={setCreatedPackages} />
-            {editedPackage?.editedPackage.id ? <EditPackage setEditedPackage={setEditedPackage} mutate={mutate} open={editPackageOpen} onOpenChange={setEditPackageOpen} packageEdited={editedPackage?.editedPackage} /> : editedPackage?.editedPackage ? <EditPackage setEditedPackage={setEditedPackage} mutate={mutate} packageEdited={editedPackage?.editedPackage} open={editPackageOpen} onOpenChange={setEditPackageOpen} setCreatedPackages={setCreatedPackages} /> : null}
+            <AddPackage onOpenChange={setPackagesOpen} open={packagesOpen} programId={program?.id!} />
+            {editedPackage?.editedPackage.id ? <EditPackage setEditedPackage={setEditedPackage} programId={program?.id!} open={editPackageOpen} onOpenChange={setEditPackageOpen} packageEdited={editedPackage?.editedPackage} /> : editedPackage?.editedPackage ? <EditPackage setEditedPackage={setEditedPackage} packageEdited={editedPackage?.editedPackage} open={editPackageOpen} onOpenChange={setEditPackageOpen} programId={program?.id!} /> : null}
         </>
     )
 }

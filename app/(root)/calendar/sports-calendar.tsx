@@ -641,13 +641,22 @@ const MonthView = ({ events, currentDate, setSelectedGroupedEvent }: { events: E
 	const monthDays = useMemo(() => {
 		const start = startOfMonth(currentDate)
 		const end = endOfMonth(currentDate)
-		return eachDayOfInterval({ start, end })
+		let firstDay = startOfMonth(currentDate)
+		// Adjust to start from the correct day of the week
+		while (firstDay.getDay() !== 1) { // 1 is Monday
+			firstDay = addDays(firstDay, -1)
+		}
+		return eachDayOfInterval({
+			start: firstDay,
+			end: addDays(end, 42 - eachDayOfInterval({ start: firstDay, end }).length)
+		})
 	}, [currentDate])
 
 	const getGroupedEventsForDay = (date: Date) => {
 		const dayEvents = events.filter((event) => {
 			if (!event.date) return false
-			return format(new Date(event.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
+			const eventDate = new Date(event.date)
+			return isSameDay(eventDate, date)
 		})
 		return groupEvents(dayEvents)
 	}
@@ -655,7 +664,7 @@ const MonthView = ({ events, currentDate, setSelectedGroupedEvent }: { events: E
 	return (
 		<div className="bg-white rounded-lg overflow-hidden">
 			<div className="grid grid-cols-7 text-center border-[#CDD1C7] bg-[#E0E4D9]">
-				{WEEK_DAYS.map((day) => (
+				{["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((day) => (
 					<div key={day} className="p-2 font-medium text-[#6A6C6A]">
 						{day}
 					</div>
@@ -682,8 +691,7 @@ const MonthView = ({ events, currentDate, setSelectedGroupedEvent }: { events: E
 									<div
 										key={`${groupedEvent.coachName}-${groupedEvent.packageId}`}
 										className={cn(
-											"text-xs p-1 rounded cursor-pointer",
-											// // groupedEvent.color ? `!bg-[${groupedEvent.color}]` : colors[index % colors.length]
+											"text-xs p-1 rounded cursor-pointer"
 										)}
 										onClick={() => setSelectedGroupedEvent(groupedEvent)}
 										style={{
