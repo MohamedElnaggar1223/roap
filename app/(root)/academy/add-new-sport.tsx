@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { addSports, getAllSports } from '@/lib/actions/academics.actions';
 import { cn } from '@/lib/utils';
+import { useSportsStore } from '@/providers/store-provider';
 import { Loader2, Plus } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -23,6 +24,8 @@ export default function AddNewSport({ sports }: Props) {
     const router = useRouter()
 
     console.log(sports)
+
+    const { fetchSports, fetchRemainingSports } = useSportsStore((state) => state)
 
     const [addNewSportOpen, setAddNewSportOpen] = useState(false)
 
@@ -46,6 +49,8 @@ export default function AddNewSport({ sports }: Props) {
         setLoading(false)
         setAddNewSportOpen(false)
         router.refresh()
+        await fetchSports()
+        await fetchRemainingSports()
     }
 
     return (

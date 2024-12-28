@@ -18,7 +18,7 @@ import { checkAcademyStatus } from "@/lib/actions/check-academy-status";
 import { OnboardingProvider } from "@/providers/onboarding-provider";
 import { OnboardingSaveProvider } from "@/providers/onboarding-save-provider";
 import { fetchPlaceInformation } from "@/lib/actions/reviews.actions";
-import { ProgramsStoreProvider } from "@/providers/store-provider";
+import { StoreProvider } from "@/providers/store-provider";
 import { DataPrefetcher } from "@/providers/data-prefetcher";
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
@@ -45,7 +45,7 @@ export default async function RootLayout({
 			<body
 				className={cn(`antialiased bg-[#E0E4D9]`, inter.variable)}
 			>
-				<ProgramsStoreProvider>
+				<StoreProvider>
 					<DataPrefetcher>
 						<OnboardingProvider onboarded={!!status.isOnboarded} isAdmin={!!status.isAdmin} academyName={status.isAdmin ? status.academyName : ''}>
 							<OnboardingSaveProvider>
@@ -63,7 +63,7 @@ export default async function RootLayout({
 							</OnboardingSaveProvider>
 						</OnboardingProvider>
 					</DataPrefetcher>
-				</ProgramsStoreProvider>
+				</StoreProvider>
 			</body>
 		</html>
 	)

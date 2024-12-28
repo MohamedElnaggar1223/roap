@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { format, setYear, setMonth, setDate, getDaysInMonth } from 'date-fns'
 import { FormControl } from "@/components/ui/form"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { TextMorph } from '../ui/text-morph'
 
 interface DateSelectorProps {
     field: {
@@ -66,7 +67,9 @@ export function DateSelector({ field }: DateSelectorProps) {
                     <SelectContent className='bg-[#F1F2E9]'>
                         {days.map((day) => (
                             <SelectItem key={day} value={day.toString()}>
-                                {day}
+                                <TextMorph>
+                                    {day.toString()}
+                                </TextMorph>
                             </SelectItem>
                         ))}
                     </SelectContent>
@@ -81,7 +84,9 @@ export function DateSelector({ field }: DateSelectorProps) {
                     <SelectContent className='bg-[#F1F2E9]'>
                         {months.map((month) => (
                             <SelectItem key={month} value={month.toString()}>
-                                {format(new Date(2000, month, 1), 'MMMM')}
+                                <TextMorph>
+                                    {format(new Date(2000, month, 1), 'MMMM')}
+                                </TextMorph>
                             </SelectItem>
                         ))}
                     </SelectContent>
@@ -96,7 +101,9 @@ export function DateSelector({ field }: DateSelectorProps) {
                     <SelectContent className='bg-[#F1F2E9]'>
                         {years.map((year) => (
                             <SelectItem key={year} value={year.toString()}>
-                                {year}
+                                <TextMorph>
+                                    {year.toString()}
+                                </TextMorph>
                             </SelectItem>
                         ))}
                     </SelectContent>

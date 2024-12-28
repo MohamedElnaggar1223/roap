@@ -18,6 +18,7 @@ import { getPrograms } from './programs.actions';
 import { getAssessments } from './assessments.actions';
 import { getAllSpokenLanguages } from './spoken-languages.actions';
 import { cookies } from 'next/headers';
+import { Sport } from '@/stores/sports-store';
 
 export const getAcademyDetails = async () => {
 	const session = await auth()
@@ -658,6 +659,77 @@ export const getAllSports = async (url: string | null) => {
 		) t`,
 			sql`t.sport_id = ${sports.id}`
 		)
+}
+
+export const getAcademySportsStore = async () => {
+	const session = await auth()
+
+	if (!session?.user) {
+		return { error: 'You are not authorized to perform this action', field: null, data: [] }
+	}
+
+	const cookieStore = await cookies()
+	const impersonatedId = session.user.role === 'admin'
+		? cookieStore.get('impersonatedAcademyId')?.value
+		: null
+
+	// Build the where condition based on user role and impersonation
+	const academicId = session.user.role === 'admin' && impersonatedId
+		? parseInt(impersonatedId)
+		: parseInt(session.user.id)
+
+	// If not admin and not academic, return error
+	if (session.user.role !== 'admin' && session.user.role !== 'academic') {
+		return { error: 'You are not authorized to perform this action', field: null, data: [] }
+	}
+
+	const academy = await db.query.academics.findFirst({
+		where: (academics, { eq }) => eq(academics.userId, academicId),
+		columns: {
+			id: true,
+		}
+	})
+
+	if (!academy) return { error: 'Academy not found', field: null, data: [] }
+
+	const sportsData = await db
+		.select({
+			id: sports.id,
+			image: sports.image,
+			name: sql<string>`t.name`,
+			locale: sql<string>`t.locale`,
+		})
+		.from(academicSport)
+		.innerJoin(sports, eq(academicSport.sportId, sports.id))
+		.innerJoin(
+			sql`(
+			SELECT st.sport_id, st.name, st.locale
+			FROM ${sportTranslations} st
+			WHERE st.locale = 'en'
+			UNION
+			SELECT st2.sport_id, st2.name, st2.locale
+			FROM ${sportTranslations} st2
+			INNER JOIN (
+				SELECT sport_id, MIN(locale) as first_locale
+				FROM ${sportTranslations}
+				WHERE sport_id NOT IN (
+					SELECT sport_id 
+					FROM ${sportTranslations} 
+					WHERE locale = 'en'
+				)
+				GROUP BY sport_id
+			) first_trans ON st2.sport_id = first_trans.sport_id 
+			AND st2.locale = first_trans.first_locale
+		) t`,
+			sql`t.sport_id = ${sports.id}`
+		)
+		.where(eq(academicSport.academicId, academy.id));
+
+	return {
+		data: sportsData,
+		error: null,
+		field: null
+	}
 }
 
 export const addSports = async (sportsIds: number[]) => {

@@ -847,7 +847,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                         )}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                                        {packageData.name} {packageData.tempId}
+                                                        {packageData.name}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
                                                         {packageData.price}

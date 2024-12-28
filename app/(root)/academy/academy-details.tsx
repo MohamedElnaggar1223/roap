@@ -27,6 +27,7 @@ import { updateAcademyDetails } from '@/lib/actions/academics.actions';
 import AddNewSport from './add-new-sport';
 import { useOnboarding } from '@/providers/onboarding-provider';
 import { cn } from '@/lib/utils';
+import { useSportsStore } from '@/providers/store-provider';
 
 type Props = {
     academyDetails: {
@@ -66,6 +67,8 @@ export default function AcademyDetails({ academyDetails, sports }: Props) {
     const router = useRouter()
     const { toast } = useToast()
     const { mutate } = useOnboarding()
+
+    const { fetchSports, fetchRemainingSports } = useSportsStore((state) => state)
 
     const inputRef = useRef<HTMLInputElement>(null)
 
@@ -247,6 +250,9 @@ export default function AcademyDetails({ academyDetails, sports }: Props) {
         } finally {
             setLoading(false)
         }
+
+        await fetchSports()
+        await fetchRemainingSports()
     }
 
     const handleSelectSport = (id: number) => {

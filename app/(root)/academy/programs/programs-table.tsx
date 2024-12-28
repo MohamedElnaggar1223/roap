@@ -19,7 +19,7 @@ import { deletePrograms } from '@/lib/actions/programs.actions'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import Image from 'next/image'
 import { useOnboarding } from '@/providers/onboarding-provider'
-import { useProgramsStore } from '@/providers/store-provider'
+import { useProgramsStore, useSportsStore } from '@/providers/store-provider'
 import { Program } from '@/stores/programs-store'
 import { cn } from '@/lib/utils'
 
@@ -35,21 +35,12 @@ interface Branch {
     locale: string
 }
 
-interface Sport {
-    id: number
-    name: string
-    image: string | null
-    locale: string
-}
-
 interface ProgramsDataTableProps {
     branches: Branch[]
-    sports: Sport[]
-    academySports?: { id: number }[]
     academicId: number
 }
 
-export function ProgramsDataTable({ branches, sports, academySports, academicId }: ProgramsDataTableProps) {
+export function ProgramsDataTable({ branches, academicId }: ProgramsDataTableProps) {
     const router = useRouter()
 
     const { mutate } = useOnboarding()
@@ -59,7 +50,9 @@ export function ProgramsDataTable({ branches, sports, academySports, academicId 
     const fetchPrograms = useProgramsStore((state) => state.fetchPrograms)
     const deletePrograms = useProgramsStore((state) => state.deletePrograms)
 
-    console.log("data: ", data)
+    const academySports = useSportsStore((state) => state.sports)
+
+    console.log("data: ", academySports)
 
     const [selectedSport, setSelectedSport] = useState<string | null>(null)
     const [selectedGender, setSelectedGender] = useState<string | null>(null)
@@ -167,7 +160,7 @@ export function ProgramsDataTable({ branches, sports, academySports, academicId 
                     <AddNewProgram
                         branches={branches}
                         academicId={academicId}
-                        sports={sports}
+                        sports={academySports}
                         academySports={academySports}
                         takenColors={data.map(program => program.color).filter(color => color !== null)}
                     />
@@ -257,7 +250,7 @@ export function ProgramsDataTable({ branches, sports, academySports, academicId 
                                         height={16}
                                         alt='Sports'
                                     />
-                                    {selectedSport ? sports.find(sport => sport.id === parseInt(selectedSport))?.name : 'Sports'}
+                                    {selectedSport ? academySports.find(sport => sport.id === parseInt(selectedSport))?.name : 'Sports'}
                                     <ChevronDown className="w-4 h-4" />
                                 </Button>
                             </DropdownMenuTrigger>
@@ -268,7 +261,7 @@ export function ProgramsDataTable({ branches, sports, academySports, academicId 
                                         key={sport.id}
                                         onClick={() => setSelectedSport(sport.id.toString())}
                                     >
-                                        {sports.find(s => s.id === sport.id)?.name}
+                                        {sport.name}
                                     </DropdownMenuItem>
                                 ))}
                             </DropdownMenuContent>
@@ -339,7 +332,7 @@ export function ProgramsDataTable({ branches, sports, academySports, academicId 
                                     {program.name}
                                 </div>
                                 <div className={cn("py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter", program.pending && 'opacity-60')}>
-                                    {sports.find(s => s.id === program.sportId)?.name}
+                                    {academySports.find(s => s.id === program.sportId)?.name}
                                 </div>
                                 <div className={cn("py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter", program.pending && 'opacity-60')}>
                                     {branches.find(b => b.id === program.branchId)?.name}
@@ -370,7 +363,7 @@ export function ProgramsDataTable({ branches, sports, academySports, academicId 
                                         <EditProgram
                                             programEdited={program}
                                             branches={branches}
-                                            sports={sports}
+                                            sports={academySports}
                                             academySports={academySports}
                                             takenColors={data.filter(p => program.id !== p.id).map(program => program.color).filter(color => color !== null)}
                                         />
