@@ -2,7 +2,7 @@
 
 import { SQL, and, asc, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm'
 import { db } from '@/db'
-import { academics, academicSport, academicTranslations, blockBranches, blockPrograms, blockPackages, blocks, blockSports, bookings, bookingSessions, branches, branchTranslations, coaches, media, packages, profiles, programs, sports, sportTranslations, users } from '@/db/schema'
+import { entryFeesHistory, academics, academicSport, academicTranslations, blockBranches, blockPrograms, blockPackages, blocks, blockSports, bookings, bookingSessions, branches, branchTranslations, coaches, media, packages, profiles, programs, sports, sportTranslations, users, coachSpokenLanguage, academicAthletic, branchFacility, branchSport, coachPackage, coachProgram, coachSport, promoCodes, schedules, wishlist } from '@/db/schema'
 // import { auth } from '../auth'
 import bcrypt from "bcryptjs";
 import { isAdmin } from '../admin'
@@ -18,7 +18,6 @@ import { getPrograms } from './programs.actions';
 import { getAssessments } from './assessments.actions';
 import { getAllSpokenLanguages } from './spoken-languages.actions';
 import { cookies } from 'next/headers';
-import { Sport } from '@/stores/sports-store';
 
 export const getAcademyDetails = async () => {
 	const session = await auth()
@@ -309,9 +308,175 @@ export const deleteAcademics = async (ids: number[]) => {
 		error: 'You are not authorized to perform this action',
 	}
 
-	await db.delete(academics).where(inArray(academics.id, ids))
+	try {
+		// Start a transaction to ensure all related deletions succeed or none do
+		await db.transaction(async (tx) => {
+			// Delete all related records in the correct order to maintain referential integrity
 
-	revalidatePath('/admin/academics')
+			// 1. Handle booking related tables
+			await tx.delete(bookingSessions)
+				.where(inArray(bookingSessions.bookingId,
+					db.select({ id: bookings.id })
+						.from(bookings)
+						.innerJoin(packages, eq(bookings.packageId, packages.id))
+						.innerJoin(programs, eq(packages.programId, programs.id))
+						.where(inArray(programs.academicId, ids))
+				))
+
+			await tx.delete(bookings)
+				.where(inArray(bookings.packageId,
+					db.select({ id: packages.id })
+						.from(packages)
+						.innerJoin(programs, eq(packages.programId, programs.id))
+						.where(inArray(programs.academicId, ids))
+				))
+
+			// 2. Delete coach related tables
+			await tx.delete(coachSpokenLanguage)
+				.where(inArray(coachSpokenLanguage.coachId,
+					db.select({ id: coaches.id })
+						.from(coaches)
+						.where(inArray(coaches.academicId, ids))
+				))
+
+			await tx.delete(coachSport)
+				.where(inArray(coachSport.coachId,
+					db.select({ id: coaches.id })
+						.from(coaches)
+						.where(inArray(coaches.academicId, ids))
+				))
+
+			await tx.delete(coachPackage)
+				.where(inArray(coachPackage.coachId,
+					db.select({ id: coaches.id })
+						.from(coaches)
+						.where(inArray(coaches.academicId, ids))
+				))
+
+			await tx.delete(coachProgram)
+				.where(inArray(coachProgram.coachId,
+					db.select({ id: coaches.id })
+						.from(coaches)
+						.where(inArray(coaches.academicId, ids))
+				))
+
+			await tx.delete(coaches)
+				.where(inArray(coaches.academicId, ids))
+
+			await tx.delete(entryFeesHistory)
+				.where(inArray(entryFeesHistory.programId,
+					db.select({ id: programs.id })
+						.from(programs)
+						.where(inArray(programs.academicId, ids))
+				))
+
+			// 3. Delete schedule and package related tables
+			await tx.delete(schedules)
+				.where(inArray(schedules.packageId,
+					db.select({ id: packages.id })
+						.from(packages)
+						.innerJoin(programs, eq(packages.programId, programs.id))
+						.where(inArray(programs.academicId, ids))
+				))
+
+			await tx.delete(packages)
+				.where(inArray(packages.programId,
+					db.select({ id: programs.id })
+						.from(programs)
+						.where(inArray(programs.academicId, ids))
+				))
+
+			// 4. Delete block related tables
+			await tx.delete(blockPrograms)
+				.where(inArray(blockPrograms.blockId,
+					db.select({ id: blocks.id })
+						.from(blocks)
+						.where(inArray(blocks.academicId, ids))
+				))
+
+			await tx.delete(blockPackages)
+				.where(inArray(blockPackages.blockId,
+					db.select({ id: blocks.id })
+						.from(blocks)
+						.where(inArray(blocks.academicId, ids))
+				))
+
+			await tx.delete(blockSports)
+				.where(inArray(blockSports.blockId,
+					db.select({ id: blocks.id })
+						.from(blocks)
+						.where(inArray(blocks.academicId, ids))
+				))
+
+			await tx.delete(blockBranches)
+				.where(inArray(blockBranches.blockId,
+					db.select({ id: blocks.id })
+						.from(blocks)
+						.where(inArray(blocks.academicId, ids))
+				))
+
+			await tx.delete(blocks)
+				.where(inArray(blocks.academicId, ids))
+
+			// 5. Delete branch related tables
+			await tx.delete(branchSport)
+				.where(inArray(branchSport.branchId,
+					db.select({ id: branches.id })
+						.from(branches)
+						.where(inArray(branches.academicId, ids))
+				))
+
+			await tx.delete(branchFacility)
+				.where(inArray(branchFacility.branchId,
+					db.select({ id: branches.id })
+						.from(branches)
+						.where(inArray(branches.academicId, ids))
+				))
+
+			await tx.delete(branchTranslations)
+				.where(inArray(branchTranslations.branchId,
+					db.select({ id: branches.id })
+						.from(branches)
+						.where(inArray(branches.academicId, ids))
+				))
+
+			await tx.delete(branches)
+				.where(inArray(branches.academicId, ids))
+
+			// 6. Delete remaining academic related tables
+			await tx.delete(academicAthletic)
+				.where(inArray(academicAthletic.academicId, ids))
+
+			await tx.delete(academicSport)
+				.where(inArray(academicSport.academicId, ids))
+
+			await tx.delete(academicTranslations)
+				.where(inArray(academicTranslations.academicId, ids))
+
+			await tx.delete(promoCodes)
+				.where(inArray(promoCodes.academicId, ids))
+
+			await tx.delete(wishlist)
+				.where(inArray(wishlist.academicId, ids))
+
+			// 7. Finally, delete the academics
+			await tx.delete(academics)
+				.where(inArray(academics.id, ids))
+		})
+
+		revalidatePath('/admin/academics')
+
+		return {
+			data: 'Successfully deleted academics and all related records',
+			error: null,
+		}
+	} catch (error) {
+		console.error('Error deleting academics:', error)
+		return {
+			data: null,
+			error: 'Failed to delete academics. Please try again.',
+		}
+	}
 }
 
 export const acceptAcademic = async (id: number) => {

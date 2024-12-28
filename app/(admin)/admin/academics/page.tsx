@@ -239,6 +239,7 @@ export default function AcademicsContainer() {
 		setBulkDeleteLoading(true)
 		await deleteAcademics(selectedRows)
 		fetchAcademics(meta.page, meta.pageSize)
+		setSelectedRows([])
 		setBulkDeleteLoading(false)
 		setBulkDeleteOpen(false)
 	}
