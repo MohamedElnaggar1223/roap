@@ -1204,6 +1204,46 @@ export const pageTranslations = pgTable("page_translations", {
     }
 });
 
+export const reviews = pgTable("reviews", {
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({
+        name: "reviews_id_seq",
+        startWith: 1000,
+        increment: 1,
+        minValue: 1,
+        maxValue: 9223372036854775807,
+        cache: 1
+    }),
+    branchId: bigint("branch_id", { mode: "number" }).notNull(),
+    placeId: varchar("place_id", { length: 255 }).notNull(),
+    authorName: varchar("author_name", { length: 255 }).notNull(),
+    authorUrl: varchar("author_url", { length: 512 }).default(sql`NULL`),
+    language: varchar({ length: 10 }).notNull(),
+    originalLanguage: varchar("original_language", { length: 10 }).notNull(),
+    profilePhotoUrl: varchar("profile_photo_url", { length: 512 }).default(sql`NULL`),
+    rating: integer().notNull(),
+    relativeTimeDescription: varchar("relative_time_description", { length: 100 }).notNull(),
+    text: text().notNull(),
+    time: bigint({ mode: "number" }).notNull(),
+    translated: boolean().default(false).notNull(),
+    createdAt: timestamp("created_at", { mode: 'string' }),
+    updatedAt: timestamp("updated_at", { mode: 'string' }),
+}, (table) => {
+    return {
+        reviewsBranchIdForeign: foreignKey({
+            columns: [table.branchId],
+            foreignColumns: [branches.id],
+            name: "reviews_branch_id_foreign"
+        }).onDelete("cascade"),
+    }
+});
+
+export const reviewsRelations = relations(reviews, ({ one }) => ({
+    branch: one(branches, {
+        fields: [reviews.branchId],
+        references: [branches.id]
+    }),
+}));
+
 export const pagesRelations = relations(pages, ({ many }) => ({
     pageTranslations: many(pageTranslations),
 }));
@@ -1326,6 +1366,7 @@ export const branchesRelations = relations(branches, ({ one, many }) => ({
     branchFacilities: many(branchFacility),
     branchSports: many(branchSport),
     programs: many(programs),
+    reviews: many(reviews)
 }));
 
 export const countryTranslationsRelations = relations(countryTranslations, ({ one }) => ({

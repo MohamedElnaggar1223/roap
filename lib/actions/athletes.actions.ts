@@ -264,7 +264,7 @@ export async function createAthlete(data: {
             const [user] = await tx
                 .insert(users)
                 .values({
-                    email: data.email,
+                    email: data.email !== '' ? data.email : sql`NULL`,
                     phoneNumber: data.phoneNumber || null,
                     isAthletic: true,
                     role: 'user',

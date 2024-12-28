@@ -166,7 +166,7 @@ export const editPage = async (values: { content: string, image: string | null, 
     }
 }
 
-export const createPage = async (values: { content: string, image: string | null, orderBy: string }) => {
+export const createPage = async (values: { content: string, image: string | null, orderBy: string, title: string }) => {
     try {
         const isAdminRes = await isAdmin()
 
@@ -197,6 +197,7 @@ export const createPage = async (values: { content: string, image: string | null
         await db.insert(pageTranslations).values({
             pageId: newPage.id,
             locale: 'en',
+            title: values.title,
             content: values.content,
             createdAt: sql`now()`,
             updatedAt: sql`now()`

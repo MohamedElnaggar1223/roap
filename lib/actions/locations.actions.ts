@@ -1,12 +1,12 @@
 'use server'
 import { db } from '@/db'
-import { branches, branchTranslations, branchFacility, branchSport, programs } from '@/db/schema'
+import { branches, branchTranslations, branchFacility, branchSport, programs, reviews } from '@/db/schema'
 import { auth } from '@/auth'
 import { and, eq, inArray, not, sql } from 'drizzle-orm'
 import { revalidateTag, unstable_cache } from 'next/cache'
 import { slugify } from '../utils'
 import { cookies } from 'next/headers'
-import { fetchPlaceInformation } from './reviews.actions'
+import { fetchPlaceInformation, getPlaceId } from './reviews.actions'
 
 const getLocationsAction = async (academicId: number) => {
     return unstable_cache(async (academicId: number) => {
@@ -185,6 +185,7 @@ export async function createLocation(data: {
             }
 
             const ratesAndReviews = await fetchPlaceInformation(data.nameInGoogleMap)
+            const placeId = await getPlaceId(data.nameInGoogleMap)
 
             const [branch] = await db
                 .insert(branches)
@@ -198,10 +199,32 @@ export async function createLocation(data: {
                     longitude: data.longitude ?? '',
                     rate: ratesAndReviews?.rating ?? null,
                     reviews: ratesAndReviews?.reviews?.length ?? null,
+                    placeId: placeId ?? null,
                 })
                 .returning({
                     id: branches.id,
                 })
+
+            if (ratesAndReviews?.reviews && placeId) {
+                await tx.insert(reviews).values(
+                    ratesAndReviews.reviews.map(review => ({
+                        branchId: branch.id,
+                        placeId: placeId,
+                        authorName: review.author_name,
+                        authorUrl: review.author_url || null,
+                        language: review.language || 'en',
+                        originalLanguage: review.original_language || review.language || 'en',
+                        profilePhotoUrl: review.profile_photo_url || null,
+                        rating: review.rating,
+                        relativeTimeDescription: review.relative_time_description,
+                        text: review.text,
+                        time: review.time,
+                        translated: review.translated || false,
+                        createdAt: sql`now()`,
+                        updatedAt: sql`now()`
+                    }))
+                )
+            }
 
             await tx.insert(branchTranslations).values({
                 branchId: branch.id,
@@ -297,6 +320,7 @@ export async function updateLocation(id: number, data: {
     if (!academy) return { error: 'Academy not found' }
 
     const ratesAndReviews = await fetchPlaceInformation(data.nameInGoogleMap)
+    const placeId = await getPlaceId(data.nameInGoogleMap)
 
     try {
         await Promise.all([
@@ -320,8 +344,37 @@ export async function updateLocation(id: number, data: {
                     longitude: data.longitude,
                     rate: ratesAndReviews?.rating ?? null,
                     reviews: ratesAndReviews?.reviews?.length ?? null,
+                    placeId: placeId ?? null,
                 })
                 .where(eq(branches.id, id)),
+
+            (async () => {
+                if (ratesAndReviews?.reviews && placeId) {
+                    // First, delete existing reviews for this branch
+                    await db.delete(reviews)
+                        .where(eq(reviews.branchId, id))
+
+                    // Then insert new reviews
+                    await db.insert(reviews).values(
+                        ratesAndReviews.reviews.map(review => ({
+                            branchId: id,
+                            placeId: placeId,
+                            authorName: review.author_name,
+                            authorUrl: review.author_url || null,
+                            language: review.language || 'en',
+                            originalLanguage: review.original_language || review.language || 'en',
+                            profilePhotoUrl: review.profile_photo_url || null,
+                            rating: review.rating,
+                            relativeTimeDescription: review.relative_time_description,
+                            text: review.text,
+                            time: review.time,
+                            translated: review.translated || false,
+                            createdAt: sql`now()`,
+                            updatedAt: sql`now()`
+                        }))
+                    )
+                }
+            })(),
 
             db.update(branchTranslations)
                 .set({

@@ -14,22 +14,29 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { useState, useRef } from "react"
-import { Loader2, Plus } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
-import { createSport } from "@/lib/actions/sports.actions"
+import { createPage } from "@/lib/actions/pages.actions"
 import { uploadImageToSupabase } from "@/lib/supabase-images"
+import TipTapEditor from "@/components/academy/academy-details/Editor"
 
-const createSportSchema = z.object({
-    name: z.string().min(2, {
-        message: "Please enter a valid name",
+const createPageSchema = z.object({
+    title: z.string().min(2, {
+        message: "Please enter a valid title",
+    }),
+    content: z.string().min(2, {
+        message: "Please enter a valid content",
+    }),
+    orderBy: z.string().min(1, {
+        message: "Please enter a valid orderBy",
     }),
 })
 
-export default function CreateSport() {
+export default function CreatePage() {
     const router = useRouter()
 
     const inputRef = useRef<HTMLInputElement>(null)
@@ -43,10 +50,12 @@ export default function CreateSport() {
         file: null
     })
 
-    const form = useForm<z.infer<typeof createSportSchema>>({
-        resolver: zodResolver(createSportSchema),
+    const form = useForm<z.infer<typeof createPageSchema>>({
+        resolver: zodResolver(createPageSchema),
         defaultValues: {
-            name: '',
+            title: '',
+            content: '',
+            orderBy: '',
         },
     })
 
@@ -101,34 +110,29 @@ export default function CreateSport() {
         }
     }
 
-    async function onSubmit(values: z.infer<typeof createSportSchema>) {
+    async function onSubmit(values: z.infer<typeof createPageSchema>) {
         try {
             setLoading(true)
 
-            if (!selectedImage.file) {
-                form.setError('root', {
-                    type: 'custom',
-                    message: 'Please select an image'
-                })
-                setLoading(false)
-                return
+            let imagePath = null
+
+            if (selectedImage.file) {
+                try {
+                    imagePath = await uploadImageToSupabase(selectedImage.file)
+                } catch (error) {
+                    setLoading(false)
+                    form.setError('root', {
+                        type: 'custom',
+                        message: 'Error uploading image. Please try again.'
+                    })
+                    return
+                }
             }
 
-            let imagePath: string | null = null
-
-            try {
-                imagePath = await uploadImageToSupabase(selectedImage.file)
-            } catch (error) {
-                setLoading(false)
-                form.setError('root', {
-                    type: 'custom',
-                    message: 'Error uploading image. Please try again.'
-                })
-                return
-            }
-
-            const result = await createSport({
-                name: values.name,
+            const result = await createPage({
+                title: values.title,
+                content: values.content,
+                orderBy: values.orderBy,
                 image: imagePath,
             })
 
@@ -145,9 +149,9 @@ export default function CreateSport() {
             }
 
             router.refresh()
-            router.push('/admin/sports')
+            router.push('/admin/pages')
         } catch (error) {
-            console.error('Error creating sport:', error)
+            console.error('Error creating page:', error)
             form.setError('root', {
                 type: 'custom',
                 message: 'An unexpected error occurred'
@@ -160,17 +164,17 @@ export default function CreateSport() {
     return (
         <div className="flex flex-col w-full items-center justify-start h-full gap-6">
             <div className="flex max-w-7xl items-center justify-between gap-2 w-full">
-                <h1 className="text-3xl font-bold">Create Sport</h1>
+                <h1 className="text-3xl font-bold">Create Page</h1>
             </div>
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 w-full max-w-7xl">
                     <div className="max-w-7xl flex max-lg:flex-wrap items-start justify-between w-full gap-4">
                         <FormField
                             control={form.control}
-                            name="name"
+                            name="title"
                             render={({ field }) => (
                                 <FormItem className='flex-1'>
-                                    <FormLabel>Name</FormLabel>
+                                    <FormLabel>Title</FormLabel>
                                     <FormControl>
                                         <Input
                                             disabled={loading}
@@ -206,10 +210,13 @@ export default function CreateSport() {
                                                 />
                                             </div>
                                         ) : (
-                                            <div className="text-center h-44 flex items-center justify-center flex-col">
-                                                <Plus className="h-8 w-8 mx-auto text-gray-400" />
-                                                <span className="text-sm text-gray-500">Add Media</span>
-                                            </div>
+                                            <Image
+                                                src='/images/placeholder.svg'
+                                                alt='Placeholder'
+                                                width={176}
+                                                height={176}
+                                                className='rounded-[31px] object-cover'
+                                            />
                                         )}
                                         <Input
                                             type="file"
@@ -223,6 +230,54 @@ export default function CreateSport() {
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    <div className="max-w-7xl flex max-lg:flex-wrap items-start justify-between w-full gap-4">
+                        <FormField
+                            control={form.control}
+                            name="orderBy"
+                            render={({ field }) => (
+                                <FormItem className='flex-1'>
+                                    <FormLabel>Order By</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            disabled={loading}
+                                            className='max-w-[570px] focus-visible:ring-main focus-visible:ring-2'
+                                            {...field}
+                                            onChange={(e) => {
+                                                const value = e.target.value
+                                                if (value === '') {
+                                                    form.setValue('orderBy', '')
+                                                }
+                                                /^\d+$/.test(value) && form.setValue('orderBy', value)
+                                            }}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+
+                    <div className="max-w-7xl flex max-lg:flex-wrap items-start justify-between w-full gap-4">
+                        <FormField
+                            control={form.control}
+                            name="content"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Policy</FormLabel>
+                                    <FormControl>
+                                        <TipTapEditor
+                                            value={field.value ?? ''}
+                                            onValueChange={field.onChange}
+                                            disabled={loading}
+                                            className="min-h-[400px] listDisplay !font-inter !antialiased"
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                     </div>
 
                     {form.formState.errors.root && (
@@ -244,7 +299,7 @@ export default function CreateSport() {
                             size="default"
                         >
                             {loading && <Loader2 className='mr-2 h-5 w-5 animate-spin' />}
-                            Create Sport
+                            Create Page
                         </Button>
                     </div>
                 </form>

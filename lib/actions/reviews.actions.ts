@@ -23,7 +23,7 @@ if (!GOOGLE_API_KEY) {
     throw new Error('Missing GOOGLE_MAPS_API_KEY environment variable')
 }
 
-async function getPlaceId(name: string): Promise<string | null> {
+export async function getPlaceId(name: string): Promise<string | null> {
     try {
         const response = await fetch(
             `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(name)}&key=${GOOGLE_API_KEY}`,
@@ -51,7 +51,7 @@ async function getPlaceId(name: string): Promise<string | null> {
     }
 }
 
-async function getPlaceDetails(placeId: string): Promise<{ rating: number; reviews: any[] } | null> {
+export async function getPlaceDetails(placeId: string): Promise<{ rating: number; reviews: any[] } | null> {
     try {
         const response = await fetch(
             `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&key=${GOOGLE_API_KEY}`,
