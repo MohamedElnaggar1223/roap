@@ -321,7 +321,7 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                 updatedAt: new Date().toLocaleString(),
                 assessmentDeductedFromProgram: false,
                 academicId
-            })
+            }, mutate)
 
             // if (result.error) {
             //     if (result?.field) {
@@ -803,8 +803,6 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
                                                         {packageData.name}
-                                                        {packageData.tempId}
-                                                        {packageData.id}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
                                                         {packageData.price}

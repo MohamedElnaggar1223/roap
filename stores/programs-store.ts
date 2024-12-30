@@ -119,7 +119,7 @@ export type ProgramsActions = {
     fetchPrograms: () => void
     editProgram: (program: Program) => Promise<{ error: string | null, field: string | null }>
     deletePrograms: (ids: number[]) => void
-    addProgram: (program: Program) => void
+    addProgram: (program: Program, mutate?: () => void) => void
     editPackage: (packageData: Package) => void
     addPackage: (packageData: Package) => void
     deletePackage: (packageData: Package) => void
@@ -191,7 +191,7 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
 
             await deletePrograms(ids)
         },
-        addProgram: async (program: Program) => {
+        addProgram: async (program: Program, mutate?: () => void) => {
             set({
                 programs: [...get().programs, ({ ...program, pending: true })]
             })
@@ -208,6 +208,7 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
                     programs: get().programs.map(p => p.id === program.id ? ({ ...program, pending: false, id: result.data?.id as number }) : p)
                 })
                 get().fetchPrograms()
+                if (mutate) mutate()
             }
         },
         editPackage: (packageData: Package) => {

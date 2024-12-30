@@ -22,6 +22,9 @@ type DashboardStats = {
     coachTraffic: Array<{ name: string | null; count: number; branchName?: string; sportName?: string; programName?: string | null; date: string }>
     sportTraffic: Array<{ name: string; count: number; branchName?: string; sportName?: string; programName?: string | null; date: string }>
     branchTraffic: Array<{ name: string; count: number; branchName?: string; sportName?: string; programName?: string | null; date: string }>
+    allPrograms: Array<{ name: string }>
+    allLocations: Array<{ name: string }>
+    allSports: Array<{ name: string }>
 }
 
 const formatTime = (time: string) => {
@@ -133,11 +136,27 @@ export function DashboardClient({ stats }: { stats: DashboardStats }) {
     const [filteredStats, setFilteredStats] = useState<DashboardStats>(stats)
 
     const getUniqueValues = (key: 'branchName' | 'sportName' | 'programName'): string[] => {
-        const allValues = Object.values(stats)
+        const fromBookings = Object.values(stats)
             .filter(Array.isArray)
             .flatMap(arr => arr.map(item => item[key]))
             .filter(Boolean) as string[]
-        return Array.from(new Set(allValues))
+
+        let allValues: string[] = []
+
+        switch (key) {
+            case 'branchName':
+                allValues = stats.allLocations.map(loc => loc.name)
+                break
+            case 'sportName':
+                allValues = stats.allSports.map(sport => sport.name)
+                break
+            case 'programName':
+                allValues = stats.allPrograms.map(prog => prog.name)
+                break
+        }
+
+        // Combine and deduplicate values
+        return Array.from(new Set([...allValues, ...fromBookings]))
     }
 
     const filterByDate = (data: any[]) => {
@@ -167,8 +186,20 @@ export function DashboardClient({ stats }: { stats: DashboardStats }) {
     const programs = getUniqueValues('programName')
 
     useEffect(() => {
-        const filterData = (data: any[]) => {
+        const filterData = (data: any[], isTimeTraffic: boolean = false) => {
             return filterByDate(data.filter(item => {
+                if (isTimeTraffic) {
+                    const bookingExists = stats.packageTraffic.some(booking => {
+                        const locationMatch = !selectedLocation || booking.branchName === selectedLocation;
+                        const sportMatch = !selectedSport || booking.sportName === selectedSport;
+                        const programMatch = !selectedProgram || booking.programName === selectedProgram;
+                        const genderMatch = !selectedGender || (booking.genders && booking.genders.includes(selectedGender));
+                        const dateMatch = new Date(booking.date).toDateString() === new Date(item.date).toDateString();
+                        return locationMatch && sportMatch && programMatch && genderMatch && dateMatch;
+                    });
+                    return bookingExists;
+                }
+
                 const locationMatch = !selectedLocation || item.branchName === selectedLocation;
                 const sportMatch = !selectedSport || item.sportName === selectedSport;
                 const programMatch = !selectedProgram || item.programName === selectedProgram;
@@ -179,7 +210,7 @@ export function DashboardClient({ stats }: { stats: DashboardStats }) {
 
         const newFilteredStats: DashboardStats = {
             ...stats,
-            timeTraffic: filterData(stats.timeTraffic),
+            timeTraffic: filterData(stats.timeTraffic, true),
             packageTraffic: filterData(stats.packageTraffic),
             programTraffic: filterData(stats.programTraffic),
             coachTraffic: filterData(stats.coachTraffic),

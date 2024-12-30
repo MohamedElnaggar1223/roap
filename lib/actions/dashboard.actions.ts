@@ -2,7 +2,7 @@
 
 import { SQL, and, eq, sql } from 'drizzle-orm'
 import { db } from '@/db'
-import { bookings, bookingSessions, packages, programs, coaches, sports, branches, users, academics, sportTranslations, branchTranslations } from '@/db/schema'
+import { bookings, bookingSessions, packages, programs, coaches, sports, branches, users, academics, sportTranslations, branchTranslations, academicSport } from '@/db/schema'
 import { auth } from '@/auth'
 import { addMonths, startOfMonth, endOfMonth, format } from 'date-fns'
 import { cookies } from 'next/headers'
@@ -17,6 +17,9 @@ type DashboardStats = {
     coachTraffic: Array<{ name: string | null; count: number; branchName?: string; sportName?: string; programName?: string | null; date: string }>
     sportTraffic: Array<{ name: string; count: number; branchName?: string; sportName?: string; programName?: string | null; date: string }>
     branchTraffic: Array<{ name: string; count: number; branchName?: string; sportName?: string; programName?: string | null; date: string }>
+    allPrograms: Array<{ name: string }>
+    allLocations: Array<{ name: string }>
+    allSports: Array<{ name: string }>
 }
 
 export interface DashboardResponse {
@@ -73,6 +76,60 @@ export async function getDashboardStats(params: DashboardStatsParams = {}): Prom
     const { location, sport, program, gender } = params
 
     try {
+        const [allPrograms, allLocations, allSports] = await Promise.all([
+            // Get all programs
+            db.select({
+                name: sql<string>`
+                    CASE 
+                        WHEN ${programs.name} = 'Assessment' 
+                        THEN CONCAT('Assessment ', ${sportTranslations.name}, ' ', ${branchTranslations.name})
+                        ELSE ${programs.name}
+                    END
+                `
+            })
+                .from(programs)
+                .innerJoin(sports, eq(programs.sportId, sports.id))
+                .innerJoin(sportTranslations, and(
+                    eq(sports.id, sportTranslations.sportId),
+                    eq(sportTranslations.locale, 'en')
+                ))
+                .innerJoin(branches, eq(programs.branchId, branches.id))
+                .innerJoin(branchTranslations, and(
+                    eq(branches.id, branchTranslations.branchId),
+                    eq(branchTranslations.locale, 'en')
+                ))
+                .where(eq(programs.academicId, academy.id)),
+
+            // Get all locations (branches)
+            db.select({
+                name: branchTranslations.name,
+            })
+                .from(branches)
+                .innerJoin(
+                    branchTranslations,
+                    and(
+                        eq(branches.id, branchTranslations.branchId),
+                        eq(branchTranslations.locale, 'en')
+                    )
+                )
+                .where(eq(branches.academicId, academy.id)),
+
+            // Get all sports
+            db.select({
+                name: sportTranslations.name,
+            })
+                .from(academicSport)
+                .innerJoin(sports, eq(academicSport.sportId, sports.id))
+                .innerJoin(
+                    sportTranslations,
+                    and(
+                        eq(sports.id, sportTranslations.sportId),
+                        eq(sportTranslations.locale, 'en')
+                    )
+                )
+                .where(eq(academicSport.academicId, academy.id))
+        ])
+
         const results = await db.transaction(async (tx) => {
             // Get current month bookings count
             const [currentMonthCount] = await tx
@@ -359,6 +416,9 @@ export async function getDashboardStats(params: DashboardStatsParams = {}): Prom
                 coachTraffic: coachTraffic as DashboardStats['coachTraffic'],
                 sportTraffic: sportTraffic as DashboardStats['sportTraffic'],
                 branchTraffic: branchTraffic as DashboardStats['branchTraffic'],
+                allPrograms: allPrograms.map(p => ({ name: p.name as string })),
+                allLocations: allLocations.map(p => ({ name: p.name as string })),
+                allSports: allSports.map(p => ({ name: p.name as string })),
             }
 
             return stats
