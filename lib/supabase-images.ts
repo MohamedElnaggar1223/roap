@@ -99,3 +99,24 @@ export async function getImageUrl(path: string | null) {
 
     return data.publicUrl
 }
+
+export async function deleteFromStorage(paths: string[]) {
+    if (!paths.length) return;
+
+    const supabase = await createClient()
+
+    // Filter out paths that don't point to storage
+    const storagePaths = paths
+        .filter(path => path && !path.startsWith('http'))
+        .map(path => path.replace('images/', ''))
+
+    if (storagePaths.length > 0) {
+        const { data, error } = await supabase.storage
+            .from('images')
+            .remove(storagePaths)
+
+        if (error) {
+            console.error('Error deleting files from storage:', error)
+        }
+    }
+}
