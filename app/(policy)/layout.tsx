@@ -20,10 +20,10 @@ export default async function RootLayout({
     return (
         <html lang="en">
             <body
-                className={cn(`antialiased bg-[#E0E4D9]`, inter.variable)}
+                className={cn(`antialiased bg-[#ffF1F2E9]`, inter.variable)}
             >
-                <main className='flex flex-col flex-1 font-inter bg-[#E0E4D9]'>
-                    <section className='p-4 bg-[#E0E4D9] h-full'>
+                <main className='flex flex-col flex-1 font-inter bg-[#ffF1F2E9]'>
+                    <section className='p-4 bg-[#ffF1F2E9] h-full'>
                         {children}
                     </section>
                 </main>
