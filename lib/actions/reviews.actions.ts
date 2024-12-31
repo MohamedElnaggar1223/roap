@@ -51,7 +51,7 @@ export async function getPlaceId(name: string): Promise<string | null> {
     }
 }
 
-export async function getPlaceDetails(placeId: string): Promise<{ rating: number; reviews: any[] } | null> {
+export async function getPlaceDetails(placeId: string): Promise<{ rating: number; reviews: any[], latitude: number, longitude: number } | null> {
     try {
         const response = await fetch(
             `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&key=${GOOGLE_API_KEY}`,
@@ -72,6 +72,8 @@ export async function getPlaceDetails(placeId: string): Promise<{ rating: number
             return {
                 rating: data.result.rating,
                 reviews: data.result.reviews,
+                latitude: data.result.geometry.location.lat,
+                longitude: data.result.geometry.location.lng,
             }
         }
 
