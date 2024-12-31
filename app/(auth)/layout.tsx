@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/toaster";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import { checkAcademyStatus } from "@/lib/actions/check-academy-status";
 
 export const metadata: Metadata = {
 	title: "Roap",
@@ -19,8 +20,9 @@ export default async function RootLayout({
 	children: React.ReactNode;
 }>) {
 	const session = await auth()
+	const status = await checkAcademyStatus()
 
-	if(session?.user) return redirect("/") 
+	if (session?.user && !status.logout) return redirect("/")
 
 	return (
 		<html lang="en">

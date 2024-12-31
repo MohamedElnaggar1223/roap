@@ -5,6 +5,7 @@ import { academics } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { auth } from '@/auth';
 import { cookies } from 'next/headers';
+import { signOut } from '@/auth';
 
 export async function checkAcademyStatus() {
     const session = await auth()
@@ -74,7 +75,17 @@ export async function checkAcademyStatus() {
         }
     })
 
+    console.log("Academy", academy)
+
     if (!academy) {
+        if (session.user.id) {
+            return {
+                shouldRedirect: true,
+                redirectTo: '/sign-in',
+                logout: true
+            }
+        }
+
         return {
             shouldRedirect: true,
             redirectTo: '/sign-in'
