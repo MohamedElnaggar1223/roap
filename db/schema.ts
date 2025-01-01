@@ -849,20 +849,52 @@ export const packageDiscount = pgTable("package_discount", {
 });
 
 export const notifications = pgTable("notifications", {
-    id: uuid().primaryKey().notNull(),
-    type: varchar({ length: 255 }).notNull(),
-    notifiableType: varchar("notifiable_type", { length: 255 }).notNull(),
-    // You can use { mode: "bigint" } if numbers are exceeding js number limitations
-    notifiableId: bigint("notifiable_id", { mode: "number" }).notNull(),
-    data: text().notNull(),
+    id: uuid("id").primaryKey().notNull(),
+    title: varchar("title", { length: 255 }).notNull(),
+    description: text("description").notNull(),
+    userId: bigint("user_id", { mode: "number" }),
+    profileId: bigint("profile_id", { mode: "number" }),
+    academicId: bigint("academic_id", { mode: "number" }),
     readAt: timestamp("read_at", { mode: 'string' }),
     createdAt: timestamp("created_at", { mode: 'string' }),
     updatedAt: timestamp("updated_at", { mode: 'string' }),
 }, (table) => {
     return {
-        notifiableTypeNotifiableIdIdx: index().using("btree", table.notifiableType.asc().nullsLast().op("int8_ops"), table.notifiableId.asc().nullsLast().op("int8_ops")),
+        userIdIdx: index("notifications_user_id_index").on(table.userId),
+        profileIdIdx: index("notifications_profile_id_index").on(table.profileId),
+        academicIdIdx: index("notifications_academic_id_index").on(table.academicId),
+        userIdFk: foreignKey({
+            columns: [table.userId],
+            foreignColumns: [users.id],
+            name: "notifications_user_id_foreign"
+        }).onDelete("cascade"),
+        profileIdFk: foreignKey({
+            columns: [table.profileId],
+            foreignColumns: [profiles.id],
+            name: "notifications_profile_id_foreign"
+        }).onDelete("cascade"),
+        academicIdFk: foreignKey({
+            columns: [table.academicId],
+            foreignColumns: [academics.id],
+            name: "notifications_academic_id_foreign"
+        }).onDelete("cascade"),
     }
 });
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+    user: one(users, {
+        fields: [notifications.userId],
+        references: [users.id]
+    }),
+    profile: one(profiles, {
+        fields: [notifications.profileId],
+        references: [profiles.id]
+    }),
+    academic: one(academics, {
+        fields: [notifications.academicId],
+        references: [academics.id]
+    })
+}));
 
 export const entryFeesHistory = pgTable("entry_fees_history", {
     id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),

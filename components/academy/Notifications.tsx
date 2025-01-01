@@ -17,23 +17,24 @@ type Props = {
 }
 
 type Notification = {
-    created_at: string | null
-    data: string
     id: string
-    notifiable_id: number
-    notifiable_type: string
+    title: string
+    description: string
+    user_id: number | null
+    profile_id: number | null
+    academic_id: number | null
     read_at: string | null
-    type: string
+    created_at: string | null
     updated_at: string | null
-    booking?: {
-        id: number
-        profile: {
-            name: string
-        } | null
-        package: {
-            name: string
-        } | null
-    }
+    profile?: {
+        name: string
+    } | null
+    academic?: {
+        academic_translations: {
+            name: string | null
+            locale: string
+        }[]
+    } | null
 }
 
 const NotificationsComponent: React.FC<Props> = ({ academicId }) => {
@@ -45,95 +46,24 @@ const NotificationsComponent: React.FC<Props> = ({ academicId }) => {
     useEffect(() => {
         const fetchNotifications = async () => {
             try {
-                console.log("Academy Id", academicId)
-                // Get the academy owner's user_id and all athletes' user_ids
-                const { data: academic, error: academicError } = await supabase
-                    .from('academics')
-                    .select('user_id')
-                    .eq('id', academicId)
-                    .single()
-
-                if (academicError) throw academicError
-
-                const { data: athleticUsers, error: athleticError } = await supabase
-                    .from('academic_athletic')
-                    .select('user_id')
-                    .eq('academic_id', academicId)
-
-                if (athleticError) throw athleticError
-
-                // Create array of all possible notifiable_ids
-                const notifiableIds = [
-                    academicId, // Academy itself
-                    academic.user_id, // Academy owner
-                    ...athleticUsers.map(au => au.user_id) // All athletes
-                ].filter(Boolean)
-
-                // First fetch notifications
                 const { data: notificationsData, error } = await supabase
                     .from('notifications')
-                    .select('*')
-                    .in('notifiable_id', notifiableIds)
+                    .select(`
+                        *,
+                        profile:profiles(name),
+                        academic:academics(
+                            academic_translations(
+                                name,
+                                locale
+                            )
+                        )
+                    `)
+                    .eq('academic_id', academicId)
                     .order('created_at', { ascending: false })
 
                 if (error) throw error
 
-                // Then fetch booking details for booking notifications
-                const notificationsWithBookings = await Promise.all(
-                    notificationsData.map(async (notification) => {
-                        try {
-                            const cleanedData = notification.data.replace(/\\/g, '');
-                            const data = JSON.parse(cleanedData);
-
-                            // console.log('Notification data:', data)
-
-                            if (data.title === 'booking_completed' && data.relatable_type === 'booking_completed') {
-                                const { data: bookingData, error: bookingError } = await supabase
-                                    .from('bookings')
-                                    .select(`
-                                        id,
-                                        profile_id,
-                                        package_id
-                                    `)
-                                    .eq('id', data.relatable_id)
-                                    .single()
-
-                                // console.log('Booking data:', bookingData)
-                                if (bookingError || !bookingData?.profile_id || !bookingData?.package_id) return notification
-
-                                const { data: profileData, error: profileError } = await supabase
-                                    .from('profiles')
-                                    .select('name')
-                                    .eq('id', bookingData?.profile_id)
-                                    .single()
-
-                                const { data: packageData, error: packageError } = await supabase
-                                    .from('packages')
-                                    .select('name')
-                                    .eq('id', bookingData?.package_id)
-                                    .single()
-
-
-                                if (!bookingError && bookingData) {
-                                    return {
-                                        ...notification,
-                                        booking: {
-                                            id: bookingData.id,
-                                            profile: profileData,
-                                            package: packageData
-                                        }
-                                    }
-                                }
-                            }
-                            return notification
-                        } catch (error) {
-                            console.error('Error processing notification data:', error)
-                            return notification
-                        }
-                    })
-                )
-
-                setNotifications(notificationsWithBookings)
+                setNotifications(notificationsData || [])
             } catch (error) {
                 console.error('Error fetching notifications:', error)
             } finally {
@@ -142,71 +72,59 @@ const NotificationsComponent: React.FC<Props> = ({ academicId }) => {
         }
 
         fetchNotifications()
-    }, [academicId])
 
-    useEffect(() => {
-        let notifiableIds: number[] = []
-
-        // First fetch the IDs we need to watch
-        const setupSubscription = async () => {
-            try {
-                const { data: academic } = await supabase
-                    .from('academics')
-                    .select('user_id')
-                    .eq('id', academicId)
-                    .single()
-
-                const { data: athleticUsers } = await supabase
-                    .from('academic_athletic')
-                    .select('user_id')
-                    .eq('academic_id', academicId)
-
-                notifiableIds = [
-                    academicId!,
-                    academic?.user_id!,
-                    ...(athleticUsers?.map(au => au.user_id!) || [])
-                ].filter(Boolean)
-
-                // Now set up the subscription with all IDs
-                const subscription = supabase
-                    .channel('notifications_channel')
-                    .on(
-                        'postgres_changes',
-                        {
-                            event: '*',
-                            schema: 'public',
-                            table: 'notifications',
-                            filter: `notifiable_id=in.(${notifiableIds.join(',')})`,
-                        },
-                        (payload) => {
-                            if (payload.eventType === 'INSERT') {
-                                setNotifications((prev) => [payload.new as Notification, ...prev])
-                            } else if (payload.eventType === 'UPDATE') {
-                                setNotifications((prev) =>
-                                    prev.map((notification) =>
-                                        notification.id === payload.new.id
-                                            ? (payload.new as Notification)
-                                            : notification
+        // Set up realtime subscription
+        const subscription = supabase
+            .channel('notifications_channel')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'notifications',
+                    filter: `academic_id=eq.${academicId}`,
+                },
+                async (payload) => {
+                    if (payload.eventType === 'INSERT') {
+                        // Fetch the complete notification with relations
+                        const { data: newNotification } = await supabase
+                            .from('notifications')
+                            .select(`
+                                *,
+                                profile:profiles(name),
+                                academic:academics(
+                                    academic_translations(
+                                        name,
+                                        locale
                                     )
                                 )
-                            } else if (payload.eventType === 'DELETE') {
-                                setNotifications((prev) =>
-                                    prev.filter((notification) => notification.id !== payload.old.id)
-                                )
-                            }
+                            `)
+                            .eq('id', payload.new.id)
+                            .single()
+
+                        if (newNotification) {
+                            setNotifications(prev => [newNotification, ...prev])
                         }
-                    )
-                    .subscribe()
-
-                return () => {
-                    supabase.removeChannel(subscription)
+                    } else if (payload.eventType === 'UPDATE') {
+                        setNotifications(prev =>
+                            prev.map(notification =>
+                                notification.id === payload.new.id
+                                    ? { ...notification, ...payload.new }
+                                    : notification
+                            )
+                        )
+                    } else if (payload.eventType === 'DELETE') {
+                        setNotifications(prev =>
+                            prev.filter(notification => notification.id !== payload.old.id)
+                        )
+                    }
                 }
-            } catch (error) {
-                console.error('Error setting up notification subscription:', error)
-            }
-        }
+            )
+            .subscribe()
 
-        setupSubscription()
+        return () => {
+            supabase.removeChannel(subscription)
+        }
     }, [academicId])
 
     const markAsRead = async (notificationId: string) => {
@@ -218,8 +136,8 @@ const NotificationsComponent: React.FC<Props> = ({ academicId }) => {
 
             if (error) throw error
 
-            setNotifications((prev) =>
-                prev.map((notification) =>
+            setNotifications(prev =>
+                prev.map(notification =>
                     notification.id === notificationId
                         ? { ...notification, read_at: new Date().toISOString() }
                         : notification
@@ -230,7 +148,18 @@ const NotificationsComponent: React.FC<Props> = ({ academicId }) => {
         }
     }
 
-    const unreadCount = notifications.filter((n) => !n.read_at).length
+    const unreadCount = notifications.filter(n => !n.read_at).length
+
+    const getAcademicName = (notification: Notification) => {
+        if (!notification.academic?.academic_translations?.length) return null
+
+        // Try to find english translation first
+        const englishTranslation = notification.academic.academic_translations
+            .find(t => t.locale === 'en')
+
+        // If no english translation, use the first available
+        return englishTranslation?.name || notification.academic.academic_translations[0].name
+    }
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -264,63 +193,41 @@ const NotificationsComponent: React.FC<Props> = ({ academicId }) => {
                             <p className="text-[#454745]">Loading notifications...</p>
                         </div>
                     ) : notifications.length > 0 ? (
-                        notifications.map((notification) => {
-                            let data;
-                            try {
-                                const cleanedData = notification.data.replace(/\\/g, '');
-                                data = JSON.parse(cleanedData);
-
-                                return (
-                                    <div
-                                        key={notification.id}
-                                        className={`p-4 border-b border-[#CDD1C7] ${!notification.read_at ? 'bg-[#F1F2E9]' : 'bg-white'}`}
-                                        onClick={() => !notification.read_at && markAsRead(notification.id)}
-                                    >
-                                        <div className="flex items-start gap-3">
-                                            {data.icon && (
-                                                <img
-                                                    src={data.icon}
-                                                    alt="Notification"
-                                                    className="w-10 h-10 rounded-full object-cover"
-                                                />
-                                            )}
-                                            <div className="flex-1">
-                                                {data.title === 'booking_completed' ? (
-                                                    <p className="text-sm text-[#454745]">
-                                                        <span className="font-medium text-[#1F441F]">
-                                                            {notification.booking?.profile?.name || 'Unknown'}
-                                                        </span>
-                                                        : new booking completed for{' '}
-                                                        <span className="font-medium">
-                                                            {notification.booking?.package?.name || 'Unknown Package'}
-                                                        </span>
-                                                    </p>
-                                                ) : (
-                                                    <>
-                                                        <h3 className="font-medium text-[#1F441F]">{data.title}</h3>
-                                                        <p className="text-sm text-[#454745] mt-1">{data.description}</p>
-                                                    </>
-                                                )}
-                                                <div className="text-xs text-[#6A6C6A] mt-1">
-                                                    {formatDistanceToNow(new Date(notification.created_at!), {
-                                                        addSuffix: true
-                                                    })}
-                                                </div>
-                                            </div>
-                                            {notification.read_at && (
-                                                <div className="flex items-center gap-1 text-[#1F441F]">
-                                                    <CheckCircle2 className="h-3 w-3" />
-                                                    <span className="text-xs">Read</span>
-                                                </div>
-                                            )}
+                        notifications.map((notification) => (
+                            <div
+                                key={notification.id}
+                                className={`p-4 border-b border-[#CDD1C7] cursor-pointer ${!notification.read_at ? 'bg-[#F1F2E9]' : 'bg-white'}`}
+                                onClick={() => !notification.read_at && markAsRead(notification.id)}
+                            >
+                                <div className="flex items-start gap-3">
+                                    <div className="flex-1">
+                                        <h3 className="font-medium text-[#1F441F]">{notification.title}</h3>
+                                        <p className="text-sm text-[#454745] mt-1">{notification.description}</p>
+                                        {notification.profile && (
+                                            <p className="text-sm text-[#6A6C6A] mt-1">
+                                                Student: {notification.profile.name}
+                                            </p>
+                                        )}
+                                        {notification.academic && (
+                                            <p className="text-sm text-[#6A6C6A] mt-1">
+                                                Academy: {getAcademicName(notification)}
+                                            </p>
+                                        )}
+                                        <div className="text-xs text-[#6A6C6A] mt-1">
+                                            {notification.created_at && formatDistanceToNow(new Date(notification.created_at), {
+                                                addSuffix: true
+                                            })}
                                         </div>
                                     </div>
-                                );
-                            } catch (error) {
-                                console.error('Error processing notification:', error);
-                                return null;
-                            }
-                        })
+                                    {notification.read_at && (
+                                        <div className="flex items-center gap-1 text-[#1F441F]">
+                                            <CheckCircle2 className="h-3 w-3" />
+                                            <span className="text-xs">Read</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))
                     ) : (
                         <div className="flex justify-center items-center h-full">
                             <p className="text-[#454745]">No notifications</p>
@@ -333,4 +240,3 @@ const NotificationsComponent: React.FC<Props> = ({ academicId }) => {
 }
 
 export default NotificationsComponent
-
