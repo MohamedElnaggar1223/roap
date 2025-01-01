@@ -1,5 +1,4 @@
-'use server'
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@/utils/supabase/client'
 import { nanoid } from 'nanoid'
 
 export async function uploadImageToSupabase(file: File) {
