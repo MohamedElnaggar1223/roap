@@ -38,37 +38,71 @@ import { getAllCoaches } from '@/lib/actions/coaches.actions'
 import { useOnboarding } from '@/providers/onboarding-provider'
 import { Checkbox } from '@/components/ui/checkbox'
 
-const calculateAge = (birthDate: string): number => {
+const calculateAgeFromDate = (birthDate: string) => {
     const today = new Date();
     const birth = new Date(birthDate);
 
-    let years = today.getFullYear() - birth.getFullYear();
-    let months = today.getMonth() - birth.getMonth();
-    let days = today.getDate() - birth.getDate();
+    // Calculate the time difference in months
+    let months = (today.getFullYear() - birth.getFullYear()) * 12;
+    months += today.getMonth() - birth.getMonth();
 
-    // Adjust years and months if the current date is before the birth date in the current year
-    if (days < 0) {
+    // Adjust for day of month
+    if (today.getDate() < birth.getDate()) {
         months--;
-        days += new Date(today.getFullYear(), today.getMonth(), 0).getDate();
     }
 
-    if (months < 0) {
-        years--;
-        months += 12;
+    // Check if months can be converted to a clean 0.5-year interval
+    const years = months / 12;
+    const roundedToHalfYear = Math.round(years * 2) / 2; // Rounds to nearest 0.5
+
+    // If the difference between actual years and rounded half-year is very small
+    // (accounting for floating point precision), use years
+    if (Math.abs(years - roundedToHalfYear) < 0.01) {
+        return {
+            age: roundedToHalfYear,
+            unit: 'years'
+        };
+    } else {
+        return {
+            age: months,
+            unit: 'months'
+        };
+    }
+};
+
+const calculateDateFromAge = (age: number, unit: string): Date => {
+    const date = new Date();
+
+    if (unit === 'months') {
+        // For months input, check if it can be converted to a clean year interval
+        const years = age / 12;
+        const roundedToHalfYear = Math.round(years * 2) / 2;
+
+        if (Math.abs(years - roundedToHalfYear) < 0.01) {
+            // If it can be represented as a clean half-year, convert to years
+            const years = Math.floor(roundedToHalfYear);
+            const monthsFraction = (roundedToHalfYear - years) * 12;
+            date.setFullYear(date.getFullYear() - years);
+            date.setMonth(date.getMonth() - Math.round(monthsFraction));
+        } else {
+            // Otherwise keep as months
+            date.setMonth(date.getMonth() - age);
+        }
+    } else { // years
+        const years = Math.floor(age);
+        const monthsFraction = (age - years) * 12;
+        date.setFullYear(date.getFullYear() - years);
+        date.setMonth(date.getMonth() - Math.round(monthsFraction));
     }
 
-    // Calculate total months with fractional part
-    const totalMonths = years * 12 + months + (days / 30); // Average days in a month.
-    console.log(totalMonths)
-
-    return parseFloat((totalMonths / 12).toFixed(1));
+    return date;
 };
 
 const editAssessmentSchema = z.object({
     description: z.string().min(1, "Description is required"),
     startAge: z.number().min(0, "Start age must be 0 or greater").max(100, "Start age must be 100 or less").multipleOf(0.5, "Start age must be in increments of 0.5"),
     startAgeUnit: z.enum(["months", "years"]),
-    endAge: z.number().min(0.5, "End age must be 0.5 or greater").max(100, "End age must be 100 or less").multipleOf(0.5, "End age must be in increments of 0.5").optional(),
+    endAge: z.number().min(0, "End age must be 0.5 or greater").max(100, "End age must be 100 or less").multipleOf(0.5, "End age must be in increments of 0.5").optional(),
     endAgeUnit: z.enum(["months", "years", "unlimited"]),
     numberOfSeats: z.string().optional(),
     assessmentDeductedFromProgram: z.boolean().default(false).optional(),
@@ -176,17 +210,32 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
         })) ?? [])
     }, [isLoading, isValidating, packagesData])
 
-    console.log(calculateAge(assessment.startDateOfBirth!))
-
     const form = useForm<z.infer<typeof editAssessmentSchema>>({
         resolver: zodResolver(editAssessmentSchema),
         defaultValues: {
             description: assessment.description ?? '',
             numberOfSeats: assessment.numberOfSeats?.toString() ?? '',
-            startAge: assessment.startDateOfBirth ? calculateAge(assessment.startDateOfBirth) < 1 ? calculateAge(assessment.startDateOfBirth) * 12 : calculateAge(assessment.startDateOfBirth) : 0,
-            startAgeUnit: assessment.startDateOfBirth ? calculateAge(assessment.startDateOfBirth) < 1 ? 'months' : 'years' : 'years',
-            endAge: assessment.endDateOfBirth ? calculateAge(assessment.endDateOfBirth) < 0 ? undefined : calculateAge(assessment.endDateOfBirth) : 100,
-            endAgeUnit: assessment.endDateOfBirth ? calculateAge(assessment.endDateOfBirth) >= 100 ? 'unlimited' : 'years' : 'unlimited',
+            startAge: (() => {
+                if (!assessment.startDateOfBirth) return 0;
+                const { age, unit } = calculateAgeFromDate(assessment.startDateOfBirth);
+                return age;
+            })(),
+            startAgeUnit: (() => {
+                if (!assessment.startDateOfBirth) return 'years';
+                return calculateAgeFromDate(assessment.startDateOfBirth).unit as 'months' | 'years' | undefined;
+            })(),
+            endAge: (() => {
+                if (!assessment.endDateOfBirth) return undefined;
+                const { age, unit } = calculateAgeFromDate(assessment.endDateOfBirth);
+                if (age >= 100) return undefined; // For unlimited
+                return age;
+            })(),
+            endAgeUnit: (() => {
+                if (!assessment.endDateOfBirth) return 'unlimited';
+                const { age } = calculateAgeFromDate(assessment.endDateOfBirth);
+                if (age >= 100) return 'unlimited';
+                return calculateAgeFromDate(assessment.endDateOfBirth).unit as "months" | "years" | undefined;
+            })(),
             assessmentDeductedFromProgram: assessment.assessmentDeductedFromProgram
         }
     })
@@ -217,65 +266,20 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                 return
             }
 
-            const getAgeInYears = (age: number, unit: string) => {
-                return unit === 'months' ? age / 12 : age;
-            };
+            const startDate = calculateDateFromAge(values.startAge, values.startAgeUnit);
 
-            const calculateDateFromYears = (age: number, unit: string) => {
-                const ageInYears = getAgeInYears(age, unit);
-                const date = new Date();
-                const years = Math.floor(ageInYears);
-                const months = (ageInYears - years) * 12;
-
-                date.setFullYear(date.getFullYear() - years);
-                date.setMonth(date.getMonth() - months);
-                return date;
-            };
-
-            const getAgeInMonths = (age: number, unit: string): number => {
-                return unit === 'months' ? age : age * 12;
-            };
-
-            const calculateDateFromMonths = (age: number, unit: string): Date => {
-                const ageInMonths = getAgeInMonths(age, unit);
-                const date = new Date();
-                const totalMonths = date.getMonth() - Math.floor(ageInMonths);
-                const years = Math.floor(totalMonths / 12);
-                const months = totalMonths % 12;
-
-                date.setFullYear(date.getFullYear() - years);
-                date.setMonth(months);
-
-                // Adjust for fractional months
-                const fractionalMonth = ageInMonths % 1;
-                if (fractionalMonth > 0) {
-                    const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-                    const daysToSubtract = Math.round(daysInMonth * fractionalMonth);
-                    date.setDate(date.getDate() - daysToSubtract);
-                }
-
-                return date;
-            };
-
-            const startDate = values.startAgeUnit === 'months' ?
-                calculateDateFromMonths(values.startAge!, values.startAgeUnit) :
-                calculateDateFromYears(values.startAge!, values.startAgeUnit);
-
-            let endDate: Date;
+            let endDate;
             if (values.endAgeUnit === 'unlimited') {
-                // Set a very large date for "unlimited" (e.g., 100 years from now)
                 endDate = new Date();
-                endDate.setFullYear(endDate.getFullYear() - 100);
+                endDate.setFullYear(endDate.getFullYear() - 100); // Set to 100 years ago for unlimited
             } else {
-                if (values.endAge === null) {
+                if (!values.endAge) {
                     return form.setError('endAge', {
                         type: 'custom',
                         message: 'End age is required for limited duration'
                     });
                 }
-                else endDate = values.endAgeUnit === 'months' ?
-                    calculateDateFromMonths(values.endAge!, values.endAgeUnit) :
-                    calculateDateFromYears(values.endAge!, values.endAgeUnit);
+                endDate = calculateDateFromAge(values.endAge, values.endAgeUnit);
             }
 
             const result = await updateAssessment(assessment.id, {

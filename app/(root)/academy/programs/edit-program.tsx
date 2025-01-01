@@ -79,7 +79,7 @@ const addProgramSchema = z.object({
     sportId: z.string().min(1, "Sport is required"),
     startAge: z.number().min(0, "Start age must be 0 or greater").max(100, "Start age must be 100 or less").multipleOf(0.5, "Start age must be in increments of 0.5"),
     startAgeUnit: z.enum(["months", "years"]),
-    endAge: z.number().min(0.5, "End age must be 0.5 or greater").max(100, "End age must be 100 or less").multipleOf(0.5, "End age must be in increments of 0.5").optional(),
+    endAge: z.number().min(0, "End age must be 0.5 or greater").max(100, "End age must be 100 or less").multipleOf(0.5, "End age must be in increments of 0.5").optional(),
     endAgeUnit: z.enum(["months", "years", "unlimited"]),
     numberOfSeats: z.string().optional(),
     type: z.enum(["TEAM", "PRIVATE"]),
