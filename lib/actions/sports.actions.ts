@@ -6,6 +6,7 @@ import { sports, sportTranslations } from '@/db/schema'
 import { isAdmin } from '../admin'
 import { getImageUrl } from '../supabase-images'
 import { revalidatePath } from 'next/cache'
+import { slugify } from '../utils'
 
 export async function getPaginatedSports(
     page: number = 1,
@@ -169,9 +170,12 @@ export const createSport = async (values: { name: string, image: string | null }
             error: 'You are not authorized to perform this action',
         }
 
+        const slug = slugify(values.name)
+
         const [newSport] = await db
             .insert(sports)
             .values({
+                slug,
                 image: values.image?.includes('images/') ?
                     values.image?.startsWith('images/') ?
                         values.image :
