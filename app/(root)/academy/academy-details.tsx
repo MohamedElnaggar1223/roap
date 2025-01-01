@@ -195,6 +195,7 @@ export default function AcademyDetails({ academyDetails, sports }: Props) {
                     galleryUrls.push(...newUrls);
                 } catch (error) {
                     setLoading(false);
+                    console.log("Error uploading gallery media: ", error)
                     form.setError('gallery', {
                         type: 'custom',
                         message: 'Error uploading gallery media. Please try again.'

@@ -61,7 +61,7 @@ export async function uploadVideoToSupabase(file: File) {
                 upsert: false
             })
 
-        console.log(error)
+        console.log("Error Uploading: ", error)
 
         if (error) {
             throw error
