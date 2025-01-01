@@ -587,7 +587,7 @@ export const branchSport = pgTable("branch_sport", {
             columns: [table.sportId],
             foreignColumns: [sports.id],
             name: "branch_sport_sport_id_foreign"
-        }),
+        }).onDelete("cascade"),
     }
 });
 
@@ -611,7 +611,7 @@ export const academicSport = pgTable("academic_sport", {
             columns: [table.sportId],
             foreignColumns: [sports.id],
             name: "academic_sport_sport_id_foreign"
-        }),
+        }).onDelete('cascade'),
     }
 });
 
@@ -693,7 +693,7 @@ export const programs = pgTable("programs", {
             columns: [table.sportId],
             foreignColumns: [sports.id],
             name: "programs_sport_id_foreign"
-        }),
+        }).onDelete('cascade'),
         programsTypeCheck: check("programs_type_check", sql`(type)::text = ANY ((ARRAY['TEAM'::character varying, 'PRIVATE'::character varying])::text[])`),
     }
 });
@@ -784,7 +784,7 @@ export const academicAthletic = pgTable("academic_athletic", {
             columns: [table.sportId],
             foreignColumns: [sports.id],
             name: "academic_athletic_sport_id_foreign"
-        }),
+        }).onDelete('cascade'),
     }
 });
 
@@ -1061,7 +1061,7 @@ export const coachSport = pgTable("coach_sport", {
             columns: [table.sportId],
             foreignColumns: [sports.id],
             name: "coach_sport_sport_id_foreign"
-        }),
+        }).onDelete('cascade'),
     }
 });
 

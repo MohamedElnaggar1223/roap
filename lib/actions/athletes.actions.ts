@@ -3,7 +3,7 @@ import { db } from '@/db'
 import { academicAthletic, bookings, bookingSessions, branches, branchTranslations, packages, profiles, programs, sports, sportTranslations, users } from '@/db/schema'
 import { auth } from '@/auth'
 import { and, eq, inArray, sql } from 'drizzle-orm'
-import { revalidateTag, unstable_cache } from 'next/cache'
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
 import { formatDateForDB } from '../utils'
 import { cookies } from 'next/headers'
 
@@ -197,8 +197,105 @@ export async function getAthletes() {
         return { error: 'Academy not found', data: null }
     }
 
-    const athletes = await getAthletesAction(academic.id)
-    return athletes
+    const results = await db
+        .select({
+            id: academicAthletic.id,
+            userId: academicAthletic.userId,
+            profileId: academicAthletic.profileId,
+            certificate: academicAthletic.certificate,
+            type: academicAthletic.type,
+            firstGuardianName: academicAthletic.firstGuardianName,
+            firstGuardianRelationship: academicAthletic.firstGuardianRelationship,
+            secondGuardianName: academicAthletic.secondGuardianName,
+            secondGuardianRelationship: academicAthletic.secondGuardianRelationship,
+            firstGuardianPhone: academicAthletic.firstGuardianPhone,
+            secondGuardianPhone: academicAthletic.secondGuardianPhone,
+            user: {
+                email: users.email,
+                phoneNumber: users.phoneNumber,
+            },
+            profile: {
+                name: profiles.name,
+                gender: profiles.gender,
+                birthday: profiles.birthday,
+                image: profiles.image,
+                country: profiles.country,
+                nationality: profiles.nationality,
+                city: profiles.city,
+                streetAddress: profiles.streetAddress,
+            },
+            booking: {
+                id: bookings.id,
+                price: bookings.price,
+                date: bookingSessions.date,
+                startTime: bookingSessions.from,
+                endTime: bookingSessions.to,
+                packageName: packages.name,
+                branchName: sql<string>`branch_translations.name`,
+                sportName: sql<string>`sport_translations.name`,
+                programName: programs.name,
+                programType: programs.type,
+            }
+        })
+        .from(academicAthletic)
+        .leftJoin(users, eq(academicAthletic.userId, users.id))
+        .leftJoin(profiles, eq(academicAthletic.profileId, profiles.id))
+        .leftJoin(bookings, eq(profiles.id, bookings.profileId))
+        .leftJoin(bookingSessions, eq(bookings.id, bookingSessions.bookingId))
+        .leftJoin(packages, eq(bookings.packageId, packages.id))
+        .leftJoin(programs, eq(packages.programId, programs.id))
+        .leftJoin(branches, eq(programs.branchId, branches.id))
+        .leftJoin(
+            branchTranslations,
+            and(
+                eq(branches.id, branchTranslations.branchId),
+                eq(branchTranslations.locale, 'en')
+            )
+        )
+        .leftJoin(sports, eq(programs.sportId, sports.id))
+        .leftJoin(
+            sportTranslations,
+            and(
+                eq(sports.id, sportTranslations.sportId),
+                eq(sportTranslations.locale, 'en')
+            )
+        )
+        .where(eq(academicAthletic.academicId, academic.id))
+
+    const athletes = results.reduce((acc: Athlete[], row) => {
+        let athlete = acc.find(a => a.id === row.id)
+
+        if (!athlete) {
+            athlete = {
+                id: row.id,
+                userId: row.userId,
+                profileId: row.profileId,
+                certificate: row.certificate,
+                type: row.type ?? 'primary',
+                firstGuardianName: row.firstGuardianName,
+                firstGuardianRelationship: row.firstGuardianRelationship,
+                secondGuardianName: row.secondGuardianName,
+                secondGuardianRelationship: row.secondGuardianRelationship,
+                firstGuardianPhone: row.firstGuardianPhone,
+                secondGuardianPhone: row.secondGuardianPhone,
+                user: row.user ?? { email: null, phoneNumber: null },
+                profile: row.profile ?? { name: null, gender: null, birthday: null, image: null, country: null, nationality: null, city: null, streetAddress: null },
+                bookings: []
+            }
+            acc.push(athlete)
+        }
+
+        if (row.booking.id) {
+            const bookingExists = athlete.bookings.some((b: Booking) => b.id === row.booking.id && typeof row.booking.id === 'number')
+            if (!bookingExists) {
+                athlete.bookings.push(row.booking as unknown as Booking)
+            }
+        }
+
+        return acc
+    }, [])
+
+    return { data: athletes, error: null }
 }
 
 export async function createAthlete(data: {
@@ -323,6 +420,7 @@ export async function createAthlete(data: {
     }
     finally {
         revalidateTag(`athletes-${academic?.id}`)
+        revalidatePath('/academy/athletes')
     }
 }
 
@@ -473,6 +571,7 @@ export async function updateAthlete(id: number, data: {
     }
     finally {
         revalidateTag(`athletes-${academic?.id}`)
+        revalidatePath('/academy/athletes')
     }
 }
 
@@ -535,6 +634,7 @@ export async function deleteAthletes(ids: number[]) {
         })
 
         revalidateTag(`athletes-${academic?.id}`)
+        revalidatePath('/academy/athletes')
         return { success: true }
     } catch (error) {
         console.error('Error deleting athletes:', error)
