@@ -181,6 +181,66 @@ const calendarColors = [
     { name: 'Light Pink', value: '#FFB6C1', textColor: '#000000' }
 ];
 
+const calculateAgeFromDate = (birthDate: string) => {
+    const today = new Date();
+    const birth = new Date(birthDate);
+
+    // Calculate the time difference in months
+    let months = (today.getFullYear() - birth.getFullYear()) * 12;
+    months += today.getMonth() - birth.getMonth();
+
+    // Adjust for day of month
+    if (today.getDate() < birth.getDate()) {
+        months--;
+    }
+
+    // Check if months can be converted to a clean 0.5-year interval
+    const years = months / 12;
+    const roundedToHalfYear = Math.round(years * 2) / 2; // Rounds to nearest 0.5
+
+    // If the difference between actual years and rounded half-year is very small
+    // (accounting for floating point precision), use years
+    if (Math.abs(years - roundedToHalfYear) < 0.01) {
+        return {
+            age: roundedToHalfYear,
+            unit: 'years'
+        };
+    } else {
+        return {
+            age: months,
+            unit: 'months'
+        };
+    }
+};
+
+const calculateDateFromAge = (age: number, unit: string): Date => {
+    const date = new Date();
+
+    if (unit === 'months') {
+        // For months input, check if it can be converted to a clean year interval
+        const years = age / 12;
+        const roundedToHalfYear = Math.round(years * 2) / 2;
+
+        if (Math.abs(years - roundedToHalfYear) < 0.01) {
+            // If it can be represented as a clean half-year, convert to years
+            const years = Math.floor(roundedToHalfYear);
+            const monthsFraction = (roundedToHalfYear - years) * 12;
+            date.setFullYear(date.getFullYear() - years);
+            date.setMonth(date.getMonth() - Math.round(monthsFraction));
+        } else {
+            // Otherwise keep as months
+            date.setMonth(date.getMonth() - age);
+        }
+    } else { // years
+        const years = Math.floor(age);
+        const monthsFraction = (age - years) * 12;
+        date.setFullYear(date.getFullYear() - years);
+        date.setMonth(date.getMonth() - Math.round(monthsFraction));
+    }
+
+    return date;
+};
+
 export default function EditProgram({ branches, sports, programEdited, academySports, takenColors }: Props) {
     const router = useRouter()
 
@@ -231,10 +291,27 @@ export default function EditProgram({ branches, sports, programEdited, academySp
             sportId: programEdited.sportId?.toString() ?? '',
             numberOfSeats: programEdited.numberOfSeats?.toString() ?? '',
             type: programEdited.type as 'TEAM' | 'PRIVATE' ?? 'TEAM',
-            startAge: programEdited.startDateOfBirth ? calculateAge(programEdited.startDateOfBirth) < 1 ? parseFloat((calculateAge(programEdited.startDateOfBirth) * 12).toFixed(1)) : calculateAge(programEdited.startDateOfBirth) : 0,
-            startAgeUnit: programEdited.startDateOfBirth ? calculateAge(programEdited.startDateOfBirth) < 1 ? 'months' : 'years' : 'years',
-            endAge: programEdited.endDateOfBirth ? calculateAge(programEdited.endDateOfBirth) < 0 ? undefined : calculateAge(programEdited.endDateOfBirth) : 100,
-            endAgeUnit: programEdited.endDateOfBirth ? calculateAge(programEdited.endDateOfBirth) >= 100 ? 'unlimited' : 'years' : 'unlimited',
+            startAge: (() => {
+                if (!programEdited.startDateOfBirth) return 0;
+                const { age, unit } = calculateAgeFromDate(programEdited.startDateOfBirth);
+                return age;
+            })(),
+            startAgeUnit: (() => {
+                if (!programEdited.startDateOfBirth) return 'years';
+                return calculateAgeFromDate(programEdited.startDateOfBirth).unit as 'months' | 'years' | undefined;
+            })(),
+            endAge: (() => {
+                if (!programEdited.endDateOfBirth) return undefined;
+                const { age, unit } = calculateAgeFromDate(programEdited.endDateOfBirth);
+                if (age >= 100) return undefined; // For unlimited
+                return age;
+            })(),
+            endAgeUnit: (() => {
+                if (!programEdited.endDateOfBirth) return 'unlimited';
+                const { age } = calculateAgeFromDate(programEdited.endDateOfBirth);
+                if (age >= 100) return 'unlimited';
+                return calculateAgeFromDate(programEdited.endDateOfBirth).unit as "months" | "years" | undefined;
+            })(),
             color: programEdited.color ?? '',
         }
     })
@@ -264,65 +341,20 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                 message: 'Please select at least one gender'
             })
 
-            const getAgeInYears = (age: number, unit: string) => {
-                return unit === 'months' ? age / 12 : age;
-            };
+            const startDate = calculateDateFromAge(values.startAge, values.startAgeUnit);
 
-            const calculateDateFromYears = (age: number, unit: string) => {
-                const ageInYears = getAgeInYears(age, unit);
-                const date = new Date();
-                const years = Math.floor(ageInYears);
-                const months = (ageInYears - years) * 12;
-
-                date.setFullYear(date.getFullYear() - years);
-                date.setMonth(date.getMonth() - months);
-                return date;
-            };
-
-            const getAgeInMonths = (age: number, unit: string): number => {
-                return unit === 'months' ? age : age * 12;
-            };
-
-            const calculateDateFromMonths = (age: number, unit: string): Date => {
-                const ageInMonths = getAgeInMonths(age, unit);
-                const date = new Date();
-                const totalMonths = date.getMonth() - Math.floor(ageInMonths);
-                const years = Math.floor(totalMonths / 12);
-                const months = totalMonths % 12;
-
-                date.setFullYear(date.getFullYear() - years);
-                date.setMonth(months);
-
-                // Adjust for fractional months
-                const fractionalMonth = ageInMonths % 1;
-                if (fractionalMonth > 0) {
-                    const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-                    const daysToSubtract = Math.round(daysInMonth * fractionalMonth);
-                    date.setDate(date.getDate() - daysToSubtract);
-                }
-
-                return date;
-            };
-
-            const startDate = values.startAgeUnit === 'months' ?
-                calculateDateFromMonths(values.startAge!, values.startAgeUnit) :
-                calculateDateFromYears(values.startAge!, values.startAgeUnit);
-
-            let endDate: Date;
+            let endDate;
             if (values.endAgeUnit === 'unlimited') {
-                // Set a very large date for "unlimited" (e.g., 100 years from now)
                 endDate = new Date();
-                endDate.setFullYear(endDate.getFullYear() - 100);
+                endDate.setFullYear(endDate.getFullYear() - 100); // Set to 100 years ago for unlimited
             } else {
-                if (values.endAge === null) {
+                if (!values.endAge) {
                     return form.setError('endAge', {
                         type: 'custom',
                         message: 'End age is required for limited duration'
                     });
                 }
-                else endDate = values.endAgeUnit === 'months' ?
-                    calculateDateFromMonths(values.endAge!, values.endAgeUnit) :
-                    calculateDateFromYears(values.endAge!, values.endAgeUnit);
+                endDate = calculateDateFromAge(values.endAge, values.endAgeUnit);
             }
 
             // const result = await updateProgram(programEdited.id, {

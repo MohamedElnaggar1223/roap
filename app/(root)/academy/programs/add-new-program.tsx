@@ -52,7 +52,7 @@ const addProgramSchema = z.object({
     sportId: z.string().min(1, "Sport is required"),
     startAge: z.number().min(0, "Start age must be 0 or greater").max(100, "Start age must be 100 or less").multipleOf(0.5, "Start age must be in increments of 0.5"),
     startAgeUnit: z.enum(["months", "years"]),
-    endAge: z.number().min(0.5, "End age must be 0.5 or greater").max(100, "End age must be 100 or less").multipleOf(0.5, "End age must be in increments of 0.5").optional(),
+    endAge: z.number().min(0, "End age must be 0.5 or greater").max(100, "End age must be 100 or less").multipleOf(0.5, "End age must be in increments of 0.5").optional(),
     endAgeUnit: z.enum(["months", "years", "unlimited"]),
     numberOfSeats: z.string().optional(),
     type: z.enum(["TEAM", "PRIVATE"]),
@@ -150,6 +150,66 @@ const calendarColors = [
     { name: 'Light Pink', value: '#FFB6C1', textColor: '#000000' }
 ];
 
+const calculateAgeFromDate = (birthDate: string) => {
+    const today = new Date();
+    const birth = new Date(birthDate);
+
+    // Calculate the time difference in months
+    let months = (today.getFullYear() - birth.getFullYear()) * 12;
+    months += today.getMonth() - birth.getMonth();
+
+    // Adjust for day of month
+    if (today.getDate() < birth.getDate()) {
+        months--;
+    }
+
+    // Check if months can be converted to a clean 0.5-year interval
+    const years = months / 12;
+    const roundedToHalfYear = Math.round(years * 2) / 2; // Rounds to nearest 0.5
+
+    // If the difference between actual years and rounded half-year is very small
+    // (accounting for floating point precision), use years
+    if (Math.abs(years - roundedToHalfYear) < 0.01) {
+        return {
+            age: roundedToHalfYear,
+            unit: 'years'
+        };
+    } else {
+        return {
+            age: months,
+            unit: 'months'
+        };
+    }
+};
+
+const calculateDateFromAge = (age: number, unit: string): Date => {
+    const date = new Date();
+
+    if (unit === 'months') {
+        // For months input, check if it can be converted to a clean year interval
+        const years = age / 12;
+        const roundedToHalfYear = Math.round(years * 2) / 2;
+
+        if (Math.abs(years - roundedToHalfYear) < 0.01) {
+            // If it can be represented as a clean half-year, convert to years
+            const years = Math.floor(roundedToHalfYear);
+            const monthsFraction = (roundedToHalfYear - years) * 12;
+            date.setFullYear(date.getFullYear() - years);
+            date.setMonth(date.getMonth() - Math.round(monthsFraction));
+        } else {
+            // Otherwise keep as months
+            date.setMonth(date.getMonth() - age);
+        }
+    } else { // years
+        const years = Math.floor(age);
+        const monthsFraction = (age - years) * 12;
+        date.setFullYear(date.getFullYear() - years);
+        date.setMonth(date.getMonth() - Math.round(monthsFraction));
+    }
+
+    return date;
+};
+
 export default function AddNewProgram({ branches, sports, academySports, takenColors, academicId }: Props) {
     const router = useRouter()
 
@@ -241,65 +301,20 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                 message: 'Please select at least one gender'
             })
 
-            const getAgeInYears = (age: number, unit: string) => {
-                return unit === 'months' ? age / 12 : age;
-            };
+            const startDate = calculateDateFromAge(values.startAge, values.startAgeUnit);
 
-            const calculateDateFromYears = (age: number, unit: string) => {
-                const ageInYears = getAgeInYears(age, unit);
-                const date = new Date();
-                const years = Math.floor(ageInYears);
-                const months = (ageInYears - years) * 12;
-
-                date.setFullYear(date.getFullYear() - years);
-                date.setMonth(date.getMonth() - months);
-                return date;
-            };
-
-            const getAgeInMonths = (age: number, unit: string): number => {
-                return unit === 'months' ? age : age * 12;
-            };
-
-            const calculateDateFromMonths = (age: number, unit: string): Date => {
-                const ageInMonths = getAgeInMonths(age, unit);
-                const date = new Date();
-                const totalMonths = date.getMonth() - Math.floor(ageInMonths);
-                const years = Math.floor(totalMonths / 12);
-                const months = totalMonths % 12;
-
-                date.setFullYear(date.getFullYear() - years);
-                date.setMonth(months);
-
-                // Adjust for fractional months
-                const fractionalMonth = ageInMonths % 1;
-                if (fractionalMonth > 0) {
-                    const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-                    const daysToSubtract = Math.round(daysInMonth * fractionalMonth);
-                    date.setDate(date.getDate() - daysToSubtract);
-                }
-
-                return date;
-            };
-
-            const startDate = values.startAgeUnit === 'months' ?
-                calculateDateFromMonths(values.startAge!, values.startAgeUnit) :
-                calculateDateFromYears(values.startAge!, values.startAgeUnit);
-
-            let endDate: Date;
+            let endDate;
             if (values.endAgeUnit === 'unlimited') {
-                // Set a very large date for "unlimited" (e.g., 100 years from now)
                 endDate = new Date();
-                endDate.setFullYear(endDate.getFullYear() - 100);
+                endDate.setFullYear(endDate.getFullYear() - 100); // Set to 100 years ago for unlimited
             } else {
-                if (values.endAge === null) {
+                if (!values.endAge) {
                     return form.setError('endAge', {
                         type: 'custom',
                         message: 'End age is required for limited duration'
                     });
                 }
-                else endDate = values.endAgeUnit === 'months' ?
-                    calculateDateFromMonths(values.endAge!, values.endAgeUnit) :
-                    calculateDateFromYears(values.endAge!, values.endAgeUnit);
+                endDate = calculateDateFromAge(values.endAge, values.endAgeUnit);
             }
 
             addProgram({

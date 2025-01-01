@@ -113,14 +113,21 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
         }
 
         // Calculate total months with fractional part
-        const totalMonths = years * 12 + months + (days / 30.44); // Average days in a month.
+        const totalMonths = years * 12 + months + (days / 30.44); // Average days in a month
 
-        if (totalMonths < 12) {
-            // If less than a year, return in months (with one decimal place)
-            return `${Math.round(totalMonths * 10) / 10} Months`;
+        // Convert to years
+        const totalYears = totalMonths / 12;
+
+        // Round to nearest 0.5
+        const roundedToHalfYear = Math.round(totalYears * 2) / 2;
+
+        // Check if it can be represented as a clean half-year interval
+        if (Math.abs(totalYears - roundedToHalfYear) < 0.01) {
+            // If it's a clean half-year interval, display in years
+            return `${roundedToHalfYear} Years`;
         } else {
-            // If a year or more, calculate years with one decimal place
-            return `${Math.round((totalMonths / 12) * 10) / 10} Years`;
+            // If it can't be represented as a clean half-year, display in months
+            return `${Math.round(totalMonths)} Months`;
         }
     };
 
