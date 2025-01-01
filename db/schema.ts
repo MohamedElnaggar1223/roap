@@ -880,7 +880,7 @@ export const entryFeesHistory = pgTable("entry_fees_history", {
     entryFeesHistorySportIdForeign: foreignKey({
         columns: [table.sportId],
         foreignColumns: [sports.id],
-    }),
+    }).onDelete('cascade'),
     entryFeesHistoryProgramIdForeign: foreignKey({
         columns: [table.programId],
         foreignColumns: [programs.id],

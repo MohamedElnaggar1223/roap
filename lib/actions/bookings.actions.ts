@@ -106,16 +106,11 @@ export async function searchAthletes(query: string): Promise<SearchAthletesRespo
                 image: profiles.image,
                 phoneNumber: users.phoneNumber,
                 birthday: profiles.birthday,
+                academicAthleticId: academicAthletic.id,
             })
-            .from(profiles)
-            .innerJoin(
-                users,
-                eq(profiles.userId, users.id)
-            )
-            .innerJoin(
-                academicAthletic,
-                eq(academicAthletic.userId, users.id)
-            )
+            .from(academicAthletic)
+            .leftJoin(users, eq(academicAthletic.userId, users.id))
+            .leftJoin(profiles, eq(academicAthletic.profileId, profiles.id))
             .where(and(
                 or(
                     sql`${users.phoneNumber} ILIKE ${`%${query}%`}`,
@@ -125,12 +120,14 @@ export async function searchAthletes(query: string): Promise<SearchAthletesRespo
             ))
             .limit(5)
 
+        console.log(athletes)
+
         const finalAthletes = await Promise.all(athletes.map(async (athlete) => {
             const image = await getImageUrl(athlete.image)
             return { ...athlete, phoneNumber: athlete.phoneNumber || '', image }
         }))
 
-        return { data: finalAthletes }
+        return { data: finalAthletes as SearchedAthlete[] }
     } catch (error) {
         console.error('Error searching athletes:', error)
         return {

@@ -637,13 +637,75 @@ const DayView = ({ events, date, setSelectedGroupedEvent }: { events: Event[], d
 	)
 }
 
-const MonthView = ({ events, currentDate, setSelectedGroupedEvent }: { events: Event[], currentDate: Date, setSelectedGroupedEvent: React.Dispatch<React.SetStateAction<GroupedEvent | null>> }) => {
+const DayEventsDialog = ({
+	isOpen,
+	onClose,
+	date,
+	events,
+	setSelectedGroupedEvent
+}: {
+	isOpen: boolean
+	onClose: () => void
+	date: Date | null
+	events: GroupedEvent[]
+	setSelectedGroupedEvent: (event: GroupedEvent) => void
+}) => {
+	if (!date || !events.length) return null;
+
+	return (
+		<Dialog open={isOpen} onOpenChange={onClose}>
+			<DialogContent className="bg-[#F1F2E9] border border-[#868685]">
+				<DialogHeader>
+					<DialogTitle className="text-[#1F441F]">
+						Events for {format(date, 'MMMM d, yyyy')}
+					</DialogTitle>
+				</DialogHeader>
+				<div className="space-y-2 max-h-[60vh] overflow-y-auto">
+					{events.map((groupedEvent, index) => (
+						<div
+							key={`${groupedEvent.coachName}-${groupedEvent.packageId}-${index}`}
+							className="p-3 rounded-lg cursor-pointer"
+							style={{
+								backgroundColor: groupedEvent.color ?? '#DCE5AE'
+							}}
+							onClick={() => {
+								setSelectedGroupedEvent(groupedEvent);
+								onClose();
+							}}
+						>
+							<div className="font-bold uppercase text-xs font-inter text-[#1F441F]">
+								• {groupedEvent.programName}
+							</div>
+							<div className="text-xs font-inter text-[#454745] mt-1">
+								{formatTimeRange(
+									groupedEvent.time.split('-')[0],
+									groupedEvent.time.split('-')[1]
+								)}
+							</div>
+							<div className="font-normal text-sm text-[#1F441F] font-inter">
+								{groupedEvent.coachName}, {groupedEvent.count} students
+							</div>
+						</div>
+					))}
+				</div>
+			</DialogContent>
+		</Dialog>
+	);
+};
+
+const MonthView = ({ events, currentDate, setSelectedGroupedEvent }: {
+	events: Event[],
+	currentDate: Date,
+	setSelectedGroupedEvent: React.Dispatch<React.SetStateAction<GroupedEvent | null>>
+}) => {
+	const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+	const [dayEvents, setDayEvents] = useState<GroupedEvent[]>([]);
+
 	const monthDays = useMemo(() => {
 		const start = startOfMonth(currentDate)
 		const end = endOfMonth(currentDate)
 		let firstDay = startOfMonth(currentDate)
-		// Adjust to start from the correct day of the week
-		while (firstDay.getDay() !== 1) { // 1 is Monday
+		while (firstDay.getDay() !== 1) {
 			firstDay = addDays(firstDay, -1)
 		}
 		return eachDayOfInterval({
@@ -660,6 +722,11 @@ const MonthView = ({ events, currentDate, setSelectedGroupedEvent }: { events: E
 		})
 		return groupEvents(dayEvents)
 	}
+
+	const handleShowMoreClick = (date: Date, groupedEvents: GroupedEvent[]) => {
+		setSelectedDate(date);
+		setDayEvents(groupedEvents);
+	};
 
 	return (
 		<div className="bg-white rounded-lg overflow-hidden">
@@ -690,9 +757,7 @@ const MonthView = ({ events, currentDate, setSelectedGroupedEvent }: { events: E
 								{groupedEvents.slice(0, 3).map((groupedEvent, index) => (
 									<div
 										key={`${groupedEvent.coachName}-${groupedEvent.packageId}`}
-										className={cn(
-											"text-xs p-1 rounded cursor-pointer"
-										)}
+										className="text-xs p-1 rounded cursor-pointer"
 										onClick={() => setSelectedGroupedEvent(groupedEvent)}
 										style={{
 											backgroundColor: groupedEvent.color ? groupedEvent.color : colors[index % colors.length]
@@ -704,15 +769,26 @@ const MonthView = ({ events, currentDate, setSelectedGroupedEvent }: { events: E
 									</div>
 								))}
 								{groupedEvents.length > 3 && (
-									<div className="text-xs text-gray-500">
-										+{groupedEvents.length - 3} more
-									</div>
+									<button
+										onClick={() => handleShowMoreClick(date, groupedEvents)}
+										className="text-xs text-[#1F441F] hover:text-[#454745] transition-colors p-1 w-full text-left"
+									>
+										+{groupedEvents.length - 3} more events
+									</button>
 								)}
 							</div>
 						</div>
 					)
 				})}
 			</div>
+
+			<DayEventsDialog
+				isOpen={!!selectedDate}
+				onClose={() => setSelectedDate(null)}
+				date={selectedDate}
+				events={dayEvents}
+				setSelectedGroupedEvent={setSelectedGroupedEvent}
+			/>
 		</div>
 	)
 }
