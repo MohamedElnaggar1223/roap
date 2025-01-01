@@ -858,7 +858,7 @@ export const getAcademicsSports = async () => {
 
 export const getAllSports = async (url: string | null) => {
 	if (!url) return
-	return await db
+	const sportsData = await db
 		.select({
 			id: sports.id,
 			image: sports.image,
@@ -888,6 +888,15 @@ export const getAllSports = async (url: string | null) => {
 		) t`,
 			sql`t.sport_id = ${sports.id}`
 		)
+
+	const sportsWithImages = await Promise.all(
+		sportsData.map(async (sport) => {
+			const image = await getImageUrl(sport.image)
+			return { ...sport, image }
+		})
+	)
+
+	return sportsWithImages
 }
 
 export const getAcademySportsStore = async () => {
@@ -954,8 +963,15 @@ export const getAcademySportsStore = async () => {
 		)
 		.where(eq(academicSport.academicId, academy.id));
 
+	const sportsWithImages = await Promise.all(
+		sportsData.map(async (sport) => {
+			const image = await getImageUrl(sport.image)
+			return { ...sport, image }
+		})
+	)
+
 	return {
-		data: sportsData,
+		data: sportsWithImages,
 		error: null,
 		field: null
 	}

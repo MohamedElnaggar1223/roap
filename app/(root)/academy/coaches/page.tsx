@@ -2,7 +2,7 @@ import { getCoaches } from '@/lib/actions/coaches.actions'
 import { CoachesDataTable } from './coaches-table'
 import { getAcademySports, getAllSports } from '@/lib/actions/academics.actions'
 import { getAllSpokenLanguages } from '@/lib/actions/spoken-languages.actions'
-import { getImageUrl } from '@/lib/supabase-images'
+import { getImageUrl } from '@/lib/supabase-images-server'
 
 export default async function CoachesPage() {
     const { data: coaches, error } = await getCoaches()

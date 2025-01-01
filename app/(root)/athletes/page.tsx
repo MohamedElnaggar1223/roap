@@ -1,6 +1,6 @@
 import { getAthletes } from '@/lib/actions/athletes.actions'
 import { AthletesDataTable } from './athletes-table'
-import { getImageUrl } from '@/lib/supabase-images'
+import { getImageUrl } from '@/lib/supabase-images-server'
 import { checkAcademyStatus } from '@/lib/actions/check-academy-status'
 import { redirect } from 'next/navigation'
 

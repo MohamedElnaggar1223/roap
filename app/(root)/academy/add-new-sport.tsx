@@ -85,7 +85,7 @@ export default function AddNewSport({ sports }: Props) {
                                 >
                                     <div className={cn('flex text-xs items-center justify-center w-[70px] h-[70px] rounded-[26px]', selectedSports.includes(sport.id) && 'bg-main-yellow')}>
                                         <Image
-                                            src={`https://roap.co/storage/${sport.image}`}
+                                            src={sport.image || '/images/placeholder.svg'}
                                             alt={sport.name}
                                             width={64}
                                             height={64}

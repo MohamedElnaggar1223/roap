@@ -1,5 +1,5 @@
 import { getAcademyDetails, getAllSports } from "@/lib/actions/academics.actions"
-import { getImageUrl } from "@/lib/supabase-images"
+import { getImageUrl } from "@/lib/supabase-images-server"
 import Image from "next/image"
 import AcademyDetails from "./academy-details"
 import { Suspense } from "react"
