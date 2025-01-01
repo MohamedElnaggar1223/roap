@@ -475,7 +475,19 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                             <FormControl>
                                                 <div className="flex items-center">
                                                     <span className="px-2 py-3.5 text-sm bg-transparent border border-r-0 border-gray-500 rounded-l-[10px]">AED</span>
-                                                    <Input {...field} type="number" min="0" step="0.01" className='px-2 py-6 rounded-l-none rounded-r-[10px] border border-gray-500 font-inter' />
+                                                    <Input
+                                                        {...field}
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.01"
+                                                        className='px-2 py-6 rounded-l-none rounded-r-[10px] border border-gray-500 font-inter'
+                                                        onChange={(event) => {
+                                                            const value = event.target.value.replace(/[^0-9.]/g, '');
+                                                            const parts = value.split('.');
+                                                            const sanitizedValue = parts[0] + (parts.length > 1 ? '.' + parts[1] : '');
+                                                            field.onChange(sanitizedValue);
+                                                        }}
+                                                    />
                                                 </div>
                                             </FormControl>
                                             <FormMessage />
