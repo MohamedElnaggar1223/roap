@@ -312,7 +312,7 @@ export function AthletesDataTable({ data }: AthletesDataTableProps) {
                                 <div className="py-4 px-4">Branch</div>
                                 <div className="py-4 px-4">Sport</div>
                                 <div className="py-4 px-4">Package</div>
-                                <div className="py-4 px-4">Type</div>
+                                <div className="py-4 px-4">Program</div>
                                 <div className="py-4 px-4">Price</div>
                             </div>
 
@@ -347,7 +347,7 @@ export function AthletesDataTable({ data }: AthletesDataTableProps) {
                                         {booking.packageName}
                                     </div>
                                     <div className="py-8 px-4 bg-main-white">
-                                        {booking.programType}
+                                        {booking.programName}
                                     </div>
                                     <div className="py-8 px-4 bg-main-white rounded-r-[20px]">
                                         {booking.price} AED
