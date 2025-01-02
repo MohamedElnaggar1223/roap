@@ -48,6 +48,8 @@ export type Athlete = {
     secondGuardianRelationship: string | null
     firstGuardianPhone: string | null
     secondGuardianPhone: string | null
+    firstGuardianEmail: string | null
+    secondGuardianEmail: string | null
     user: User
     profile: Profile
     bookings: Booking[]
@@ -69,6 +71,8 @@ export const getAthletesAction = async (academicId: number) => {
                     secondGuardianRelationship: academicAthletic.secondGuardianRelationship,
                     firstGuardianPhone: academicAthletic.firstGuardianPhone,
                     secondGuardianPhone: academicAthletic.secondGuardianPhone,
+                    firstGuardianEmail: academicAthletic.firstGuardianEmail,
+                    secondGuardianEmail: academicAthletic.secondGuardianEmail,
                     user: {
                         email: users.email,
                         phoneNumber: users.phoneNumber,
@@ -136,6 +140,8 @@ export const getAthletesAction = async (academicId: number) => {
                         secondGuardianName: row.secondGuardianName,
                         secondGuardianRelationship: row.secondGuardianRelationship,
                         firstGuardianPhone: row.firstGuardianPhone,
+                        firstGuardianEmail: row.firstGuardianEmail,
+                        secondGuardianEmail: row.secondGuardianEmail,
                         secondGuardianPhone: row.secondGuardianPhone,
                         user: row.user ?? { email: null, phoneNumber: null },
                         profile: row.profile ?? { name: null, gender: null, birthday: null, image: null, country: null, nationality: null, city: null, streetAddress: null },
@@ -210,6 +216,8 @@ export async function getAthletes() {
             secondGuardianRelationship: academicAthletic.secondGuardianRelationship,
             firstGuardianPhone: academicAthletic.firstGuardianPhone,
             secondGuardianPhone: academicAthletic.secondGuardianPhone,
+            firstGuardianEmail: academicAthletic.firstGuardianEmail,
+            secondGuardianEmail: academicAthletic.secondGuardianEmail,
             user: {
                 email: users.email,
                 phoneNumber: users.phoneNumber,
@@ -277,6 +285,8 @@ export async function getAthletes() {
                 secondGuardianName: row.secondGuardianName,
                 secondGuardianRelationship: row.secondGuardianRelationship,
                 firstGuardianPhone: row.firstGuardianPhone,
+                firstGuardianEmail: row.firstGuardianEmail,
+                secondGuardianEmail: row.secondGuardianEmail,
                 secondGuardianPhone: row.secondGuardianPhone,
                 user: row.user ?? { email: null, phoneNumber: null },
                 profile: row.profile ?? { name: null, gender: null, birthday: null, image: null, country: null, nationality: null, city: null, streetAddress: null },

@@ -179,7 +179,7 @@ export const countries = [
     "Turkey",
     "Turkmenistan",
     "Tuvalu",
-    "UAE",
+    "United Arab Emirates",
     "Uganda",
     "UK",
     "Ukraine",

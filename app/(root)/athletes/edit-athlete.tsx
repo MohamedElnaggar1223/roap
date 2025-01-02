@@ -42,6 +42,10 @@ type Athlete = {
     firstGuardianRelationship: string | null
     secondGuardianName: string | null
     secondGuardianRelationship: string | null
+    firstGuardianPhone: string | null
+    firstGuardianEmail: string | null
+    secondGuardianPhone: string | null
+    secondGuardianEmail: string | null
     profile?: {
         country: string | null
         nationality: string | null
@@ -74,6 +78,8 @@ export default function EditAthlete({ athleteEdited }: Props) {
     const imageInputRef = useRef<HTMLInputElement>(null)
     const certificateInputRef = useRef<HTMLInputElement>(null)
 
+    console.log("Edited Athlete", athleteEdited)
+
     const [editOpen, setEditOpen] = useState(false)
     const [showOtherFirstGuardian, setShowOtherFirstGuardian] = useState(false)
     const [showOtherSecondGuardian, setShowOtherSecondGuardian] = useState(false)
@@ -95,19 +101,19 @@ export default function EditAthlete({ athleteEdited }: Props) {
             phoneNumber: athleteEdited.phoneNumber || '',
             firstName: athleteEdited.profile?.name.split(' ')[0] || '',
             lastName: athleteEdited.profile?.name.split(' ')[1] || '',
-            gender: athleteEdited.profile?.gender || '',
+            gender: athleteEdited.profile?.gender?.toLowerCase() || '',
             birthday: athleteEdited.profile?.birthday ? new Date(athleteEdited.profile.birthday) : new Date(),
             image: athleteEdited.profile?.image || '',
             certificate: athleteEdited.certificate || '',
             type: athleteEdited.type,
             firstGuardianName: athleteEdited.firstGuardianName || '',
             firstGuardianRelationship: athleteEdited.firstGuardianRelationship || '',
-            firstGuardianPhone: athleteEdited.phoneNumber || '',
-            firstGuardianEmail: athleteEdited.email || '',
+            firstGuardianPhone: athleteEdited.firstGuardianPhone || '',
+            firstGuardianEmail: athleteEdited.firstGuardianEmail || '',
             secondGuardianName: athleteEdited.secondGuardianName || '',
             secondGuardianRelationship: athleteEdited.secondGuardianRelationship || '',
-            secondGuardianPhone: athleteEdited.phoneNumber || '',
-            secondGuardianEmail: athleteEdited.email || '',
+            secondGuardianPhone: athleteEdited.secondGuardianPhone || '',
+            secondGuardianEmail: athleteEdited.secondGuardianEmail || '',
             city: athleteEdited.profile?.city || '',
             streetAddress: athleteEdited.profile?.streetAddress || '',
             nationality: athleteEdited.profile?.nationality || '',
@@ -498,7 +504,7 @@ export default function EditAthlete({ athleteEdited }: Props) {
                                                                     {country}
                                                                 </SelectItem>
                                                             ))} */}
-                                                            <SelectItem key={'UAE'} value={'UAE'}>
+                                                            <SelectItem key={'UAE'} value={'United Arab Emirates'}>
                                                                 {'UAE'}
                                                             </SelectItem>
                                                         </SelectContent>
