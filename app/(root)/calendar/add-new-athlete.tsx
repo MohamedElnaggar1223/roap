@@ -50,8 +50,6 @@ const relationships = [
     "wife",
     "son",
     "daughter",
-    "brother",
-    "sister",
     "other"
 ]
 
