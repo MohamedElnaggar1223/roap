@@ -44,11 +44,15 @@ type Props = {
 }
 
 const relationships = [
-    "Mother",
-    "Father",
-    "Grandmother",
-    "Grandfather",
-    "Other"
+    "mother",
+    "father",
+    "husband",
+    "wife",
+    "son",
+    "daughter",
+    "brother",
+    "sister",
+    "other"
 ]
 
 export default function AddNewAthlete({ addNewAthleteOpen, setAddNewAthleteOpen, handleAthleteSelect, onNext }: Props) {

@@ -8,7 +8,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { format, isBefore, parseISO } from "date-fns";
+import { endOfMonth, format, isBefore, parseISO } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import {
     Popover,
@@ -507,7 +507,7 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingDetails, athlete
 
             <div className="space-y-2 flex flex-col">
                 <label className="text-sm font-medium">End Date</label>
-                <p>{selectedPackage?.name.includes('Monthly') ? format((new Date()).setMonth(new Date().getMonth() + 1), "PPP") : selectedPackage?.endDate ? format(selectedPackage.endDate, "PPP") : "No end date"}</p>
+                <p>{selectedPackage?.name.includes('Monthly') ? format(endOfMonth(new Date()), "PPP") : selectedPackage?.endDate ? format(selectedPackage.endDate, "PPP") : "No end date"}</p>
             </div>
             <div className="space-y-2 flex flex-col">
                 <label className="text-sm font-medium">Sessions</label>

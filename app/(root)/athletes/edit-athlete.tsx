@@ -59,9 +59,15 @@ type Athlete = {
 }
 
 const relationships = [
-    "Mother",
-    "Father",
-    "Other"
+    "mother",
+    "father",
+    "husband",
+    "wife",
+    "son",
+    "daughter",
+    "brother",
+    "sister",
+    "other"
 ]
 
 type Props = {
@@ -107,11 +113,11 @@ export default function EditAthlete({ athleteEdited }: Props) {
             certificate: athleteEdited.certificate || '',
             type: athleteEdited.type,
             firstGuardianName: athleteEdited.firstGuardianName || '',
-            firstGuardianRelationship: athleteEdited.firstGuardianRelationship || '',
+            firstGuardianRelationship: athleteEdited.firstGuardianRelationship?.toLowerCase() || '',
             firstGuardianPhone: athleteEdited.firstGuardianPhone || '',
             firstGuardianEmail: athleteEdited.firstGuardianEmail || '',
             secondGuardianName: athleteEdited.secondGuardianName || '',
-            secondGuardianRelationship: athleteEdited.secondGuardianRelationship || '',
+            secondGuardianRelationship: athleteEdited.secondGuardianRelationship?.toLowerCase() || '',
             secondGuardianPhone: athleteEdited.secondGuardianPhone || '',
             secondGuardianEmail: athleteEdited.secondGuardianEmail || '',
             city: athleteEdited.profile?.city || '',
@@ -546,6 +552,7 @@ export default function EditAthlete({ athleteEdited }: Props) {
                                                                     field.onChange(value)
                                                                 }
                                                             }}
+                                                            value={field.value}
                                                         >
                                                             <FormControl>
                                                                 <SelectTrigger className="px-2 py-6 rounded-[10px] border border-gray-500 font-inter">
@@ -555,7 +562,7 @@ export default function EditAthlete({ athleteEdited }: Props) {
                                                             <SelectContent>
                                                                 {relationships.map((relationship) => (
                                                                     <SelectItem key={relationship} value={relationship}>
-                                                                        {relationship}
+                                                                        {relationship.slice(0, 1).toUpperCase() + relationship.slice(1)}
                                                                     </SelectItem>
                                                                 ))}
                                                             </SelectContent>

@@ -36,9 +36,15 @@ type FileState = {
 }
 
 const relationships = [
-    "Mother",
-    "Father",
-    "Other"
+    "mother",
+    "father",
+    "husband",
+    "wife",
+    "son",
+    "daughter",
+    "brother",
+    "sister",
+    "other"
 ]
 
 export default function AddNewAthlete() {
