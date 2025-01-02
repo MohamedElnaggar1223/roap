@@ -28,6 +28,8 @@ interface Athlete {
     firstGuardianRelationship: string | null
     secondGuardianName: string | null
     secondGuardianRelationship: string | null
+    firstGuardianEmail: string | null
+    secondGuardianEmail: string | null
     firstGuardianPhone: string | null
     secondGuardianPhone: string | null
     bookings: Booking[]
