@@ -507,7 +507,7 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingDetails, athlete
 
             <div className="space-y-2 flex flex-col">
                 <label className="text-sm font-medium">End Date</label>
-                <p>{selectedPackage?.name.includes('Monthly') ? format(endOfMonth(new Date()), "PPP") : selectedPackage?.endDate ? format(selectedPackage.endDate, "PPP") : "No end date"}</p>
+                <p>{selectedPackage?.name.includes('Monthly') ? (date ? format(endOfMonth(date), "PPP") : "Select a date first") : selectedPackage?.endDate ? format(selectedPackage.endDate, "PPP") : "No end date"}</p>
             </div>
             <div className="space-y-2 flex flex-col">
                 <label className="text-sm font-medium">Sessions</label>
