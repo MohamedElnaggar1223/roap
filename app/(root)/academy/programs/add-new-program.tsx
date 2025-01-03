@@ -292,6 +292,9 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
         }
     }, [addNewProgramOpen])
 
+    const startAgeUnitChange = form.watch('startAgeUnit')
+    const endAgeUnitChange = form.watch('endAgeUnit')
+
     const onSubmit = async (values: z.infer<typeof addProgramSchema>) => {
         try {
             // setLoading(true)
@@ -568,7 +571,7 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                                                                 type="number"
                                                                 {...field}
                                                                 onChange={e => field.onChange(Number(e.target.value))}
-                                                                step={0.5}
+                                                                step={startAgeUnitChange === 'months' ? 1 : 0.5}
                                                                 min={0}
                                                                 max={100}
                                                                 className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
@@ -613,7 +616,7 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                                                                 type="number"
                                                                 {...field}
                                                                 onChange={e => field.onChange(Number(e.target.value))}
-                                                                step={0.5}
+                                                                step={endAgeUnitChange === 'months' ? 1 : 0.5}
                                                                 min={0.5}
                                                                 max={100}
                                                                 disabled={form.watch('endAgeUnit') === 'unlimited'}

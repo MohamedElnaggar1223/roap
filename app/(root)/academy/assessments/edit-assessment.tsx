@@ -324,6 +324,9 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
         }
     }
 
+    const startAgeUnitChange = form.watch('startAgeUnit')
+    const endAgeUnitChange = form.watch('endAgeUnit')
+
     useEffect(() => {
         if (!editPackageOpen) {
             setEditedPackage(null)
@@ -514,7 +517,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                                                                 type="number"
                                                                 {...field}
                                                                 onChange={e => field.onChange(Number(e.target.value))}
-                                                                step={0.5}
+                                                                step={startAgeUnitChange === 'months' ? 1 : 0.5}
                                                                 min={0}
                                                                 max={100}
                                                                 disabled={isLoading || isValidating || loading}
@@ -560,7 +563,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                                                                 type="number"
                                                                 {...field}
                                                                 onChange={e => field.onChange(Number(e.target.value))}
-                                                                step={0.5}
+                                                                step={endAgeUnitChange === 'months' ? 1 : 0.5}
                                                                 min={0.5}
                                                                 max={100}
                                                                 disabled={isLoading || isValidating || loading || form.watch('endAgeUnit') === 'unlimited'}

@@ -549,7 +549,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                     name="entryFees"
                                     render={({ field }) => (
                                         <FormItem className='hidden absolute'>
-                                            <FormLabel>Entry Fees</FormLabel>
+                                            <FormLabel>Entry Fees <span className='text-xs text-red-500'>(All Prices Include VAT)</span></FormLabel>
                                             <FormControl>
                                                 <div className="flex items-center">
                                                     <span className="px-2 py-3.5 text-sm bg-transparent border border-r-0 border-gray-500 rounded-l-[10px]">AED</span>

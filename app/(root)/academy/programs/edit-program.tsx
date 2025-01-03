@@ -320,6 +320,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
     console.log(form.getValues('endAge'))
 
     const endAgeUnitChange = form.watch('endAgeUnit')
+    const startAgeUnitChange = form.watch('startAgeUnit')
 
     useEffect(() => {
         if (endAgeUnitChange === 'unlimited') {
@@ -627,7 +628,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                                 type="number"
                                                                 {...field}
                                                                 onChange={e => field.onChange(Number(e.target.value))}
-                                                                step={0.5}
+                                                                step={startAgeUnitChange === 'months' ? 1 : 0.5}
                                                                 min={0}
                                                                 max={100}
                                                                 disabled={loading}
@@ -673,8 +674,8 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                                 type="number"
                                                                 {...field}
                                                                 onChange={e => field.onChange(Number(e.target.value))}
-                                                                step={0.5}
-                                                                min={0.5}
+                                                                step={endAgeUnitChange === 'months' ? 1 : 0.5}
+                                                                min={0}
                                                                 max={100}
                                                                 disabled={loading || form.watch('endAgeUnit') === 'unlimited'}
                                                                 className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'

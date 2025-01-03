@@ -684,6 +684,7 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
                 <div className="flex justify-between items-center font-medium text-lg">
                     <div className='min-w-[140px] text-sm font-semibold'>Total</div>
                     <div className='font-semibold flex-1'>{(discountedPrice + (entryFeesDetails.shouldPay ? bookingDetails.package.entryFees ?? 0 : 0) + (assessmentResult.shouldPay ? assessmentResult.amount : 0)).toFixed(2)} AED</div>
+                    <span className='text-xs text-red-500'>(All Prices Include VAT){" "}</span>
                 </div>
             </div>
 
