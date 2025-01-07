@@ -71,6 +71,7 @@ export type Program = {
     pending?: boolean;
     packages: Package[];
     discounts: Discount[];
+    flexible: boolean;
     // sport: {
     // id: number;
     // createdAt: string | null;
@@ -164,8 +165,25 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
         editProgram: async (program: Program, mutate?: () => void) => {
             const oldProgram = get().programs.find(p => p.id === program.id) as Program
 
+            const updatedProgram = {
+                ...program,
+                packages: program.packages.map(pkg => ({
+                    ...pkg,
+                    flexible: program.flexible,
+                    // Update capacity and other fields based on flexibility
+                    capacity: program.flexible ? null : pkg.capacity,
+                    sessionDuration: program.flexible ? pkg.sessionDuration : null,
+                    sessionPerWeek: program.flexible ? pkg.sessionPerWeek : pkg.schedules.length,
+                    schedules: pkg.schedules.map(schedule => ({
+                        ...schedule,
+                        capacity: program.flexible ? schedule.capacity : (pkg.capacity ?? 0)
+                    }))
+                })),
+                pending: true
+            }
+
             set({
-                programs: get().programs.map(p => p.id === program.id ? ({ ...program, pending: true }) : p),
+                programs: get().programs.map(p => p.id === program.id ? updatedProgram : p),
             })
 
             const result = await updateProgramStore(program, oldProgram)
@@ -179,7 +197,7 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
             }
             else {
                 set({
-                    programs: get().programs.map(p => p.id === program.id ? ({ ...program, pending: false }) : p)
+                    programs: get().programs.map(p => p.id === program.id ? ({ ...updatedProgram, pending: false }) : p)
                 })
 
                 get().fetchPrograms()
@@ -196,8 +214,24 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
             await deletePrograms(ids)
         },
         addProgram: async (program: Program, mutate?: () => void) => {
+            const programWithFlexiblePackages = {
+                ...program,
+                packages: program.packages.map(pkg => ({
+                    ...pkg,
+                    flexible: program.flexible,
+                    capacity: program.flexible ? null : pkg.capacity,
+                    sessionDuration: program.flexible ? pkg.sessionDuration : null,
+                    sessionPerWeek: program.flexible ? pkg.sessionPerWeek : pkg.schedules.length,
+                    schedules: pkg.schedules.map(schedule => ({
+                        ...schedule,
+                        capacity: program.flexible ? schedule.capacity : (pkg.capacity ?? 0)
+                    }))
+                })),
+                pending: true
+            }
+
             set({
-                programs: [...get().programs, ({ ...program, pending: true })]
+                programs: [...get().programs, programWithFlexiblePackages]
             })
 
             const result = await createProgramStore(program)
@@ -209,7 +243,7 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
             }
             else if (result?.data?.id && typeof result?.data?.id === 'number') {
                 set({
-                    programs: get().programs.map(p => p.id === program.id ? ({ ...program, pending: false, id: result.data?.id as number }) : p)
+                    programs: get().programs.map(p => p.id === program.id ? ({ ...programWithFlexiblePackages, pending: false, id: result.data?.id as number }) : p)
                 })
                 get().fetchPrograms()
                 if (mutate) mutate()
@@ -225,13 +259,13 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
                     ...program,
                     packages: [...program.packages, {
                         ...packageData,
-                        flexible: packageData.flexible ?? null,
-                        capacity: packageData.flexible ? null : packageData.capacity,
-                        sessionDuration: packageData.flexible ? packageData.sessionDuration : null,
-                        sessionPerWeek: packageData.flexible ? packageData.sessionPerWeek : packageData.schedules.length,
+                        flexible: program.flexible, // Use program's flexibility
+                        capacity: program.flexible ? null : packageData.capacity,
+                        sessionDuration: program.flexible ? packageData.sessionDuration : null,
+                        sessionPerWeek: program.flexible ? packageData.sessionPerWeek : packageData.schedules.length,
                         schedules: packageData.schedules.map(schedule => ({
                             ...schedule,
-                            capacity: packageData.flexible ? schedule.capacity : (packageData.capacity ?? 0)
+                            capacity: program.flexible ? schedule.capacity : (packageData.capacity ?? 0)
                         }))
                     }]
                 }) : p)
@@ -253,13 +287,13 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
                                 (packageData.tempId && pkg.tempId === packageData.tempId)) {
                                 return {
                                     ...packageData,
-                                    flexible: packageData.flexible ?? null,
-                                    capacity: packageData.flexible ? null : packageData.capacity,
-                                    sessionDuration: packageData.flexible ? packageData.sessionDuration : null,
-                                    sessionPerWeek: packageData.flexible ? packageData.sessionPerWeek : packageData.schedules.length,
+                                    flexible: program.flexible, // Use program's flexibility
+                                    capacity: program.flexible ? null : packageData.capacity,
+                                    sessionDuration: program.flexible ? packageData.sessionDuration : null,
+                                    sessionPerWeek: program.flexible ? packageData.sessionPerWeek : packageData.schedules.length,
                                     schedules: packageData.schedules.map(schedule => ({
                                         ...schedule,
-                                        capacity: packageData.flexible ? schedule.capacity : (packageData.capacity ?? 0)
+                                        capacity: program.flexible ? schedule.capacity : (packageData.capacity ?? 0)
                                     }))
                                 }
                             }

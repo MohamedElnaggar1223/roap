@@ -239,6 +239,7 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
             capacity: '0',
             months: [],
             capacityType: 'normal',
+            flexible: program?.flexible ?? false,
         }
     })
 
@@ -341,7 +342,7 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                         packageId: undefined
                     })),
                     capacity: values.flexible ? null : (values.capacityType === "unlimited" ? 9999 : parseInt(values.capacity)),
-                    flexible: values.flexible,
+                    // flexible: values.flexible,
                     sessionPerWeek: values.flexible ? (values.sessionPerWeek ?? 0) : values.schedules.length,
                     sessionDuration: values.flexible ? (values.sessionDuration ?? 0) : null,
                     createdAt: new Date().toLocaleString(),
@@ -440,7 +441,7 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                                         control={form.control}
                                         name="flexible"
                                         render={({ field }) => (
-                                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                            <FormItem className="absolute hidden flex-row items-center justify-between rounded-lg border p-4">
                                                 <div className="space-y-0.5">
                                                     <FormLabel className="text-base">Flexible Schedule</FormLabel>
                                                     <FormDescription>
@@ -457,7 +458,7 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                                         )}
                                     />
 
-                                    {form.watch("flexible") ? (
+                                    {program?.flexible ? (
                                         <div className="space-y-4">
                                             <FormField
                                                 control={form.control}
@@ -856,7 +857,7 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                                                                         if (newValue === '' || /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(newValue)) {
                                                                             field.onChange(newValue);
                                                                             // If package is flexible, automatically calculate and set 'to' time
-                                                                            if (form.watch("flexible") && newValue && form.watch("sessionDuration")) {
+                                                                            if (program?.flexible && newValue && form.watch("sessionDuration")) {
                                                                                 const duration = form.watch("sessionDuration");
                                                                                 const [hours, minutes] = newValue.split(':').map(Number);
                                                                                 const startDate = new Date();
@@ -887,14 +888,14 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                                                                     type="time"
                                                                     value={formatTimeValue(field.value)}
                                                                     onChange={(e) => {
-                                                                        if (!form.watch("flexible")) {
+                                                                        if (!program?.flexible) {
                                                                             const newValue = e.target.value;
                                                                             if (newValue === '' || /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(newValue)) {
                                                                                 field.onChange(newValue);
                                                                             }
                                                                         }
                                                                     }}
-                                                                    disabled={form.watch("flexible")}
+                                                                    disabled={program?.flexible}
                                                                     className="px-2 py-6 rounded-[10px] border border-gray-500 font-inter disabled:opacity-50"
                                                                 />
                                                             </FormControl>
@@ -902,7 +903,7 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                                                         </FormItem>
                                                     )}
                                                 />
-                                                {form.watch("flexible") && (
+                                                {program?.flexible && (
                                                     <div className="grid grid-cols-2 gap-4">
                                                         <FormField
                                                             control={form.control}
@@ -917,7 +918,7 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                                                                             min="1"
                                                                             disabled={form.watch(`schedules.${index}.capacityType`) === "unlimited"}
                                                                             className={cn("px-2 py-6 rounded-[10px] border border-gray-500 font-inter", form.watch(`schedules.${index}.capacityType`) === "unlimited" && 'text-transparent')}
-                                                                            required={form.watch("flexible")}
+                                                                            required={program?.flexible}
                                                                         />
                                                                     </FormControl>
                                                                     <FormMessage />

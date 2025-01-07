@@ -13,6 +13,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import {
     Form,
     FormControl,
+    FormDescription,
     FormField,
     FormItem,
     FormLabel,
@@ -44,6 +45,7 @@ import EditDiscount from './edit-discount';
 import { useProgramsStore } from '@/providers/store-provider';
 import { v4 as uuid } from 'uuid';
 import { Discount, Package } from '@/stores/programs-store';
+import { Switch } from '@/components/ui/switch';
 
 const addProgramSchema = z.object({
     name: z.string().min(1, "Name is required"),
@@ -57,6 +59,7 @@ const addProgramSchema = z.object({
     numberOfSeats: z.string().optional(),
     type: z.enum(["TEAM", "PRIVATE"]),
     color: z.string().min(1, "Color is required"),
+    flexible: z.boolean().default(false),
 })
 
 interface Branch {
@@ -259,6 +262,7 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
             endAge: undefined,
             endAgeUnit: 'unlimited',
             color: calendarColors[0].value,
+            flexible: false,
         }
     })
 
@@ -270,6 +274,7 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                 branchId: 0,
                 sportId: 0,
                 gender: '',
+                flexible: false,
                 startDateOfBirth: new Date().toLocaleString(),
                 endDateOfBirth: new Date().toLocaleString(),
                 numberOfSeats: 0,
@@ -330,6 +335,7 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                 endDateOfBirth: endDate.toLocaleString(),
                 numberOfSeats: 0,
                 type: values.type,
+                flexible: values.flexible,
                 coachPrograms: selectedCoaches.map(coachId => ({ coach: { id: coachId }, id: parseInt(uuid().replace(/-/g, '')) })),
                 packages: program?.packages || [],
                 color: values.color,
@@ -432,6 +438,29 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                                                         <AutoGrowingTextarea field={{ ...field }} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                     </FormControl>
                                                     <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                    <div className="space-y-4 mt-4 mb-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="flexible"
+                                            render={({ field }) => (
+                                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                                    <div className="space-y-0.5">
+                                                        <FormLabel className="text-base">Flexible Schedule Program</FormLabel>
+                                                        <FormDescription>
+                                                            Allow program schedules to be flexible. All packages in this program will inherit this setting.
+                                                        </FormDescription>
+                                                    </div>
+                                                    <FormControl>
+                                                        <Switch
+                                                            checked={field.value}
+                                                            onCheckedChange={field.onChange}
+                                                            disabled={loading}
+                                                        />
+                                                    </FormControl>
                                                 </FormItem>
                                             )}
                                         />

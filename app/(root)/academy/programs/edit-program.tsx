@@ -13,6 +13,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import {
     Form,
     FormControl,
+    FormDescription,
     FormField,
     FormItem,
     FormLabel,
@@ -45,6 +46,7 @@ import EditDiscount from './edit-discount';
 import { getProgramDiscounts } from '@/lib/actions/discounts.actions';
 import { Discount, Package, Program } from '@/stores/programs-store';
 import { useProgramsStore } from '@/providers/store-provider';
+import { Switch } from '@/components/ui/switch';
 
 const calculateAge = (birthDate: string): number => {
     const today = new Date();
@@ -84,6 +86,7 @@ const addProgramSchema = z.object({
     numberOfSeats: z.string().optional(),
     type: z.enum(["TEAM", "PRIVATE"]),
     color: z.string().min(1),
+    flexible: z.boolean(),
 })
 
 interface Branch {
@@ -313,6 +316,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                 return calculateAgeFromDate(programEdited.endDateOfBirth).unit as "months" | "years" | undefined;
             })(),
             color: programEdited.color ?? '',
+            flexible: programEdited.flexible ?? false,
         }
     })
 
@@ -382,13 +386,14 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                 description: values.description,
                 branchId: parseInt(values.branchId),
                 color: values.color,
+                flexible: values.flexible,
                 sportId: parseInt(values.sportId),
                 createdAt: programEdited.createdAt,
                 updatedAt: programEdited.updatedAt,
                 gender: selectedGenders.join(','),
                 startDateOfBirth: startDate.toLocaleString(),
                 endDateOfBirth: endDate.toLocaleString(),
-            })
+            }, mutateProgram)
 
             // if (result.error) {
             //     console.error('Error creating program:', result.error)
@@ -492,6 +497,30 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                         <AutoGrowingTextarea disabled={loading} field={{ ...field }} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                     </FormControl>
                                                     <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-4 mt-4 mb-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="flexible"
+                                            render={({ field }) => (
+                                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                                    <div className="space-y-0.5">
+                                                        <FormLabel className="text-base">Flexible Schedule Program</FormLabel>
+                                                        <FormDescription>
+                                                            Allow program schedules to be flexible. All packages in this program will inherit this setting.
+                                                        </FormDescription>
+                                                    </div>
+                                                    <FormControl>
+                                                        <Switch
+                                                            checked={field.value}
+                                                            onCheckedChange={field.onChange}
+                                                            disabled={loading}
+                                                        />
+                                                    </FormControl>
                                                 </FormItem>
                                             )}
                                         />
