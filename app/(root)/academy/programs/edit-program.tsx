@@ -486,7 +486,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                             name='name'
                                             render={({ field }) => (
                                                 <FormItem className='flex-1'>
-                                                    <FormLabel>Name</FormLabel>
+                                                    <FormLabel>Name <span className='text-xs text-red-500'>*</span></FormLabel>
                                                     <FormControl>
                                                         <Input disabled={loading} {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                     </FormControl>
@@ -499,7 +499,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                             name='description'
                                             render={({ field }) => (
                                                 <FormItem className='flex-1'>
-                                                    <FormLabel>Description</FormLabel>
+                                                    <FormLabel>Description <span className='text-xs text-red-500'>*</span></FormLabel>
                                                     <FormControl>
                                                         <AutoGrowingTextarea disabled={loading} field={{ ...field }} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                     </FormControl>
@@ -540,7 +540,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                             name="branchId"
                                             render={({ field }) => (
                                                 <FormItem className='flex-1'>
-                                                    <FormLabel>Branch</FormLabel>
+                                                    <FormLabel>Branch <span className='text-xs text-red-500'>*</span></FormLabel>
                                                     <Select disabled={loading} onValueChange={field.onChange} defaultValue={field.value}>
                                                         <FormControl>
                                                             <SelectTrigger className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'>
@@ -561,7 +561,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                         />
 
                                         <div className="flex flex-col gap-4 flex-1">
-                                            <p className='text-xs'>Genders</p>
+                                            <p className='text-xs'>For <span className='text-xs text-red-500'>*</span></p>
                                             <div className="flex w-full flex-col gap-4 border border-gray-500 p-3 rounded-lg">
                                                 <div className="flex flex-wrap gap-2">
                                                     {selectedGenders.map((gender) => (
@@ -661,7 +661,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                 name='startAge'
                                                 render={({ field }) => (
                                                     <FormItem className="flex flex-col flex-1">
-                                                        <FormLabel>Start Age</FormLabel>
+                                                        <FormLabel>Start Age <span className='text-xs text-red-500'>*</span></FormLabel>
                                                         <FormControl>
                                                             <Input
                                                                 type="number"
@@ -707,7 +707,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                 name='endAge'
                                                 render={({ field }) => (
                                                     <FormItem className="flex flex-col flex-1">
-                                                        <FormLabel>End Age</FormLabel>
+                                                        <FormLabel>End Age <span className='text-xs text-red-500'>*</span></FormLabel>
                                                         <FormControl>
                                                             <Input
                                                                 type="number"
@@ -750,7 +750,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                     </div>
 
                                     <div className="flex flex-col gap-4 w-full">
-                                        <p className='text-xs'>Coaches</p>
+                                        <p className='text-xs'>Coaches <span className='text-xs text-red-500'>*</span></p>
                                         <div className="flex w-full flex-col gap-4 border border-gray-500 p-3 rounded-lg">
                                             <div className="flex flex-wrap gap-2">
                                                 {selectedCoaches.map((coach) => (
@@ -820,7 +820,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                             name="sportId"
                                             render={({ field }) => (
                                                 <FormItem className='flex-1'>
-                                                    <FormLabel>Sport</FormLabel>
+                                                    <FormLabel>Sport <span className='text-xs text-red-500'>*</span></FormLabel>
                                                     <Select disabled={loading} onValueChange={field.onChange} defaultValue={field.value}>
                                                         <FormControl>
                                                             <SelectTrigger className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'>

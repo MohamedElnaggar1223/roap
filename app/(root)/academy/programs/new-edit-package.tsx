@@ -508,7 +508,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full'>
                         <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>
-                            <DialogTitle className='font-normal text-base'>Edit Package {packageData?.tempId}</DialogTitle>
+                            <DialogTitle className='font-normal text-base'>Edit Package</DialogTitle>
                             <div className='flex items-center gap-2'>
                                 <button disabled={loading} type='submit' className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5'>
                                     {loading && <Loader2 className='h-5 w-5 animate-spin' />}
@@ -523,7 +523,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                     name="type"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Type</FormLabel>
+                                            <FormLabel>Type <span className='text-xs text-red-500'>*</span></FormLabel>
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                 <FormControl>
                                                     <SelectTrigger className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'>
@@ -547,7 +547,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                         name="termNumber"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Term Number</FormLabel>
+                                                <FormLabel>Term Number <span className='text-xs text-red-500'>*</span></FormLabel>
                                                 <FormControl>
                                                     <div className="flex items-center">
                                                         <span className="px-2 py-3.5 text-sm bg-transparent border border-r-0 border-gray-500 rounded-l-[10px]">Term</span>
@@ -564,7 +564,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                         name="name"
                                         render={({ field }) => (
                                             <FormItem className='absolute hidden'>
-                                                <FormLabel>Name</FormLabel>
+                                                <FormLabel>Name <span className='text-xs text-red-500'>*</span></FormLabel>
                                                 <FormControl>
                                                     <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                 </FormControl>
@@ -603,7 +603,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                                 name="sessionPerWeek"
                                                 render={({ field }) => (
                                                     <FormItem>
-                                                        <FormLabel>Sessions Per Week</FormLabel>
+                                                        <FormLabel>Sessions Per Week <span className='text-xs text-red-500'>*</span></FormLabel>
                                                         <FormControl>
                                                             <Input
                                                                 {...field}
@@ -631,7 +631,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                                 name="sessionDuration"
                                                 render={({ field }) => (
                                                     <FormItem>
-                                                        <FormLabel>Session Duration (minutes)</FormLabel>
+                                                        <FormLabel>Session Duration (minutes) <span className='text-xs text-red-500'>*</span></FormLabel>
                                                         <FormControl>
                                                             <Input
                                                                 {...field}
@@ -658,7 +658,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                                     name="capacity"
                                                     render={({ field }) => (
                                                         <FormItem className="flex-1">
-                                                            <FormLabel>Package Capacity</FormLabel>
+                                                            <FormLabel>Package Capacity <span className='text-xs text-red-500'>*</span></FormLabel>
                                                             <FormControl>
                                                                 <Input
                                                                     {...field}
@@ -694,7 +694,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                                                     </SelectTrigger>
                                                                 </FormControl>
                                                                 <SelectContent className="!bg-[#F1F2E9]">
-                                                                    <SelectItem value="normal">Normal</SelectItem>
+                                                                    <SelectItem value="normal">Slots</SelectItem>
                                                                     <SelectItem value="unlimited">Unlimited</SelectItem>
                                                                 </SelectContent>
                                                             </Select>
@@ -727,7 +727,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                 {packageType === "Monthly" ? (
                                     <div className="space-y-4">
                                         <div className="flex justify-between items-center">
-                                            <FormLabel>Package Months</FormLabel>
+                                            <FormLabel>Package Months <span className='text-xs text-red-500'>*</span></FormLabel>
                                             <Button
                                                 type="button"
                                                 variant="outline"
@@ -802,7 +802,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                             name="startDate"
                                             render={({ field }) => (
                                                 <FormItem className="flex-1">
-                                                    <FormLabel>Start Date</FormLabel>
+                                                    <FormLabel>Start Date <span className='text-xs text-red-500'>*</span></FormLabel>
                                                     <DateSelector field={field} />
                                                     <FormMessage />
                                                 </FormItem>
@@ -814,7 +814,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                             name="endDate"
                                             render={({ field }) => (
                                                 <FormItem className="flex-1">
-                                                    <FormLabel>End Date</FormLabel>
+                                                    <FormLabel>End Date <span className='text-xs text-red-500'>*</span></FormLabel>
                                                     <DateSelector field={field} />
                                                     <FormMessage />
                                                 </FormItem>
@@ -852,7 +852,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                         name="entryFeesExplanation"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Entry Fees Explanation</FormLabel>
+                                                <FormLabel>Entry Fees Explanation <span className='text-xs text-red-500'>*</span></FormLabel>
                                                 <FormControl>
                                                     <Textarea
                                                         {...field}
@@ -872,7 +872,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                         name="entryFeesAppliedUntil"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Entry Fees Applied For</FormLabel>
+                                                <FormLabel>Entry Fees Applied For <span className='text-xs text-red-500'>*</span></FormLabel>
                                                 <div className="grid grid-cols-3 gap-4 border rounded-[10px] p-4">
                                                     {availableMonths.map((month) => (
                                                         <label
@@ -906,7 +906,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                             name="entryFeesStartDate"
                                             render={({ field }) => (
                                                 <FormItem className="flex-1">
-                                                    <FormLabel>Entry Fees Start Date</FormLabel>
+                                                    <FormLabel>Entry Fees Start Date <span className='text-xs text-red-500'>*</span></FormLabel>
                                                     <DateSelector field={field} />
                                                     <FormMessage />
                                                 </FormItem>
@@ -918,7 +918,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                             name="entryFeesEndDate"
                                             render={({ field }) => (
                                                 <FormItem className="flex-1">
-                                                    <FormLabel>Entry Fees End Date</FormLabel>
+                                                    <FormLabel>Entry Fees End Date <span className='text-xs text-red-500'>*</span></FormLabel>
                                                     <DateSelector field={field} />
                                                     <FormMessage />
                                                 </FormItem>
@@ -929,7 +929,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
 
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center">
-                                        <FormLabel>Sessions</FormLabel>
+                                        <FormLabel>Sessions <span className='text-xs text-red-500'>*</span></FormLabel>
                                         <Button
                                             type="button"
                                             variant="outline"
@@ -1050,7 +1050,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                                             name={`schedules.${index}.capacity`}
                                                             render={({ field }) => (
                                                                 <FormItem>
-                                                                    <FormLabel>Session Capacity</FormLabel>
+                                                                    <FormLabel>Session Capacity <span className='text-xs text-red-500'>*</span></FormLabel>
                                                                     <FormControl>
                                                                         <Input
                                                                             {...field}
@@ -1087,7 +1087,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                                                             </SelectTrigger>
                                                                         </FormControl>
                                                                         <SelectContent className="!bg-[#F1F2E9]">
-                                                                            <SelectItem value="normal">Normal</SelectItem>
+                                                                            <SelectItem value="normal">Slots</SelectItem>
                                                                             <SelectItem value="unlimited">Unlimited</SelectItem>
                                                                         </SelectContent>
                                                                     </Select>

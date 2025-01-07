@@ -96,7 +96,7 @@ const ColorSelector = ({ form, takenColors, disabled = false }: { form: any; tak
             name="color"
             render={({ field }) => (
                 <FormItem className='flex-1'>
-                    <FormLabel>Color</FormLabel>
+                    <FormLabel>Color <span className='text-xs text-red-500'>*</span></FormLabel>
                     <div className="flex items-center gap-2">
                         <Select
                             disabled={disabled}
@@ -425,7 +425,7 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                                             name='name'
                                             render={({ field }) => (
                                                 <FormItem className='flex-1'>
-                                                    <FormLabel>Name</FormLabel>
+                                                    <FormLabel>Name <span className='text-xs text-red-500'>*</span></FormLabel>
                                                     <FormControl>
                                                         <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                     </FormControl>
@@ -438,7 +438,7 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                                             name='description'
                                             render={({ field }) => (
                                                 <FormItem className='flex-1'>
-                                                    <FormLabel>Description</FormLabel>
+                                                    <FormLabel>Description <span className='text-xs text-red-500'>*</span></FormLabel>
                                                     <FormControl>
                                                         <AutoGrowingTextarea field={{ ...field }} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                     </FormControl>
@@ -478,7 +478,7 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                                             name="branchId"
                                             render={({ field }) => (
                                                 <FormItem className='flex-1'>
-                                                    <FormLabel>Branch</FormLabel>
+                                                    <FormLabel>Branch <span className='text-xs text-red-500'>*</span></FormLabel>
                                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                         <FormControl>
                                                             <SelectTrigger className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'>
@@ -499,7 +499,7 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                                         />
 
                                         <div className="flex flex-col gap-4 flex-1">
-                                            <p className='text-xs'>For</p>
+                                            <p className='text-xs'>For <span className='text-xs text-red-500'>*</span></p>
                                             <div className="flex w-full flex-col gap-4 border border-gray-500 p-3 rounded-lg">
                                                 <div className="flex flex-wrap gap-2">
                                                     {selectedGenders.map((gender) => (
@@ -599,7 +599,7 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                                                 name='startAge'
                                                 render={({ field }) => (
                                                     <FormItem className="flex flex-col flex-1">
-                                                        <FormLabel>Start Age</FormLabel>
+                                                        <FormLabel>Start Age <span className='text-xs text-red-500'>*</span></FormLabel>
                                                         <FormControl>
                                                             <Input
                                                                 type="number"
@@ -644,7 +644,7 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                                                 name='endAge'
                                                 render={({ field }) => (
                                                     <FormItem className="flex flex-col flex-1">
-                                                        <FormLabel>End Age</FormLabel>
+                                                        <FormLabel>End Age <span className='text-xs text-red-500'>*</span></FormLabel>
                                                         <FormControl>
                                                             <Input
                                                                 type="number"
@@ -688,7 +688,7 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
 
                                     <div className="flex w-full gap-4 items-start justify-between">
                                         <div className="flex flex-col gap-4 flex-1">
-                                            <p className='text-xs'>Coaches</p>
+                                            <p className='text-xs'>Coaches <span className='text-xs text-red-500'>*</span></p>
                                             <div className="flex w-full flex-col gap-4 border border-gray-500 p-3 rounded-lg">
                                                 <div className="flex flex-wrap gap-2">
                                                     {selectedCoaches.map((coach) => (
@@ -757,7 +757,7 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                                             name="sportId"
                                             render={({ field }) => (
                                                 <FormItem className='flex-1'>
-                                                    <FormLabel>Sport</FormLabel>
+                                                    <FormLabel>Sport <span className='text-xs text-red-500'>*</span></FormLabel>
                                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                         <FormControl>
                                                             <SelectTrigger className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'>
