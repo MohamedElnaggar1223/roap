@@ -1,7 +1,7 @@
 'use server'
 import { auth } from "@/auth"
 import { db } from "@/db"
-import { academicAthletic, blockPrograms, blocks, bookings, bookingSessions, branchTranslations, coaches, entryFeesHistory, packageDiscount, packages, profiles, programs, sports, sportTranslations, users } from "@/db/schema"
+import { academicAthletic, blockPrograms, blocks, bookings, bookingSessions, branchTranslations, coaches, entryFeesHistory, packageDiscount, packages, profiles, programs, schedules, sports, sportTranslations, users } from "@/db/schema"
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm"
 import { revalidateTag } from "next/cache"
 import { revalidatePath } from 'next/cache'
@@ -201,11 +201,14 @@ export async function getProgramDetails(programId: number): Promise<ProgramDetai
                     sessionPerWeek: pkg.sessionPerWeek,
                     sessionDuration: pkg.sessionDuration,
                     months: pkg.months,
+                    capacity: pkg.capacity,
+                    flexible: pkg.flexible,
                     schedules: pkg.schedules.map(s => ({
                         id: s.id,
                         day: s.day,
                         from: s.from,
                         to: s.to,
+                        capacity: s.capacity
                     })),
                     endDate: pkg.endDate,
                     startDate: pkg.startDate
@@ -241,18 +244,23 @@ export async function calculateSessionsAndPrice(
     schedules: any[],
     bookingTime: string
 ) {
-    console.log("Selected Date", selectedDate)
     const packageName = packageDetails.name.toLowerCase();
     const isAssessment = packageName.startsWith('assessment');
     const isMonthly = packageName.startsWith('monthly');
+    let schedulesToUse = schedules;
+
+    // If package is flexible, parse the selected schedules from bookingTime
+    if (packageDetails.flexible) {
+        schedulesToUse = JSON.parse(bookingTime);
+    }
 
     const sessions = [];
     let totalPrice = Number(packageDetails.price);
     let deductions = 0;
 
-    const [startTime, endTime] = bookingTime.split(' ');
-
     if (isAssessment) {
+        // Assessment logic remains the same
+        const [startTime, endTime] = bookingTime.split(' ');
         sessions.push({
             date: selectedDate,
             from: startTime,
@@ -260,10 +268,7 @@ export async function calculateSessionsAndPrice(
             status: 'pending'
         });
     } else if (isMonthly) {
-        // For monthly packages, only generate sessions until end of current month
         const selectedMonthYear = format(selectedDate, 'MMMM yyyy');
-
-        // Check if this month is in the package's months array
         if (!packageDetails.months?.includes(selectedMonthYear)) {
             throw new Error('Selected month is not available in this package');
         }
@@ -272,11 +277,12 @@ export async function calculateSessionsAndPrice(
         const monthStartDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
         const monthEndDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
 
-        // Get all possible sessions for this month
+        // Get all possible sessions for this month using only the selected schedules
         const allSessions = generateSessionsFromSchedules(
-            schedules,
+            schedulesToUse,
             monthStartDate,
-            monthEndDate
+            monthEndDate,
+            packageDetails
         );
 
         // Calculate price per session for the month
@@ -292,21 +298,18 @@ export async function calculateSessionsAndPrice(
             session => session.date >= selectedDate
         ));
     } else {
-        // For term and full season packages
+        // Term and Full Season logic
         const packageStartDate = new Date(packageDetails.startDate);
         const endDate = new Date(packageDetails.endDate);
 
-        // Get all possible sessions from start to end
         const allSessions = generateSessionsFromSchedules(
-            schedules,
+            schedulesToUse,
             packageStartDate,
-            endDate
+            endDate,
+            packageDetails
         );
 
-        // Calculate price per session
         const pricePerSession = totalPrice / allSessions.length;
-
-        // Calculate missed sessions
         const missedSessions = allSessions.filter(
             session => session.date < selectedDate
         );
@@ -536,6 +539,26 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
         }
 
         // Calculate sessions and initial price
+        if (packageDetails.flexible) {
+            const selectedSchedules = JSON.parse(validatedInput.time);
+
+            // Verify selected schedules match sessionPerWeek
+            if (selectedSchedules.length !== packageDetails.sessionPerWeek) {
+                return { error: { message: 'Invalid number of sessions selected', field: 'time' } };
+            }
+
+            // Check capacity for each selected schedule
+            for (const schedule of selectedSchedules) {
+                const matchingSchedule = packageDetails.schedules.find(
+                    s => s.day === schedule.day && s.from === schedule.from
+                );
+                if (!matchingSchedule || matchingSchedule.capacity <= 0) {
+                    return { error: { message: 'One or more selected sessions are full', field: 'time' } };
+                }
+            }
+        }
+
+        // Calculate sessions and prices
         const selectedDate = new Date(validatedInput.date);
         const { sessions, totalPrice, deductions } = await calculateSessionsAndPrice(
             packageDetails,
@@ -611,6 +634,22 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
                 });
             }
 
+            if (packageDetails.flexible) {
+                const selectedSchedules = JSON.parse(validatedInput.time);
+                // Update capacity for each selected schedule
+                for (const schedule of selectedSchedules) {
+                    await tx.update(schedules)
+                        .set({
+                            capacity: sql`${schedules.capacity} - 1`
+                        })
+                        .where(and(
+                            eq(schedules.packageId, packageDetails.id),
+                            eq(schedules.day, schedule.day),
+                            eq(schedules.from, schedule.from)
+                        ));
+                }
+            }
+
             return [booking];
         });
 
@@ -640,14 +679,21 @@ const days = {
 function generateSessionsFromSchedules(
     schedules: any[],
     startDate: Date,
-    endDate: Date
+    endDate: Date,
+    packageDetails: any
 ): Array<{ date: Date; from: string; to: string }> {
     const sessions = [];
     const currentDate = new Date(startDate);
 
+    // For flexible packages, schedules will be the JSON parsed selected schedules
+    const schedulesToUse = packageDetails.flexible ?
+        schedules : // These are the selected schedules
+        packageDetails.schedules; // All package schedules
+
     while (currentDate <= endDate) {
-        const daySchedule = schedules.find(
-            s => days[s.day.toLowerCase() as keyof typeof days].toLowerCase() === currentDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+        const daySchedule = schedulesToUse.find(
+            (s: any) => days[s.day.toLowerCase() as keyof typeof days].toLowerCase() ===
+                currentDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
         );
 
         if (daySchedule) {

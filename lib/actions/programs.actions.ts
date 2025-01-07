@@ -352,6 +352,9 @@ interface Package {
     entryFeesAppliedUntil?: string[]
     id?: number
     months?: string[] | null
+    sessionDuration?: number | null
+    capacity?: number | null
+    flexible?: boolean | null
 }
 interface ProgramDiscountData {
     id?: number
@@ -480,7 +483,10 @@ export async function createProgramStore(program: Program): Promise<{
                                 startDate: startDate,
                                 endDate: endDate,
                                 months: isMonthly ? packageData.months : null,
-                                sessionPerWeek: packageData.schedules.length,
+                                sessionPerWeek: packageData.flexible ? packageData.sessionPerWeek : packageData.schedules.length,
+                                sessionDuration: packageData.flexible ? (packageData.sessionDuration ?? 0) : 0,
+                                capacity: packageData.flexible ? null : packageData.capacity,
+                                flexible: packageData.flexible,
                                 memo: packageData.memo,
                                 entryFees: packageData.entryFees ?? 0,
                                 entryFeesExplanation: packageData.entryFeesExplanation,
@@ -501,6 +507,7 @@ export async function createProgramStore(program: Program): Promise<{
                                         from: schedule.from,
                                         to: schedule.to,
                                         memo: schedule.memo,
+                                        capacity: schedule.capacity ?? 0,
                                         createdAt: sql`now()`,
                                         updatedAt: sql`now()`,
                                     }))
@@ -819,10 +826,12 @@ export async function updateProgramStore(program: Program, oldProgram: Program) 
                                 name: packageData.name,
                                 price: packageData.price,
                                 startDate: startDate,
-                                capacity: packageData.capacity,
                                 endDate: endDate,
                                 months: isMonthly ? packageData.months : null,
-                                sessionPerWeek: packageData.schedules.length,
+                                sessionPerWeek: packageData.flexible ? packageData.sessionPerWeek : packageData.schedules.length,
+                                sessionDuration: packageData.flexible ? (packageData.sessionDuration ?? 0) : 0,
+                                capacity: packageData.flexible ? null : packageData.capacity,
+                                flexible: packageData.flexible,
                                 memo: packageData.memo,
                                 entryFees: packageData.entryFees ?? 0,
                                 entryFeesExplanation: packageData.entryFeesExplanation,
@@ -843,6 +852,7 @@ export async function updateProgramStore(program: Program, oldProgram: Program) 
                                         from: schedule.from,
                                         to: schedule.to,
                                         memo: schedule.memo,
+                                        capacity: schedule.capacity ?? 0,
                                         createdAt: sql`now()`,
                                         updatedAt: sql`now()`,
                                     }))
@@ -878,14 +888,15 @@ export async function updateProgramStore(program: Program, oldProgram: Program) 
                                     price: packageData.price,
                                     startDate: startDate,
                                     endDate: endDate,
-                                    capacity: packageData.capacity,
+                                    capacity: packageData.flexible ? null : packageData.capacity,
                                     months: isMonthly ? packageData.months : null,
-                                    sessionPerWeek: packageData.schedules.length,
+                                    sessionPerWeek: packageData.flexible ? packageData.sessionPerWeek : packageData.schedules.length,
+                                    sessionDuration: packageData.flexible ? packageData.sessionDuration : null,
+                                    flexible: packageData.flexible,
                                     memo: packageData.memo,
                                     entryFees: packageData.entryFees ?? 0,
                                     entryFeesExplanation: packageData.entryFeesExplanation,
                                     entryFeesAppliedUntil: packageData.entryFeesAppliedUntil || null,
-                                    updatedAt: sql`now()`,
                                 })
                                 .where(eq(packages.id, packageData.id!))
 
@@ -903,6 +914,7 @@ export async function updateProgramStore(program: Program, oldProgram: Program) 
                                             from: schedule.from,
                                             to: schedule.to,
                                             memo: schedule.memo,
+                                            capacity: schedule.capacity ?? 0,
                                             createdAt: sql`now()`,
                                             updatedAt: sql`now()`,
                                         }))

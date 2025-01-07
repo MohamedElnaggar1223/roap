@@ -798,7 +798,7 @@ export const packages = pgTable("packages", {
     months: text("months").array(),
     sessionPerWeek: integer("session_per_week").default(0).notNull(),
     sessionDuration: integer("session_duration"),
-    capacity: integer("capacity").default(0).notNull(),
+    capacity: integer("capacity").default(0),
     // You can use { mode: "bigint" } if numbers are exceeding js number limitations
     programId: bigint("program_id", { mode: "number" }).notNull(),
     createdAt: timestamp("created_at", { mode: 'string' }),
@@ -809,6 +809,7 @@ export const packages = pgTable("packages", {
     entryFeesAppliedUntil: text("entry_fees_applied_until").array(),
     entryFeesStartDate: date("entry_fees_start_date"),
     entryFeesEndDate: date("entry_fees_end_date"),
+    flexible: boolean("flexible"),
 }, (table) => {
     return {
         packagesProgramIdForeign: foreignKey({
@@ -929,6 +930,7 @@ export const schedules = pgTable("schedules", {
     packageId: bigint("package_id", { mode: "number" }).notNull(),
     createdAt: timestamp("created_at", { mode: 'string' }),
     updatedAt: timestamp("updated_at", { mode: 'string' }),
+    capacity: integer("capacity").notNull().default(0),
     memo: text(),
 }, (table) => {
     return {

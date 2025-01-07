@@ -13,8 +13,6 @@ export type Package = {
     endDate: string;
     months: string[] | null;
     sessionPerWeek: number;
-    sessionDuration: number | null;
-    capacity: number;
     programId: number;
     memo: string | null;
     entryFeesExplanation: string | null;
@@ -22,6 +20,9 @@ export type Package = {
     entryFeesStartDate: string | null;
     entryFeesEndDate: string | null;
     pending?: boolean;
+    flexible?: boolean | null;
+    capacity: number | null;
+    sessionDuration: number | null;
     schedules: {
         id?: number;
         createdAt: string | null;
@@ -31,6 +32,7 @@ export type Package = {
         day: string;
         from: string;
         to: string;
+        capacity: number;
     }[];
 }
 
@@ -211,6 +213,28 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
                 if (mutate) mutate()
             }
         },
+        addPackage: (packageData: Package) => {
+            const program = get().programs.find(p => p.id === packageData.programId)
+
+            if (!program) return
+
+            set({
+                programs: get().programs.map(p => p.id === program.id ? ({
+                    ...program,
+                    packages: [...program.packages, {
+                        ...packageData,
+                        flexible: packageData.flexible ?? null,
+                        capacity: packageData.flexible ? null : packageData.capacity,
+                        sessionDuration: packageData.flexible ? packageData.sessionDuration : null,
+                        sessionPerWeek: packageData.flexible ? packageData.sessionPerWeek : packageData.schedules.length,
+                        schedules: packageData.schedules.map(schedule => ({
+                            ...schedule,
+                            capacity: packageData.flexible ? schedule.capacity : (packageData.capacity ?? 0)
+                        }))
+                    }]
+                }) : p)
+            })
+        },
         editPackage: (packageData: Package) => {
             const program = get().programs.find(p => p.id === packageData.programId)
 
@@ -223,27 +247,24 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
                     return {
                         ...program,
                         packages: program.packages.map(pkg => {
-                            if (packageData.id && pkg.id) {
-                                return pkg.id === packageData.id ? packageData : pkg
+                            if ((packageData.id && pkg.id === packageData.id) ||
+                                (packageData.tempId && pkg.tempId === packageData.tempId)) {
+                                return {
+                                    ...packageData,
+                                    flexible: packageData.flexible ?? null,
+                                    capacity: packageData.flexible ? null : packageData.capacity,
+                                    sessionDuration: packageData.flexible ? packageData.sessionDuration : null,
+                                    sessionPerWeek: packageData.flexible ? packageData.sessionPerWeek : packageData.schedules.length,
+                                    schedules: packageData.schedules.map(schedule => ({
+                                        ...schedule,
+                                        capacity: packageData.flexible ? schedule.capacity : (packageData.capacity ?? 0)
+                                    }))
+                                }
                             }
-
-                            if (packageData.tempId && pkg.tempId) {
-                                return pkg.tempId === packageData.tempId ? packageData : pkg
-                            }
-
                             return pkg
                         })
                     }
                 })
-            })
-        },
-        addPackage: (packageData: Package) => {
-            const program = get().programs.find(p => p.id === packageData.programId)
-
-            if (!program) return
-
-            set({
-                programs: get().programs.map(p => p.id === program.id ? ({ ...program, packages: [...program.packages, packageData] }) : p)
             })
         },
         deletePackage: (packageData: Package) => {

@@ -55,6 +55,7 @@ export interface Schedule {
     day: string;
     from: string;
     to: string;
+    capacity: number;
 }
 
 export interface PackageDetails {
@@ -68,6 +69,8 @@ export interface PackageDetails {
     endDate: string | null;
     startDate: string | null;
     months: string[] | null;
+    flexible: boolean | null;
+    capacity: number | null;
 }
 
 export interface CoachDetails {

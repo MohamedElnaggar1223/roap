@@ -12,6 +12,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import {
     Form,
     FormControl,
+    FormDescription,
     FormField,
     FormItem,
     FormLabel,
@@ -31,6 +32,7 @@ import { DateSelector } from '@/components/shared/date-selector';
 import { Package } from '@/stores/programs-store';
 import { useProgramsStore } from '@/providers/store-provider';
 import { v4 as uuid } from 'uuid';
+import { Switch } from '@/components/ui/switch';
 
 const formatTimeValue = (value: string) => {
     if (!value) return '';
@@ -74,7 +76,7 @@ const packageSchema = z.object({
         required_error: "End date is required",
     }).optional(),
     months: z.array(z.string()).optional(),
-    memo: z.string(),
+    memo: z.string().optional(),
     entryFees: z.string().default("0"),
     entryFeesExplanation: z.string().optional(),
     entryFeesAppliedUntil: z.array(z.string()).default([]).optional(),
@@ -84,27 +86,94 @@ const packageSchema = z.object({
         day: z.string().min(1, "Day is required"),
         from: z.string().min(1, "Start time is required"),
         to: z.string().min(1, "End time is required"),
-        memo: z.string(),
-        id: z.number().optional()
+        memo: z.string().optional(),
+        id: z.number().optional(),
+        capacity: z.string().default("0")
     })),
     capacity: z.string().default("0"),
-}).refine((data) => {
+    flexible: z.boolean().default(false),
+    sessionPerWeek: z.string().transform(val => parseInt(val) || 0),
+    sessionDuration: z.string().transform(val => parseInt(val) || null).nullable(),
+}).superRefine((data, ctx) => {
     if (parseFloat(data.entryFees) > 0 && !data.entryFeesExplanation) {
-        return false;
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Entry fees explanation is required when entry fees is set",
+            path: ["entryFeesExplanation"]
+        });
     }
+
     if (data.type === "Monthly" && parseFloat(data.entryFees) > 0 && data.entryFeesAppliedUntil?.length === 0) {
-        return false;
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Must select months for entry fees application",
+            path: ["entryFeesAppliedUntil"]
+        });
     }
+
     if (data.type === "Monthly" && (!data.months || data.months.length === 0)) {
-        return false;
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Must select at least one month",
+            path: ["months"]
+        });
     }
+
     if (data.type !== "Monthly" && (!data.startDate || !data.endDate)) {
-        return false;
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Start and end dates are required",
+            path: ["startDate"]
+        });
     }
-    return true;
-}, {
-    message: "Required fields missing",
-    path: ["months"]
+
+    if (data.flexible) {
+        // Check sessionPerWeek when package is flexible
+        if (!data.sessionPerWeek || data.sessionPerWeek <= 0) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Sessions per week is required and must be greater than 0",
+                path: ["sessionPerWeek"]
+            });
+        }
+
+        if (data.sessionPerWeek > data.schedules.length) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: `Sessions per week cannot be greater than available schedules (${data.schedules.length})`,
+                path: ["sessionPerWeek"]
+            });
+        }
+
+        // Check sessionDuration when package is flexible
+        if (!data.sessionDuration) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Session duration is required for flexible packages",
+                path: ["sessionDuration"]
+            });
+        }
+
+        // Validate that all schedules have capacity when package is flexible
+        data.schedules.forEach((schedule, index) => {
+            if (!schedule?.capacity || schedule.capacity === 'NaN' || parseInt(schedule.capacity) <= 0) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "Schedule capacity must be greater than 0",
+                    path: [`schedules.${index}.capacity`]
+                });
+            }
+        });
+    } else {
+        // When not flexible, validate package capacity
+        if (parseInt(data.capacity) <= 0) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Package capacity must be greater than 0",
+                path: ["capacity"]
+            });
+        }
+    }
 });
 
 interface Props {
@@ -181,6 +250,8 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
     const endDate = form.watch("endDate")
     const months = form.watch("months") || []
 
+    console.log(fields)
+
     const addMonth = () => {
         const newMonthEntry = {
             month: '',
@@ -212,7 +283,6 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
 
     const onSubmit = async (values: z.infer<typeof packageSchema>) => {
         try {
-            console.log(programId)
             if (programId) {
                 setLoading(true)
                 const packageName = values.type === "Term" ?
@@ -238,7 +308,7 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                     endDate: endDate?.toLocaleString() ?? '',
                     months: values.months ?? [],
                     programId,
-                    memo: values.memo,
+                    memo: values.memo ?? '',
                     entryFees: parseFloat(values.entryFees),
                     entryFeesExplanation: showEntryFeesFields ? values.entryFeesExplanation ?? '' : null,
                     entryFeesAppliedUntil: values.type === "Monthly" && showEntryFeesFields ?
@@ -251,15 +321,17 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                         day: schedule.day,
                         from: schedule.from,
                         to: schedule.to,
-                        memo: schedule.memo,
+                        memo: schedule.memo ?? '',
+                        capacity: values.flexible ? parseInt(schedule.capacity) : parseInt(values.capacity),
                         id: undefined,
                         createdAt: new Date().toLocaleString(),
                         updatedAt: new Date().toLocaleString(),
                         packageId: undefined
                     })),
-                    capacity: parseInt(values.capacity),
-                    sessionPerWeek: 0,
-                    sessionDuration: 60,
+                    capacity: values.flexible ? null : parseInt(values.capacity),
+                    flexible: values.flexible,
+                    sessionPerWeek: values.flexible ? values.sessionPerWeek : values.schedules.length,
+                    sessionDuration: values.flexible ? values.sessionDuration : null,
                     createdAt: new Date().toLocaleString(),
                     updatedAt: new Date().toLocaleString(),
                 })
@@ -351,6 +423,104 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                                     />
                                 ) : null}
 
+                                <div className="space-y-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="flexible"
+                                        render={({ field }) => (
+                                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                                <div className="space-y-0.5">
+                                                    <FormLabel className="text-base">Flexible Schedule</FormLabel>
+                                                    <FormDescription>
+                                                        Allow students to choose which days they want to attend
+                                                    </FormDescription>
+                                                </div>
+                                                <FormControl>
+                                                    <Switch
+                                                        checked={field.value}
+                                                        onCheckedChange={field.onChange}
+                                                    />
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    {form.watch("flexible") ? (
+                                        <div className="space-y-4">
+                                            <FormField
+                                                control={form.control}
+                                                name="sessionPerWeek"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Sessions Per Week</FormLabel>
+                                                        <FormControl>
+                                                            <Input
+                                                                {...field}
+                                                                type="number"
+                                                                min="1"
+                                                                max={fields.length}
+                                                                className="px-2 py-6 rounded-[10px] border border-gray-500 font-inter"
+                                                                value={field.value || ''} // Convert 0 to empty string
+                                                                onChange={(e) => {
+                                                                    const value = parseInt(e.target.value) || 0;
+                                                                    field.onChange(value.toString());
+                                                                }}
+                                                            />
+                                                        </FormControl>
+                                                        <FormDescription>
+                                                            Maximum {fields.length} sessions available per week
+                                                        </FormDescription>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+
+                                            <FormField
+                                                control={form.control}
+                                                name="sessionDuration"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Session Duration (minutes)</FormLabel>
+                                                        <FormControl>
+                                                            <Input
+                                                                {...field}
+                                                                type="number"
+                                                                min="1"
+                                                                className="px-2 py-6 rounded-[10px] border border-gray-500 font-inter"
+                                                                value={field.value || ''} // Convert null to empty string
+                                                                onChange={(e) => {
+                                                                    const value = e.target.value ? parseInt(e.target.value) : null;
+                                                                    field.onChange(value?.toString());
+                                                                }}
+                                                            />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <FormField
+                                            control={form.control}
+                                            name="capacity"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Package Capacity</FormLabel>
+                                                    <FormControl>
+                                                        <Input
+                                                            {...field}
+                                                            type="number"
+                                                            min="1"
+                                                            className="px-2 py-6 rounded-[10px] border border-gray-500 font-inter"
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    )}
+                                </div>
+
                                 <FormField
                                     control={form.control}
                                     name="price"
@@ -361,22 +531,6 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                                                 <div className="flex items-center">
                                                     <span className="px-2 py-3.5 text-sm bg-transparent border border-r-0 border-gray-500 rounded-l-[10px]">AED</span>
                                                     <Input {...field} type="number" min="0" step="0.01" className='px-2 py-6 rounded-l-none rounded-r-[10px] border border-gray-500 font-inter' />
-                                                </div>
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    control={form.control}
-                                    name="capacity"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Capacity</FormLabel>
-                                            <FormControl>
-                                                <div className="flex items-center">
-                                                    <Input {...field} type="number" min="0" step="1" className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                 </div>
                                             </FormControl>
                                             <FormMessage />
@@ -595,7 +749,7 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                                             variant="outline"
                                             size="sm"
                                             className="text-main-green"
-                                            onClick={() => append({ day: '', from: '', to: '', memo: '' })}
+                                            onClick={() => append({ day: '', from: '', to: '', memo: '', capacity: '' })}
                                         >
                                             Add Session
                                         </Button>
@@ -652,15 +806,19 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                                                                     value={formatTimeValue(field.value)}
                                                                     onChange={(e) => {
                                                                         const newValue = e.target.value;
-                                                                        // Only update if it's a valid time format
                                                                         if (newValue === '' || /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(newValue)) {
                                                                             field.onChange(newValue);
+                                                                            // If package is flexible, automatically calculate and set 'to' time
+                                                                            if (form.watch("flexible") && newValue && form.watch("sessionDuration")) {
+                                                                                const duration = form.watch("sessionDuration");
+                                                                                const [hours, minutes] = newValue.split(':').map(Number);
+                                                                                const startDate = new Date();
+                                                                                startDate.setHours(hours, minutes, 0);
+                                                                                const endDate = new Date(startDate.getTime() + (duration ?? 0) * 60000);
+                                                                                const to = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`;
+                                                                                form.setValue(`schedules.${index}.to`, to);
+                                                                            }
                                                                         }
-                                                                    }}
-                                                                    onBlur={(e) => {
-                                                                        // Format on blur to ensure consistent value
-                                                                        field.onChange(formatTimeValue(e.target.value));
-                                                                        field.onBlur();
                                                                     }}
                                                                     className="px-2 py-6 rounded-[10px] border border-gray-500 font-inter"
                                                                 />
@@ -682,24 +840,42 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                                                                     type="time"
                                                                     value={formatTimeValue(field.value)}
                                                                     onChange={(e) => {
-                                                                        const newValue = e.target.value;
-                                                                        // Only update if it's a valid time format
-                                                                        if (newValue === '' || /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(newValue)) {
-                                                                            field.onChange(newValue);
+                                                                        if (!form.watch("flexible")) {
+                                                                            const newValue = e.target.value;
+                                                                            if (newValue === '' || /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(newValue)) {
+                                                                                field.onChange(newValue);
+                                                                            }
                                                                         }
                                                                     }}
-                                                                    onBlur={(e) => {
-                                                                        // Format on blur to ensure consistent value
-                                                                        field.onChange(formatTimeValue(e.target.value));
-                                                                        field.onBlur();
-                                                                    }}
-                                                                    className="px-2 py-6 rounded-[10px] border border-gray-500 font-inter"
+                                                                    disabled={form.watch("flexible")}
+                                                                    className="px-2 py-6 rounded-[10px] border border-gray-500 font-inter disabled:opacity-50"
                                                                 />
                                                             </FormControl>
                                                             <FormMessage />
                                                         </FormItem>
                                                     )}
                                                 />
+                                                {form.watch("flexible") && (
+                                                    <FormField
+                                                        control={form.control}
+                                                        name={`schedules.${index}.capacity`}
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>Session Capacity</FormLabel>
+                                                                <FormControl>
+                                                                    <Input
+                                                                        {...field}
+                                                                        type="number"
+                                                                        min="1"
+                                                                        className="px-2 py-6 rounded-[10px] border border-gray-500 font-inter"
+                                                                        required={form.watch("flexible")}
+                                                                    />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                )}
                                             </div>
 
                                             <FormField

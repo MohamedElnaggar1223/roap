@@ -526,7 +526,7 @@ export default function Calendar() {
 												</div>
 												{slotEvents.map((groupedEvent, index) => (
 													<div
-														key={`${groupedEvent.coachName}-${groupedEvent.packageId}`}
+														key={index}
 														className={cn(
 															"absolute left-0 right-0 m-1 p-2 text-xs border rounded-md overflow-hidden flex flex-col items-start justify-start gap-1 cursor-pointer",
 															// groupedEvent.color ? `!bg-[${groupedEvent.color}]` : colors[index % colors.length]

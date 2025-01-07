@@ -8,7 +8,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { endOfMonth, format, isBefore, parseISO } from "date-fns";
+import { addDays, endOfMonth, format, isAfter, isBefore, parseISO, startOfWeek } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import {
     Popover,
@@ -37,6 +37,14 @@ import { getProgramsData } from '@/lib/actions/programs.actions';
 import Image from 'next/image';
 import { Checkbox } from '@/components/ui/checkbox';
 import AddNewAthlete from './add-new-athlete';
+import { Label } from '@/components/ui/label';
+
+type SelectedSchedule = {
+    day: string;
+    from: string;
+    to: string;
+    capacity: number;
+};
 
 function calculateEndTime(startTime: string, durationMinutes: number): string {
     const [hours, minutes] = startTime.split(':').map(Number)
@@ -254,6 +262,7 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingDetails, athlete
     const [filteredPrograms, setFilteredPrograms] = useState<ProgramDetails[]>([]);
     const [filteredSports, setFilteredSports] = useState<string[]>([]);
     const [error, setError] = useState<string | null>(null);
+    const [selectedSchedules, setSelectedSchedules] = useState<SelectedSchedule[]>([]);
 
     useEffect(() => {
         if (selectedLocation) {
@@ -320,6 +329,46 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingDetails, athlete
         );
     };
 
+    const getWeekDates = (selectedDate: Date) => {
+        const startOfWeekData = startOfWeek(selectedDate);
+        return Array.from({ length: 7 }, (_, i) => {
+            const date = addDays(startOfWeekData, i);
+            return {
+                date,
+                day: format(date, 'EEEE').toLowerCase()
+            };
+        });
+    };
+
+    const getWeekSchedules = (packageData: PackageDetails, selectedDate: Date) => {
+        if (!selectedDate) return [];
+
+        const weekDates = getWeekDates(selectedDate);
+        return packageData.schedules.map(schedule => {
+            const dayDate = weekDates.find(d => d.day === days[schedule.day.toLowerCase() as keyof typeof days]);
+            return {
+                ...schedule,
+                date: dayDate?.date,
+                isAvailable: dayDate?.date ? !isBefore(dayDate.date, new Date()) &&
+                    !isAfter(dayDate.date, new Date(packageData.endDate!)) : false
+            };
+        });
+    };
+
+    useEffect(() => {
+        if (date && selectedPackage?.flexible) {
+            const dayName = format(date, 'EEEE').toLowerCase();
+            const daySchedules = selectedPackage.schedules.filter(
+                schedule => days[schedule.day.toLowerCase() as keyof typeof days] === dayName
+            );
+
+            // If there are schedules for this day, select the first one by default
+            if (daySchedules.length > 0) {
+                setSelectedSchedules([daySchedules[0]]);
+                onTimeChange(JSON.stringify([daySchedules[0]]));
+            }
+        }
+    }, [date, selectedPackage]);
 
     useEffect(() => {
         if (date && selectedPackage?.schedules) {
@@ -353,9 +402,17 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingDetails, athlete
     }, [date])
 
     useEffect(() => {
-        if (!time) return
-        onTimeChange(time)
-    }, [time])
+        if (selectedPackage?.flexible) {
+            // For flexible packages, pass stringified selected schedules
+            if (selectedSchedules.length === selectedPackage.sessionPerWeek) {
+                onTimeChange(JSON.stringify(selectedSchedules));
+            }
+        } else {
+            // For non-flexible packages, pass single time slot as before
+            if (!time) return;
+            onTimeChange(time);
+        }
+    }, [time, selectedPackage, selectedSchedules]);
 
     // useEffect(() => {
     //     if (selectedProgram && selectedPackage && selectedCoach && date && time) {
@@ -513,29 +570,101 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingDetails, athlete
                 <label className="text-sm font-medium">Sessions</label>
                 <div>{selectedPackage?.schedules.map(s => <p className='font-semibold' key={s.id}>{days[s.day.toLowerCase() as keyof typeof days].slice(0, 1).toUpperCase() + days[s.day.toLowerCase() as keyof typeof days].slice(1)} {format(new Date(`2000-01-01T${s.from}`), 'h:mm a')} - {format(new Date(`2000-01-01T${s.to}`), 'h:mm a')}</p>)}</div>
             </div>
+            {selectedPackage?.flexible && (
+                <div className="space-y-2 flex flex-col">
+                    <label className="text-sm font-medium">
+                        Select {selectedPackage.sessionPerWeek} sessions per week:
+                    </label>
+                    <div className="grid gap-2">
+                        {selectedPackage.schedules.map((schedule, index) => {
+                            const isSelectedDay = date &&
+                                days[schedule.day.toLowerCase() as keyof typeof days] ===
+                                format(date, 'EEEE').toLowerCase();
+
+                            const isSelected = selectedSchedules.some(s =>
+                                s.day === schedule.day && s.from === schedule.from
+                            );
+
+                            // Count how many schedules are selected for this day
+                            const selectedForThisDay = selectedSchedules.filter(s => s.day === schedule.day).length;
+
+                            return (
+                                <div key={`${schedule.day}-${schedule.from}`} className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id={`schedule-${index}`}
+                                        checked={isSelected}
+                                        onCheckedChange={(checked) => {
+                                            if (checked) {
+                                                // If adding a schedule
+                                                if (selectedSchedules.length >= selectedPackage.sessionPerWeek) {
+                                                    // Remove the first non-selected-day schedule
+                                                    const newSchedules = selectedSchedules.filter(s =>
+                                                        !(days[s.day.toLowerCase() as keyof typeof days] ===
+                                                            format(date!, 'EEEE').toLowerCase())
+                                                    ).slice(1);
+                                                    setSelectedSchedules([...newSchedules, schedule]);
+                                                    onTimeChange(JSON.stringify([...newSchedules, schedule]));
+                                                } else {
+                                                    setSelectedSchedules([...selectedSchedules, schedule]);
+                                                    onTimeChange(JSON.stringify([...selectedSchedules, schedule]));
+                                                }
+                                            } else {
+                                                // Only allow unchecking if there's another schedule selected for this day
+                                                if (!isSelectedDay || selectedForThisDay > 1) {
+                                                    const newSchedules = selectedSchedules.filter(s =>
+                                                        !(s.day === schedule.day && s.from === schedule.from)
+                                                    );
+                                                    setSelectedSchedules(newSchedules);
+                                                    onTimeChange(JSON.stringify(newSchedules));
+                                                }
+                                            }
+                                        }}
+                                        disabled={
+                                            // Disable if:
+                                            // 1. At max sessions and not already selected
+                                            (!isSelected && selectedSchedules.length >= selectedPackage.sessionPerWeek) ||
+                                            // 2. It's the only selected session for the selected day
+                                            (isSelected && isSelectedDay && selectedForThisDay === 1) ||
+                                            // 3. No capacity
+                                            schedule.capacity <= 0
+                                        }
+                                    />
+                                    <Label htmlFor={`schedule-${index}`} className={schedule.capacity <= 0 ? "text-gray-400" : ""}>
+                                        {days[schedule.day as keyof typeof days]} {" "}
+                                        {format(parseISO(`2000-01-01T${schedule.from}`), 'h:mm a')} - {" "}
+                                        {format(parseISO(`2000-01-01T${schedule.to}`), 'h:mm a')} {" "}
+                                        ({schedule.capacity} spots)
+                                    </Label>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
             {/* Time Selection */}
-            <div className="space-y-2 flex flex-col">
-                <label className="text-sm font-medium">Time</label>
-                <select
-                    className='px-2 py-3.5 text-sm rounded-[10px] border border-gray-500 font-inter bg-transparent'
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                    disabled={!date}
-                >
-                    <option value="">Select time</option>
-                    {availableTimeSlots.map(slot => (
-                        <option
-                            key={slot.time}
-                            value={slot.from + " " + slot.to}
-                            disabled={!slot.isAvailable}
-                        >
-                            {/* {format(new Date(`2000-01-01T${slot.time}`), 'h:mm a')} */}
-                            {slot.time}
-                            {!slot.isAvailable && ` (${slot.reason})`}
-                        </option>
-                    ))}
-                </select>
-            </div>
+            {selectedPackage && !selectedPackage.flexible && (
+                <div className="space-y-2 flex flex-col">
+                    <label className="text-sm font-medium">Time</label>
+                    <select
+                        className='px-2 py-3.5 text-sm rounded-[10px] border border-gray-500 font-inter bg-transparent'
+                        value={time}
+                        onChange={(e) => setTime(e.target.value)}
+                        disabled={!date}
+                    >
+                        <option value="">Select time</option>
+                        {availableTimeSlots.map(slot => (
+                            <option
+                                key={slot.time}
+                                value={slot.from + " " + slot.to}
+                                disabled={!slot.isAvailable}
+                            >
+                                {slot.time}
+                                {!slot.isAvailable && ` (${slot.reason})`}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            )}
         </div>
     );
 };
@@ -653,7 +782,31 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
                     </div>
                     <div className='flex flex-col items-start justify-center gap-2'>
                         <p className='text-xs text-gray-500'>Training Days and Time</p>
-                        <p className='font-semibold'>{bookingDetails.package.schedules.map(s => <p>{days[s.day as keyof typeof days].slice(0, 1).toUpperCase() + days[s.day as keyof typeof days].slice(1)} {format(new Date(`2000-01-01T${s.from}`), 'h:mm a')} - {format(new Date(`2000-01-01T${s.to}`), 'h:mm a')}<br /></p>)}</p>
+                        <p className='font-semibold'>
+                            {bookingDetails.package.flexible ? (
+                                // For flexible packages, parse the selected schedules from time string
+                                JSON.parse(bookingDetails.time).map((schedule: any) => (
+                                    <p key={`${schedule.day}-${schedule.from}`}>
+                                        {days[schedule.day as keyof typeof days].slice(0, 1).toUpperCase() +
+                                            days[schedule.day as keyof typeof days].slice(1)} {" "}
+                                        {format(new Date(`2000-01-01T${schedule.from}`), 'h:mm a')} - {" "}
+                                        {format(new Date(`2000-01-01T${schedule.to}`), 'h:mm a')}
+                                        <br />
+                                    </p>
+                                ))
+                            ) : (
+                                // For non-flexible packages, show all schedules as before
+                                bookingDetails.package.schedules.map(s => (
+                                    <p key={`${s.day}-${s.from}`}>
+                                        {days[s.day as keyof typeof days].slice(0, 1).toUpperCase() +
+                                            days[s.day as keyof typeof days].slice(1)} {" "}
+                                        {format(new Date(`2000-01-01T${s.from}`), 'h:mm a')} - {" "}
+                                        {format(new Date(`2000-01-01T${s.to}`), 'h:mm a')}
+                                        <br />
+                                    </p>
+                                ))
+                            )}
+                        </p>
                     </div>
                 </div>
             </div>
