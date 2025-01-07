@@ -121,7 +121,7 @@ const ColorSelector = ({ form, takenColors, disabled = false }: { form: any; tak
             name="color"
             render={({ field }) => (
                 <FormItem className='flex-1'>
-                    <FormLabel>Color {field.value}</FormLabel>
+                    <FormLabel>Color {field.value} <span className='text-xs text-red-500'>*</span></FormLabel>
                     <div className="flex items-center gap-2">
                         <Select
                             disabled={disabled}
@@ -381,6 +381,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                 name: values.name,
                 description: values.description,
                 branchId: parseInt(values.branchId),
+                color: values.color,
                 sportId: parseInt(values.sportId),
                 createdAt: programEdited.createdAt,
                 updatedAt: programEdited.updatedAt,
@@ -438,6 +439,8 @@ export default function EditProgram({ branches, sports, programEdited, academySp
             setEditedPackage(null)
         }
     }, [editPackageOpen])
+
+    console.log(program)
 
     return (
         <>
@@ -872,7 +875,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                             </div>
 
                                             {/* Rows */}
-                                            {program?.packages?.map((packageData, index) => (
+                                            {program?.packages?.filter(p => !p.deleted).map((packageData, index) => (
                                                 <Fragment key={index}>
                                                     <div className="py-4 px-2 bg-main-white flex items-center justify-center">
                                                         {!packageData.id && (

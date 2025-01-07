@@ -52,14 +52,12 @@ interface StepRequirements {
     }
     'assessment': {
         description: boolean
-        coaches: boolean
         packages: boolean
         branchId: boolean
         sportId: boolean
         startDateOfBirth: boolean
         endDateOfBirth: boolean
         gender: boolean
-        numberOfSeats: boolean
     }
 }
 
@@ -119,7 +117,7 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
     const router = useRouter()
     const pathname = usePathname()
     const [steps, setSteps] = useState<Step[]>(STEPS)
-    const { data: finalAcademyDetails, mutate } = useSWR(!onboarded ? 'OnBoardingDetails' : null, getAcademyDetailsClient)
+    const { data: finalAcademyDetails, mutate } = useSWR(!onboarded ? `OnBoardingDetails ${academyName}` : null, getAcademyDetailsClient)
     const [requirements, setRequirements] = useState<StepRequirements>({
         'academy-details': {
             name: false,
@@ -157,14 +155,12 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
         },
         'assessment': {
             description: false,
-            coaches: false,
             packages: false,
             branchId: false,
             sportId: false,
             startDateOfBirth: false,
             endDateOfBirth: false,
             gender: false,
-            numberOfSeats: false,
         },
     })
 
@@ -196,14 +192,34 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
         return allRequirementsMet
     }
 
+    console.log(finalAcademyDetails)
+    console.log(
+        {
+            name: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].name,
+            description: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].description,
+            branchId: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].branchId,
+            sportId: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].sportId,
+            startDateOfBirth: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].startDateOfBirth,
+            endDateOfBirth: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].endDateOfBirth,
+            type: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].type,
+            packages: (finalAcademyDetails?.programs ?? []).length > 0 && (finalAcademyDetails?.programs![0].packages!?.length > 0),
+            gender: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].gender,
+            color: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].color,
+        }
+    )
+
     useEffect(() => {
         console.log({
-            name: !!finalAcademyDetails?.name,
-            description: !!finalAcademyDetails?.description,
-            sports: !!(finalAcademyDetails?.sports?.length && finalAcademyDetails.sports.length > 0),
-            logo: !!finalAcademyDetails?.logo,
-            hasGallery: !!(finalAcademyDetails?.gallery?.length && finalAcademyDetails.gallery.length > 0),
-            hasPolicy: finalAcademyDetails?.policy!?.length > 0
+            name: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].name,
+            description: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].description,
+            branchId: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].branchId,
+            sportId: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].sportId,
+            startDateOfBirth: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].startDateOfBirth,
+            endDateOfBirth: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].endDateOfBirth,
+            type: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].type,
+            packages: (finalAcademyDetails?.programs ?? []).length > 0 && (finalAcademyDetails?.programs![0].packages!?.length > 0),
+            gender: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].gender,
+            color: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].color,
         })
         updateRequirements('academy-details', {
             name: !!finalAcademyDetails?.name,
@@ -245,7 +261,6 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
         })
         updateRequirements('assessment', {
             description: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].description,
-            coaches: (finalAcademyDetails?.assessments ?? []).length > 0 && (finalAcademyDetails?.assessments![0].coaches!?.length > 0),
             packages: (finalAcademyDetails?.assessments ?? []).length > 0 && (finalAcademyDetails?.assessments![0].packages!?.length > 0),
             branchId: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].branchId,
             sportId: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].sportId,
@@ -254,7 +269,7 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
             gender: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].gender,
         })
 
-        if (completedSteps === STEPS.length - 1) {
+        if (completedSteps === STEPS.length) {
             const finishOnboarding = async () => {
                 await academyOnBoarded()
                 router.refresh()
@@ -263,6 +278,22 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
             finishOnboarding()
         }
     }, [finalAcademyDetails])
+
+    console.log(completedSteps)
+    console.log(STEPS.length)
+
+    useEffect(() => {
+        if (completedSteps === STEPS.length) {
+            const finishOnboarding = async () => {
+                await academyOnBoarded()
+                router.refresh()
+            }
+
+            console.log("A7a")
+
+            finishOnboarding()
+        }
+    }, [completedSteps])
 
     // useEffect(() => {
     //     if (completedSteps === STEPS.length - 1) {

@@ -28,6 +28,7 @@ import { DateSelector } from '@/components/shared/date-selector';
 import { Package } from '@/stores/programs-store';
 import { useProgramsStore } from '@/providers/store-provider';
 import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
 
 const formatTimeValue = (value: string) => {
     if (!value) return '';
@@ -62,12 +63,14 @@ const packageSchema = z.object({
         to: z.string().min(1, "End time is required"),
         memo: z.string().optional(),
         id: z.number().optional(),
-        capacity: z.string().default("0")
+        capacity: z.string().default("0"),
+        capacityType: z.enum(["normal", "unlimited"]).default("normal")
     })),
     capacity: z.string().default("0"),
+    capacityType: z.enum(["normal", "unlimited"]).default("normal"),
     flexible: z.boolean().default(false),
-    sessionPerWeek: z.string().transform(val => parseInt(val) || 0),
-    sessionDuration: z.string().transform(val => parseInt(val) || null).nullable(),
+    sessionPerWeek: z.string().transform(val => parseInt(val) || 0).optional(),
+    sessionDuration: z.string().transform(val => parseInt(val) || null).optional(),
 }).superRefine((data, ctx) => {
     console.log("Data", data)
     if (parseFloat(data.entryFees) > 0 && !data.entryFeesExplanation) {
@@ -112,7 +115,7 @@ const packageSchema = z.object({
             });
         }
 
-        if (data.sessionPerWeek > data.schedules.length) {
+        if ((data?.sessionPerWeek ?? 0) > data.schedules.length) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 message: `Sessions per week cannot be greater than available schedules (${data.schedules.length})`,
@@ -131,7 +134,7 @@ const packageSchema = z.object({
 
         // Validate that all schedules have capacity when package is flexible
         data.schedules.forEach((schedule, index) => {
-            if (!schedule?.capacity || schedule.capacity === 'NaN' || parseInt(schedule.capacity) <= 0) {
+            if (schedule.capacityType === "normal" && !schedule?.capacity || schedule.capacity === 'NaN' || parseInt(schedule.capacity) <= 0) {
                 console.log("Schedule", schedule)
                 ctx.addIssue({
                     code: z.ZodIssueCode.custom,
@@ -142,7 +145,7 @@ const packageSchema = z.object({
         });
     } else {
         // When not flexible, validate package capacity
-        if (parseInt(data.capacity) <= 0) {
+        if (data.capacityType === "normal" && parseInt(data.capacity) <= 0) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 message: "Package capacity must be greater than 0",
@@ -264,9 +267,10 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                     memo: s.memo ?? '',
                     from: s.from.split(':').length >= 3 ? s.from.split(':')[0] + ':' + s.from.split(':')[1] : s.from,
                     to: s.to.split(':').length >= 3 ? s.to.split(':')[0] + ':' + s.to.split(':')[1] : s.to,
-                    capacity: s.capacity?.toString() ?? '0'
+                    capacity: s.capacity?.toString() ?? '0',
+                    capacityType: s.capacity === 9999 ? 'unlimited' : 'normal'
                 })) :
-                [{ day: '', from: '', to: '', memo: '', capacity: '0' }],
+                [{ day: '', from: '', to: '', memo: '', capacity: '0', capacityType: 'normal' }],
             memo: packageData?.memo ?? '',
             entryFees: (packageData?.entryFees ?? 0).toString(),
             entryFeesExplanation: packageData?.entryFeesExplanation ?? undefined,
@@ -277,6 +281,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                 new Date(packageData?.entryFeesEndDate) : undefined,
             capacity: (packageData?.capacity ?? 0).toString(),
             flexible: packageData?.flexible ?? false,
+            capacityType: packageData?.capacity === 9999 ? 'unlimited' : 'normal',
             //@ts-ignore
             sessionPerWeek: packageData?.sessionPerWeek.toString() ?? '0',
             //@ts-ignore
@@ -355,6 +360,31 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
         }
     }, [startDate, endDate])
 
+    const capacityTypeChange = form.watch("capacityType")
+
+    useEffect(() => {
+        if (capacityTypeChange === 'normal') {
+            form.setValue('capacity', '0')
+        }
+    }, [capacityTypeChange])
+
+    const sessionDurationChange = form.watch('sessionDuration')
+
+    useEffect(() => {
+        form.setValue('schedules', form.getValues('schedules').map(s => {
+            const duration = form.watch("sessionDuration");
+            const [hours, minutes] = s.from.split(':').map(Number);
+            const startDate = new Date();
+            startDate.setHours(hours, minutes, 0);
+            const endDate = new Date(startDate.getTime() + (duration ?? 0) * 60000);
+            const to = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`;
+            return {
+                ...s,
+                to
+            }
+        }))
+    }, [sessionDurationChange])
+
     console.log(form.getValues('schedules'))
 
     const onSubmit = async (values: z.infer<typeof packageSchema>) => {
@@ -385,7 +415,9 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                     months: values.months ?? [],
                     schedules: values.schedules.map(s => ({
                         ...s,
-                        capacity: parseInt(values.flexible ? s.capacity : values.capacity),
+                        capacity: values.flexible ?
+                            (s.capacityType === "unlimited" ? 9999 : parseInt(s.capacity)) :
+                            (values.capacityType === "unlimited" ? 9999 : parseInt(values.capacity)),
                         createdAt: new Date().toLocaleString(),
                         updatedAt: new Date().toLocaleString(),
                         memo: s.memo ?? '',
@@ -401,10 +433,10 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                         values.entryFeesStartDate?.toLocaleString() ?? '' : null,
                     entryFeesEndDate: values.type !== "Monthly" && showEntryFeesFields ?
                         values.entryFeesEndDate?.toLocaleString() ?? '' : null,
-                    capacity: values.flexible ? null : parseInt(values.capacity),
+                    capacity: values.flexible ? null : (values.capacityType === "unlimited" ? 9999 : parseInt(values.capacity)),
                     flexible: values.flexible,
-                    sessionPerWeek: values.flexible ? values.sessionPerWeek : values.schedules.length,
-                    sessionDuration: values.flexible ? values.sessionDuration : null,
+                    sessionPerWeek: values.flexible ? (values.sessionPerWeek ?? 0) : values.schedules.length,
+                    sessionDuration: values.flexible ? (values.sessionDuration ?? 0) : null,
                     createdAt: new Date().toLocaleString(),
                     updatedAt: new Date().toLocaleString(),
                 });
@@ -439,8 +471,8 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                             values.entryFeesEndDate?.toLocaleString() ?? '' : null,
                         capacity: values.flexible ? null : parseInt(values.capacity),
                         flexible: values.flexible,
-                        sessionPerWeek: values.flexible ? values.sessionPerWeek : values.schedules.length,
-                        sessionDuration: values.flexible ? values.sessionDuration : null,
+                        sessionPerWeek: values.flexible ? (values.sessionPerWeek ?? 0) : values.schedules.length,
+                        sessionDuration: values.flexible ? (values.sessionDuration ?? 0) : null,
                         createdAt: new Date().toLocaleString(),
                         updatedAt: new Date().toLocaleString(),
                     }
@@ -610,24 +642,59 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                             />
                                         </div>
                                     ) : (
-                                        <FormField
-                                            control={form.control}
-                                            name="capacity"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Package Capacity</FormLabel>
-                                                    <FormControl>
-                                                        <Input
-                                                            {...field}
-                                                            type="number"
-                                                            min="1"
-                                                            className="px-2 py-6 rounded-[10px] border border-gray-500 font-inter"
-                                                        />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
+                                        <div className="space-y-4">
+                                            <div className="flex gap-4">
+                                                <FormField
+                                                    control={form.control}
+                                                    name="capacity"
+                                                    render={({ field }) => (
+                                                        <FormItem className="flex-1">
+                                                            <FormLabel>Package Capacity</FormLabel>
+                                                            <FormControl>
+                                                                <Input
+                                                                    {...field}
+                                                                    type="number"
+                                                                    min="1"
+                                                                    disabled={capacityTypeChange === "unlimited"}
+                                                                    className={cn("px-2 py-6 rounded-[10px] border border-gray-500 font-inter", capacityTypeChange === "unlimited" && 'text-transparent')}
+                                                                />
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+
+                                                <FormField
+                                                    control={form.control}
+                                                    name="capacityType"
+                                                    render={({ field }) => (
+                                                        <FormItem className="w-[200px]">
+                                                            <FormLabel>Capacity Type</FormLabel>
+                                                            <Select
+                                                                onValueChange={(value) => {
+                                                                    field.onChange(value);
+                                                                    if (value === "unlimited") {
+                                                                        form.setValue("capacity", "9999");
+                                                                    }
+                                                                }}
+                                                                value={field.value}
+                                                            >
+                                                                <FormControl>
+                                                                    <SelectTrigger className="px-2 py-6 rounded-[10px] border border-gray-500 font-inter">
+                                                                        <SelectValue placeholder="Select type" />
+                                                                    </SelectTrigger>
+                                                                </FormControl>
+                                                                <SelectContent className="!bg-[#F1F2E9]">
+                                                                    <SelectItem value="normal">Normal</SelectItem>
+                                                                    <SelectItem value="unlimited">Unlimited</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
 
@@ -859,7 +926,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                             variant="outline"
                                             size="sm"
                                             className="text-main-green"
-                                            onClick={() => append({ day: '', from: '', to: '', memo: '', capacity: '' })}
+                                            onClick={() => append({ day: '', from: '', to: '', memo: '', capacity: '', capacityType: 'normal' })}
                                         >
                                             Add Session
                                         </Button>
@@ -968,24 +1035,58 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                                     )}
                                                 />
                                                 {form.watch("flexible") && (
-                                                    <FormField
-                                                        control={form.control}
-                                                        name={`schedules.${index}.capacity`}
-                                                        render={({ field }) => (
-                                                            <FormItem>
-                                                                <FormLabel>Session Capacity</FormLabel>
-                                                                <FormControl>
-                                                                    <Input
-                                                                        {...field}
-                                                                        type="number"
-                                                                        min="1"
-                                                                        className="px-2 py-6 rounded-[10px] border border-gray-500 font-inter"
-                                                                    />
-                                                                </FormControl>
-                                                                <FormMessage />
-                                                            </FormItem>
-                                                        )}
-                                                    />
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <FormField
+                                                            control={form.control}
+                                                            name={`schedules.${index}.capacity`}
+                                                            render={({ field }) => (
+                                                                <FormItem>
+                                                                    <FormLabel>Session Capacity</FormLabel>
+                                                                    <FormControl>
+                                                                        <Input
+                                                                            {...field}
+                                                                            type="number"
+                                                                            min="1"
+                                                                            disabled={form.watch(`schedules.${index}.capacityType`) === "unlimited"}
+                                                                            className={cn("px-2 py-6 rounded-[10px] border border-gray-500 font-inter", form.watch(`schedules.${index}.capacityType`) === "unlimited" && 'text-transparent')}
+                                                                            required={form.watch("flexible")}
+                                                                        />
+                                                                    </FormControl>
+                                                                    <FormMessage />
+                                                                </FormItem>
+                                                            )}
+                                                        />
+
+                                                        <FormField
+                                                            control={form.control}
+                                                            name={`schedules.${index}.capacityType`}
+                                                            render={({ field }) => (
+                                                                <FormItem>
+                                                                    <FormLabel>Capacity Type</FormLabel>
+                                                                    <Select
+                                                                        onValueChange={(value) => {
+                                                                            field.onChange(value);
+                                                                            if (value === "unlimited") {
+                                                                                form.setValue(`schedules.${index}.capacity`, "9999");
+                                                                            }
+                                                                        }}
+                                                                        value={field.value}
+                                                                    >
+                                                                        <FormControl>
+                                                                            <SelectTrigger className="px-2 py-6 rounded-[10px] border border-gray-500 font-inter">
+                                                                                <SelectValue placeholder="Select type" />
+                                                                            </SelectTrigger>
+                                                                        </FormControl>
+                                                                        <SelectContent className="!bg-[#F1F2E9]">
+                                                                            <SelectItem value="normal">Normal</SelectItem>
+                                                                            <SelectItem value="unlimited">Unlimited</SelectItem>
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                    <FormMessage />
+                                                                </FormItem>
+                                                            )}
+                                                        />
+                                                    </div>
                                                 )}
                                             </div>
 
@@ -1013,7 +1114,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                     control={form.control}
                                     name="memo"
                                     render={({ field }) => (
-                                        <FormItem>
+                                        <FormItem className='hidden absolute'>
                                             <FormLabel>Package Memo</FormLabel>
                                             <FormControl>
                                                 <Textarea

@@ -23,6 +23,7 @@ export type Package = {
     flexible?: boolean | null;
     capacity: number | null;
     sessionDuration: number | null;
+    deleted?: boolean;
     schedules: {
         id?: number;
         createdAt: string | null;
@@ -119,7 +120,7 @@ export type ProgramsState = {
 
 export type ProgramsActions = {
     fetchPrograms: () => void
-    editProgram: (program: Program) => Promise<{ error: string | null, field: string | null }>
+    editProgram: (program: Program, mutate?: () => void) => Promise<{ error: string | null, field: string | null }>
     deletePrograms: (ids: number[]) => void
     addProgram: (program: Program, mutate?: () => void) => void
     editPackage: (packageData: Package) => void
@@ -160,7 +161,7 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
                 fetched: true
             })
         },
-        editProgram: async (program: Program) => {
+        editProgram: async (program: Program, mutate?: () => void) => {
             const oldProgram = get().programs.find(p => p.id === program.id) as Program
 
             set({
@@ -182,6 +183,7 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
                 })
 
                 get().fetchPrograms()
+                if (mutate) mutate()
 
                 return { error: null, field: null }
             }
@@ -273,7 +275,7 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
             if (!program) return
 
             set({
-                programs: get().programs.map(p => p.id === program.id ? ({ ...program, packages: program.packages.filter(p => p.id !== packageData.id) }) : p)
+                programs: get().programs.map(p => p.id === program.id ? ({ ...program, packages: program.packages.map(pk => pk.id === packageData.id ? ({ ...pk, deleted: true }) : pk) }) : p)
             })
         },
         editDiscount: (discountData: Discount) => {

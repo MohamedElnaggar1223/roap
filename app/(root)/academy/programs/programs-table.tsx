@@ -354,7 +354,7 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
                                     {program.coachPrograms?.length ?? 0}
                                 </div>
                                 <div className={cn("py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter", program.pending && 'opacity-60')}>
-                                    {program.packages?.length ?? 0}
+                                    {program.packages?.filter(p => !p.deleted).length ?? 0}
                                 </div>
                                 <div className={cn("py-4 px-4 bg-main-white rounded-r-[20px] flex items-center justify-end font-bold font-inter", program.pending && 'opacity-60')}>
                                     {program.pending ? (

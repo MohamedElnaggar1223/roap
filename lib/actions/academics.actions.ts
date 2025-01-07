@@ -212,6 +212,8 @@ export const getAcademyDetailsClient = async (url: string | null) => {
 		})!)
 	])
 
+	console.log("Programs: ", programs)
+
 	const finalAcademyDetails = {
 		...academyDetails,
 		locations,

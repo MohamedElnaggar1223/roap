@@ -812,7 +812,7 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                                             </div>
 
                                             {/* Rows */}
-                                            {program?.packages?.map((packageData, index) => (
+                                            {program?.packages?.filter(p => !p.deleted).map((packageData, index) => (
                                                 <Fragment key={index}>
                                                     <div className="py-4 px-2 bg-main-white flex items-center justify-center">
                                                         {!packageData.id && (

@@ -779,8 +779,11 @@ export async function updateProgramStore(program: Program, oldProgram: Program) 
 
             const currentPackageIds = currentPackages.filter(p => p.id !== undefined).map(p => p.id as number)
             const packagesToAdd = program.packages.filter(p => !p.id || !currentPackageIds.includes(p?.id))
-            const packagesToRemove = currentPackageIds.filter(p => !program.packages.map(pd => pd.id).filter(pid => pid).includes(p))
-            const packagesToUpdate = program.packages.filter(p => p.id && currentPackageIds.includes(p.id))
+            const packagesToRemove = program.packages.filter(p => p.deleted).filter(p => !!p.id).map(p => p.id as number)
+            const packagesToUpdate = program.packages.filter(p => p.id && currentPackageIds.includes(p.id) && !p.deleted)
+
+            console.log("Packages to remove", packagesToRemove)
+            console.log("Packages to update", packagesToUpdate)
 
             const currentDiscountIds = currentDiscounts.filter(d => d.id !== undefined).map(d => d.id as number)
             const discountsToAdd = program.discounts.filter(d => !d.id || !currentDiscountIds.includes(d.id))
@@ -861,11 +864,18 @@ export async function updateProgramStore(program: Program, oldProgram: Program) 
                     })) : Promise.resolve(),
 
                 packagesToRemove.length > 0 ?
-                    tx.delete(packages)
-                        .where(and(
-                            eq(packages.programId, program.id),
-                            inArray(packages.id, packagesToRemove)
-                        )) : Promise.resolve(),
+                    (async () => {
+                        // First delete all schedules
+                        await tx.delete(schedules)
+                            .where(inArray(schedules.packageId, packagesToRemove))
+
+                        // Then delete the packages
+                        await tx.delete(packages)
+                            .where(and(
+                                eq(packages.programId, program.id),
+                                inArray(packages.id, packagesToRemove)
+                            ))
+                    })() : Promise.resolve(),
 
                 packagesToUpdate.length > 0 ?
                     Promise.all(packagesToUpdate.map(async (packageData) => {
