@@ -324,8 +324,6 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
         name: "schedules"
     })
 
-    console.log(fields.map(f => f.capacity))
-
     const packageType = form.watch("type")
     const entryFees = parseFloat(form.watch("entryFees") || "0")
     const showEntryFeesFields = entryFees > 0
