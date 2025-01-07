@@ -96,7 +96,7 @@ const packageSchema = z.object({
     capacityType: z.enum(["normal", "unlimited"]).default("normal"),
     flexible: z.boolean().default(false),
     sessionPerWeek: z.string().transform(val => parseInt(val) || 0).optional(),
-    sessionDuration: z.string().transform(val => parseInt(val) || null).optional(),
+    sessionDuration: z.string().transform(val => parseInt(val) || null).optional().nullable(),
 }).superRefine((data, ctx) => {
     if (parseFloat(data.entryFees) > 0 && !data.entryFeesExplanation) {
         ctx.addIssue({
@@ -247,6 +247,10 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
         control: form.control,
         name: "schedules"
     })
+
+    useEffect(() => {
+        form.setValue('flexible', program?.flexible ?? false)
+    }, [program])
 
     const packageType = form.watch("type")
     const entryFees = parseFloat(form.watch("entryFees") || "0")

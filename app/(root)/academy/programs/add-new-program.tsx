@@ -241,6 +241,7 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
     const deletePackage = useProgramsStore((state) => state.deletePackage)
     const addTempProgram = useProgramsStore((state) => state.addTempProgram)
     const removeTempPrograms = useProgramsStore((state) => state.removeTempPrograms)
+    const triggerFlexibleChange = useProgramsStore((state) => state.triggerFlexibleChange)
 
     const dateToAge = (date: Date) => {
         const today = new Date()
@@ -390,7 +391,11 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
         )
     }
 
-    console.log("Edited Package Temp id", editedPackage?.editedPackage.tempId)
+    const flexibleChanged = form.watch('flexible')
+
+    useEffect(() => {
+        triggerFlexibleChange(flexibleChanged, programId)
+    }, [flexibleChanged])
 
     return (
         <>

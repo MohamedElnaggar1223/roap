@@ -274,6 +274,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
     const program = useProgramsStore((state) => state.programs.find(p => p.id === programEdited.id))
     const deleteDiscount = useProgramsStore((state) => state.deleteDiscount)
     const deletePackage = useProgramsStore((state) => state.deletePackage)
+    const triggerFlexibleChange = useProgramsStore((state) => state.triggerFlexibleChange)
 
     // useEffect(() => {
     //     if (isLoading || isValidating) return
@@ -446,6 +447,12 @@ export default function EditProgram({ branches, sports, programEdited, academySp
     }, [editPackageOpen])
 
     console.log(program)
+
+    const flexibleChanged = form.watch('flexible')
+
+    useEffect(() => {
+        triggerFlexibleChange(flexibleChanged, program?.id!)
+    }, [flexibleChanged])
 
     return (
         <>

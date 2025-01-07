@@ -63,14 +63,14 @@ const packageSchema = z.object({
         to: z.string().min(1, "End time is required"),
         memo: z.string().optional(),
         id: z.number().optional(),
-        capacity: z.string().default("0"),
+        capacity: z.string(),
         capacityType: z.enum(["normal", "unlimited"]).default("normal")
     })),
-    capacity: z.string().default("0"),
+    capacity: z.string(),
     capacityType: z.enum(["normal", "unlimited"]).default("normal"),
     flexible: z.boolean().optional(),
     sessionPerWeek: z.string().transform(val => parseInt(val) || 0).optional(),
-    sessionDuration: z.string().transform(val => parseInt(val) || null).optional(),
+    sessionDuration: z.string().transform(val => parseInt(val) || null).optional().nullable(),
 }).superRefine((data, ctx) => {
     console.log("Data", data)
     if (parseFloat(data.entryFees) > 0 && !data.entryFeesExplanation) {
@@ -289,6 +289,8 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
         }
     });
 
+    console.log("Package Data", packageData, program?.flexible)
+
     useEffect(() => {
         if (!open) {
             setEditedPackage({
@@ -330,6 +332,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
     const startDate = form.watch("startDate")
     const endDate = form.watch("endDate")
     const months = form.watch("months") || []
+    form.watch("capacity")
 
     const addMonth = () => {
         const newMonthEntry = {
@@ -383,6 +386,14 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
         }))
     }, [sessionDurationChange])
 
+    useEffect(() => {
+        form.setValue('flexible', program?.flexible ?? false)
+    }, [program])
+
+    useEffect(() => {
+        form.setValue('capacity', program?.flexible ? '0' : (packageData?.capacity ?? 0).toString())
+    }, [])
+
     const onSubmit = async (values: z.infer<typeof packageSchema>) => {
         try {
             if (packageData?.id || packageData?.tempId) {
@@ -402,6 +413,8 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                     endDate = dates.endDate;
                 }
 
+                console.log("Capacity", program?.flexible ? null : (values.capacityType === "unlimited" ? 9999 : parseInt(values.capacity)))
+
                 editPackage({
                     ...packageData,
                     name: packageName!,
@@ -411,7 +424,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                     months: values.months ?? [],
                     schedules: values.schedules.map(s => ({
                         ...s,
-                        capacity: values.flexible ?
+                        capacity: program?.flexible ?
                             (s.capacityType === "unlimited" ? 9999 : parseInt(s.capacity)) :
                             (values.capacityType === "unlimited" ? 9999 : parseInt(values.capacity)),
                         createdAt: new Date().toLocaleString(),
@@ -429,7 +442,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                         values.entryFeesStartDate?.toLocaleString() ?? '' : null,
                     entryFeesEndDate: values.type !== "Monthly" && showEntryFeesFields ?
                         values.entryFeesEndDate?.toLocaleString() ?? '' : null,
-                    capacity: values.flexible ? null : (values.capacityType === "unlimited" ? 9999 : parseInt(values.capacity)),
+                    capacity: program?.flexible ? null : (values.capacityType === "unlimited" ? 9999 : parseInt(values.capacity)),
                     // flexible: values.flexible,
                     sessionPerWeek: values.flexible ? (values.sessionPerWeek ?? 0) : values.schedules.length,
                     sessionDuration: values.flexible ? (values.sessionDuration ?? 0) : null,

@@ -122,6 +122,7 @@ export type ProgramsState = {
 export type ProgramsActions = {
     fetchPrograms: () => void
     editProgram: (program: Program, mutate?: () => void) => Promise<{ error: string | null, field: string | null }>
+    triggerFlexibleChange: (flexible: boolean, programId: number) => void
     deletePrograms: (ids: number[]) => void
     addProgram: (program: Program, mutate?: () => void) => void
     editPackage: (packageData: Package) => void
@@ -160,6 +161,29 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
             set({
                 programs: data?.data,
                 fetched: true
+            })
+        },
+        triggerFlexibleChange: (flexible: boolean, programId: number) => {
+            const program = get().programs.find(p => p.id === programId)
+
+            if (!program) return
+
+            set({
+                programs: get().programs.map(p => p.id === programId ? ({
+                    ...program,
+                    flexible,
+                    packages: program.packages.map(pkg => ({
+                        ...pkg,
+                        flexible,
+                        capacity: flexible ? null : pkg.capacity,
+                        sessionDuration: flexible ? pkg.sessionDuration : null,
+                        sessionPerWeek: flexible ? pkg.sessionPerWeek : pkg.schedules.length,
+                        schedules: pkg.schedules.map(schedule => ({
+                            ...schedule,
+                            capacity: flexible ? schedule.capacity : (pkg.capacity ?? 0)
+                        }))
+                    }))
+                }) : p)
             })
         },
         editProgram: async (program: Program, mutate?: () => void) => {
@@ -280,6 +304,8 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
                 programs: get().programs.map(p => {
                     if (p.id !== program.id) return p
 
+                    console.log("Package Data", packageData, program.flexible)
+
                     return {
                         ...program,
                         packages: program.packages.map(pkg => {
@@ -288,7 +314,7 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
                                 return {
                                     ...packageData,
                                     flexible: program.flexible, // Use program's flexibility
-                                    capacity: program.flexible ? null : packageData.capacity,
+                                    capacity: packageData.capacity,
                                     sessionDuration: program.flexible ? packageData.sessionDuration : null,
                                     sessionPerWeek: program.flexible ? packageData.sessionPerWeek : packageData.schedules.length,
                                     schedules: packageData.schedules.map(schedule => ({
