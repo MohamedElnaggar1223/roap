@@ -11,9 +11,10 @@ interface DateSelectorProps {
         value: Date | undefined
         onChange: (date: Date | undefined) => void
     }
+    optional?: boolean
 }
 
-export function DateSelector({ field }: DateSelectorProps) {
+export function DateSelector({ field, optional }: DateSelectorProps) {
     // Initialize with undefined to match field state
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(field.value)
 
@@ -124,7 +125,7 @@ export function DateSelector({ field }: DateSelectorProps) {
                         </SelectContent>
                     </Select>
                 </div>
-                {!selectedDate && (
+                {!selectedDate && !optional && (
                     <p className="text-xs text-red-500 mt-1">Please select a date</p>
                 )}
             </div>

@@ -768,7 +768,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                     control={form.control}
                                     name="memo"
                                     render={({ field }) => (
-                                        <FormItem>
+                                        <FormItem className='hidden absolute'>
                                             <FormLabel>Package Memo</FormLabel>
                                             <FormControl>
                                                 <Textarea

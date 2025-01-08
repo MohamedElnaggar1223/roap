@@ -618,9 +618,6 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                                                 }}
                                                             />
                                                         </FormControl>
-                                                        <FormDescription>
-                                                            Maximum {fields.length} sessions available per week
-                                                        </FormDescription>
                                                         <FormMessage />
                                                     </FormItem>
                                                 )}

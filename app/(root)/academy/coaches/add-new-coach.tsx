@@ -81,7 +81,7 @@ export default function AddNewCoach({ sports, languages, academySports }: Props)
             gender: '',
             image: '',
             privateSessionPercentage: '',
-            dateOfBirth: new Date(),
+            dateOfBirth: undefined,
         }
     })
 
@@ -283,7 +283,7 @@ export default function AddNewCoach({ sports, languages, academySports }: Props)
                                             name='title'
                                             render={({ field }) => (
                                                 <FormItem className='flex-1'>
-                                                    <FormLabel>Job Title</FormLabel>
+                                                    <FormLabel>Job Title <span className='text-xs text-red-500'>*</span></FormLabel>
                                                     <FormControl>
                                                         <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                     </FormControl>
@@ -296,7 +296,7 @@ export default function AddNewCoach({ sports, languages, academySports }: Props)
                                             name='name'
                                             render={({ field }) => (
                                                 <FormItem className='flex-1'>
-                                                    <FormLabel>Name</FormLabel>
+                                                    <FormLabel>Name <span className='text-xs text-red-500'>*</span></FormLabel>
                                                     <FormControl>
                                                         <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                     </FormControl>
@@ -312,7 +312,7 @@ export default function AddNewCoach({ sports, languages, academySports }: Props)
                                             name='gender'
                                             render={({ field }) => (
                                                 <FormItem className='flex-1'>
-                                                    <FormLabel>Gender</FormLabel>
+                                                    <FormLabel>Gender <span className='text-xs text-red-500'>*</span></FormLabel>
                                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                         <FormControl>
                                                             <SelectTrigger className='px-2 h-12 rounded-[10px] border border-gray-500 font-inter'>
@@ -333,9 +333,9 @@ export default function AddNewCoach({ sports, languages, academySports }: Props)
                                             name='dateOfBirth'
                                             render={({ field }) => (
                                                 <FormItem className='flex-1'>
-                                                    <FormLabel>Date of Birth</FormLabel>
+                                                    <FormLabel>Date of Birth <span className='text-xs text-gray-500'>(optional)</span></FormLabel>
                                                     <FormControl>
-                                                        <DateSelector field={field} />
+                                                        <DateSelector field={field} optional />
                                                     </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
@@ -361,7 +361,7 @@ export default function AddNewCoach({ sports, languages, academySports }: Props)
                                         name='bio'
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Bio</FormLabel>
+                                                <FormLabel>Bio <span className='text-xs text-red-500'>*</span></FormLabel>
                                                 <FormControl>
                                                     <Textarea {...field} className='min-h-[100px] rounded-[10px] border border-gray-500 font-inter' />
                                                 </FormControl>
@@ -370,7 +370,7 @@ export default function AddNewCoach({ sports, languages, academySports }: Props)
                                         )}
                                     />
                                     <div className="flex flex-col gap-4 w-full">
-                                        <p className='text-xs'>Sports</p>
+                                        <p className='text-xs'>Sports <span className='text-xs text-red-500'>*</span></p>
                                         <div className="flex w-full flex-col gap-4 border border-gray-500 p-3 rounded-lg">
                                             <div className="flex flex-wrap gap-2">
                                                 {selectedSports.map((sport) => (
@@ -429,7 +429,7 @@ export default function AddNewCoach({ sports, languages, academySports }: Props)
                                         </div>
                                     </div>
                                     <div className="flex flex-col gap-4 w-full">
-                                        <p className='text-xs'>Languages</p>
+                                        <p className='text-xs'>Languages <span className='text-xs text-red-500'>*</span></p>
                                         <div className="flex w-full flex-col gap-4 border border-gray-500 p-3 rounded-lg">
                                             <div className="flex flex-wrap gap-2">
                                                 {selectedLanguages.map((lang) => (

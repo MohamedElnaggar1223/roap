@@ -313,7 +313,7 @@ export default function AddNewAthlete() {
                                             name='firstName'
                                             render={({ field }) => (
                                                 <FormItem className='flex-1'>
-                                                    <FormLabel>Athlete First Name</FormLabel>
+                                                    <FormLabel>Athlete First Name <span className='text-xs text-red-500'>*</span></FormLabel>
                                                     <FormControl>
                                                         <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                     </FormControl>
@@ -326,7 +326,7 @@ export default function AddNewAthlete() {
                                             name='lastName'
                                             render={({ field }) => (
                                                 <FormItem className='flex-1'>
-                                                    <FormLabel>Athlete Last Name</FormLabel>
+                                                    <FormLabel>Athlete Last Name <span className='text-xs text-red-500'>*</span></FormLabel>
                                                     <FormControl>
                                                         <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                     </FormControl>
@@ -340,7 +340,7 @@ export default function AddNewAthlete() {
                                         name='phoneNumber'
                                         render={({ field }) => (
                                             <FormItem className='flex-1'>
-                                                <FormLabel>Mobile Number</FormLabel>
+                                                <FormLabel>Mobile Number <span className='text-xs text-red-500'>*</span></FormLabel>
                                                 <FormControl>
                                                     <Input {...field} type="tel" className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                 </FormControl>
@@ -353,7 +353,7 @@ export default function AddNewAthlete() {
                                         name='email'
                                         render={({ field }) => (
                                             <FormItem className='flex-1'>
-                                                <FormLabel>Email</FormLabel>
+                                                <FormLabel>Email <span className='text-xs text-gray-500'>(optional)</span></FormLabel>
                                                 <FormControl>
                                                     <Input {...field} type="email" className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                 </FormControl>
@@ -396,7 +396,7 @@ export default function AddNewAthlete() {
                                                 name='gender'
                                                 render={({ field }) => (
                                                     <FormItem className='flex-1'>
-                                                        <FormLabel>Gender</FormLabel>
+                                                        <FormLabel>Gender <span className='text-xs text-red-500'>*</span></FormLabel>
                                                         <Select onValueChange={field.onChange} value={field.value}>
                                                             <FormControl>
                                                                 <SelectTrigger className='px-2 h-12 rounded-[10px] border border-gray-500 font-inter'>
@@ -420,7 +420,7 @@ export default function AddNewAthlete() {
                                                 name='birthday'
                                                 render={({ field }) => (
                                                     <FormItem className='flex-1'>
-                                                        <FormLabel>Date of Birth</FormLabel>
+                                                        <FormLabel>Date of Birth <span className='text-xs text-red-500'>*</span></FormLabel>
                                                         <FormControl>
                                                             <DateSelector field={field} />
                                                         </FormControl>
@@ -492,7 +492,7 @@ export default function AddNewAthlete() {
                                                 name='firstGuardianName'
                                                 render={({ field }) => (
                                                     <FormItem className='flex-1'>
-                                                        <FormLabel>First Guardian Name*</FormLabel>
+                                                        <FormLabel>First Guardian Name <span className='text-xs text-red-500'>*</span></FormLabel>
                                                         <FormControl>
                                                             <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                         </FormControl>
@@ -505,7 +505,7 @@ export default function AddNewAthlete() {
                                                 name="firstGuardianRelationship"
                                                 render={({ field }) => (
                                                     <FormItem className="flex-1">
-                                                        <FormLabel>First Guardian Relationship*</FormLabel>
+                                                        <FormLabel>First Guardian Relationship <span className='text-xs text-red-500'>*</span></FormLabel>
                                                         <Select
                                                             onValueChange={(value) => {
                                                                 if (value === "Other") {
@@ -551,7 +551,7 @@ export default function AddNewAthlete() {
                                                 name='firstGuardianEmail'
                                                 render={({ field }) => (
                                                     <FormItem className='flex-1'>
-                                                        <FormLabel>First Guardian Email</FormLabel>
+                                                        <FormLabel>First Guardian Email <span className='text-xs text-red-500'>*</span></FormLabel>
                                                         <FormControl>
                                                             <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                         </FormControl>
@@ -564,7 +564,7 @@ export default function AddNewAthlete() {
                                                 name='firstGuardianPhone'
                                                 render={({ field }) => (
                                                     <FormItem className='flex-1'>
-                                                        <FormLabel>First Guardian Phone</FormLabel>
+                                                        <FormLabel>First Guardian Phone <span className='text-xs text-red-500'>*</span></FormLabel>
                                                         <FormControl>
                                                             <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                         </FormControl>
@@ -586,7 +586,7 @@ export default function AddNewAthlete() {
                                             name='secondGuardianName'
                                             render={({ field }) => (
                                                 <FormItem className='flex-1'>
-                                                    <FormLabel>Second Guardian Name (Optional)</FormLabel>
+                                                    <FormLabel>Second Guardian Name <span className='text-xs text-gray-500'>(optional)</span></FormLabel>
                                                     <FormControl>
                                                         <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                     </FormControl>
@@ -599,7 +599,7 @@ export default function AddNewAthlete() {
                                             name="secondGuardianRelationship"
                                             render={({ field }) => (
                                                 <FormItem className="flex-1">
-                                                    <FormLabel>Second Guardian Relationship*</FormLabel>
+                                                    <FormLabel>Second Guardian Relationship <span className='text-xs text-gray-500'>(optional)</span></FormLabel>
                                                     <Select
                                                         onValueChange={(value) => {
                                                             if (value === "Other") {
@@ -645,7 +645,7 @@ export default function AddNewAthlete() {
                                             name='secondGuardianEmail'
                                             render={({ field }) => (
                                                 <FormItem className='flex-1'>
-                                                    <FormLabel>Second Guardian Email (Optional)</FormLabel>
+                                                    <FormLabel>Second Guardian Email <span className='text-xs text-gray-500'>(optional)</span></FormLabel>
                                                     <FormControl>
                                                         <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                     </FormControl>
@@ -658,7 +658,7 @@ export default function AddNewAthlete() {
                                             name='secondGuardianPhone'
                                             render={({ field }) => (
                                                 <FormItem className='flex-1'>
-                                                    <FormLabel>Second Guardian Phone (Optional)</FormLabel>
+                                                    <FormLabel>Second Guardian Phone <span className='text-xs text-gray-500'>(optional)</span></FormLabel>
                                                     <FormControl>
                                                         <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                     </FormControl>
@@ -675,7 +675,7 @@ export default function AddNewAthlete() {
                                             name='city'
                                             render={({ field }) => (
                                                 <FormItem className='flex-1'>
-                                                    <FormLabel>City</FormLabel>
+                                                    <FormLabel>City <span className='text-xs text-gray-500'>(optional)</span></FormLabel>
                                                     <FormControl>
                                                         <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                     </FormControl>
@@ -688,7 +688,7 @@ export default function AddNewAthlete() {
                                             name='streetAddress'
                                             render={({ field }) => (
                                                 <FormItem className='flex-1'>
-                                                    <FormLabel>Street Address</FormLabel>
+                                                    <FormLabel>Street Address <span className='text-xs text-gray-500'>(optional)</span></FormLabel>
                                                     <FormControl>
                                                         <Input {...field} className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter' />
                                                     </FormControl>
@@ -697,8 +697,6 @@ export default function AddNewAthlete() {
                                             )}
                                         />
                                     </div>
-
-
                                 </div>
                             </div>
                         </form>

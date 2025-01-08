@@ -484,9 +484,6 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                                                                 }}
                                                             />
                                                         </FormControl>
-                                                        <FormDescription>
-                                                            Maximum {fields.length} sessions available per week
-                                                        </FormDescription>
                                                         <FormMessage />
                                                     </FormItem>
                                                 )}
@@ -967,7 +964,7 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                                                 control={form.control}
                                                 name={`schedules.${index}.memo`}
                                                 render={({ field }) => (
-                                                    <FormItem className='hidden absolute'>
+                                                    <FormItem className=''>
                                                         <FormLabel>Memo</FormLabel>
                                                         <FormControl>
                                                             <Textarea
