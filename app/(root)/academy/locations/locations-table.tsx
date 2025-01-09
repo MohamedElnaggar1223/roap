@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Fragment } from 'react'
+import { useState, Fragment, useEffect } from 'react'
 import { ChevronDown, Loader2, SearchIcon, Trash2Icon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -103,6 +103,14 @@ export function LocationsDataTable({ data, sports, academySports }: LocationsDat
         setBulkDeleteOpen(false)
     }
 
+    useEffect(() => {
+        setFilteredData(() => {
+            const filtered = data
+                .filter((location) => selectedSport ? location.sports?.includes(selectedSport) : true)
+            return filtered
+        })
+    }, [selectedSport, data])
+
     return (
         <>
             <div className="flex items-center justify-between gap-4 w-full flex-wrap">
@@ -183,7 +191,6 @@ export function LocationsDataTable({ data, sports, academySports }: LocationsDat
 
                     {/* Rows */}
                     {filteredData
-                        .filter((location) => selectedSport ? location.sports?.includes(selectedSport) : true)
                         .map((location) => (
                             <Fragment key={location.id}>
                                 <div className="py-4 px-4 bg-main-white rounded-l-[20px] flex items-center justify-center font-bold font-inter">

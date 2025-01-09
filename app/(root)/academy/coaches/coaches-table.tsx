@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Fragment } from 'react'
+import { useState, Fragment, useEffect } from 'react'
 import { ChevronDown, Loader2, SearchIcon, Trash2Icon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -118,6 +118,15 @@ export function CoachesDataTable({ data, sports, languages, academySports }: Coa
         return age
     }
 
+    useEffect(() => {
+        setFilteredData(() => {
+            const filtered = data.slice()
+                .filter((coach) => selectedSport ? coach.sports?.includes(parseInt(selectedSport)) : true)
+
+            return filtered
+        })
+    }, [data, selectedSport])
+
     return (
         <>
             <div className="flex items-center justify-between gap-4 w-full flex-wrap">
@@ -198,7 +207,7 @@ export function CoachesDataTable({ data, sports, languages, academySports }: Coa
 
                     {/* Rows */}
                     {filteredData
-                        .filter((coach) => selectedSport ? coach.sports?.includes(parseInt(selectedSport)) : true)
+                        // .filter((coach) => selectedSport ? coach.sports?.includes(parseInt(selectedSport)) : true)
                         .map((coach) => (
                             <Fragment key={coach.id}>
                                 <div className="py-4 px-4 bg-main-white rounded-l-[20px] flex items-center justify-center">

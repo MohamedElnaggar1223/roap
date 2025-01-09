@@ -47,6 +47,7 @@ import { getProgramDiscounts } from '@/lib/actions/discounts.actions';
 import { Discount, Package, Program } from '@/stores/programs-store';
 import { useProgramsStore } from '@/providers/store-provider';
 import { Switch } from '@/components/ui/switch';
+import { useToast } from '@/hooks/use-toast';
 
 const calculateAge = (birthDate: string): number => {
     const today = new Date();
@@ -246,6 +247,8 @@ const calculateDateFromAge = (age: number, unit: string): Date => {
 
 export default function EditProgram({ branches, sports, programEdited, academySports, takenColors }: Props) {
     const router = useRouter()
+
+    const { toast } = useToast()
 
     const { mutate: mutateProgram } = useOnboarding()
 
@@ -454,6 +457,42 @@ export default function EditProgram({ branches, sports, programEdited, academySp
         triggerFlexibleChange(flexibleChanged, program?.id!)
     }, [flexibleChanged])
 
+    const handleToastValidation = () => {
+        const values = form.getValues()
+
+        const missingFields: string[] = [];
+
+        if (!values.name) missingFields.push('Name');
+        if (!values.description) missingFields.push('Description');
+        if (!values.branchId) missingFields.push('Branch');
+        if (!values.sportId) missingFields.push('Sport');
+        if (!values.color) missingFields.push('Color');
+        if (!selectedGenders.length) missingFields.push('Gender');
+        if (!selectedCoaches.length) missingFields.push('Coaches');
+        if (values.startAge === undefined || values.startAge === null) missingFields.push('Start Age');
+        if (values.endAgeUnit !== 'unlimited' && (!values.endAge || values.endAge === undefined)) {
+            missingFields.push('End Age');
+        }
+
+        if (missingFields.length > 0) {
+            toast({
+                title: "Missing Required Fields",
+                description: `Please fill in the following required fields: ${missingFields.join(', ')}`,
+                variant: "destructive",
+            });
+            return;
+        }
+
+        if (!selectedGenders.length) {
+            toast({
+                title: "Gender Selection Required",
+                description: "Please select at least one gender for the program",
+                variant: "destructive",
+            });
+            return;
+        }
+    }
+
     return (
         <>
             <Button variant="ghost" size="icon" onClick={() => setEditProgramOpen(true)}>
@@ -471,7 +510,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                             <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>
                                 <DialogTitle className='font-normal text-base'>New Program</DialogTitle>
                                 <div className='flex items-center gap-2'>
-                                    <button disabled={loading} type='submit' className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5'>
+                                    <button onClick={handleToastValidation} disabled={loading} type='submit' className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5'>
                                         {loading && <Loader2 className='h-5 w-5 animate-spin' />}
                                         Save
                                     </button>

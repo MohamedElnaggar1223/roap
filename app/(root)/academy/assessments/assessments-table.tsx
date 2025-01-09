@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Fragment } from 'react'
+import { useState, Fragment, useEffect } from 'react'
 import { ChevronDown, SearchIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -89,6 +89,16 @@ export function AssessmentsTable({ data, branches, sports, academySports }: Asse
         setSearchQuery(value)
         debouncedSearch(value)
     }
+
+    useEffect(() => {
+        setFilteredData(() => {
+            const filtered = data.slice()
+                .filter((assessment) => selectedSport ? assessment.sportId === parseInt(selectedSport) : true)
+                .filter((assessment) => selectedGender ? assessment.gender?.includes(selectedGender) : true)
+                .filter((assessment) => selectedBranch ? assessment.branchId === parseInt(selectedBranch) : true)
+            return filtered
+        })
+    }, [selectedSport, selectedGender, selectedBranch, data])
 
     return (
         <>
@@ -204,9 +214,6 @@ export function AssessmentsTable({ data, branches, sports, academySports }: Asse
 
                     {/* Rows */}
                     {filteredData
-                        .filter((assessment) => selectedSport ? assessment.sportId === parseInt(selectedSport) : true)
-                        .filter((assessment) => selectedGender ? assessment.gender?.includes(selectedGender) : true)
-                        .filter((assessment) => selectedBranch ? assessment.branchId === parseInt(selectedBranch) : true)
                         .map((assessment) => (
                             <Fragment key={assessment.id}>
                                 <div className="py-4 px-4 bg-main-white rounded-l-[20px] flex items-center justify-start font-bold font-inter">

@@ -76,6 +76,17 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
     }, [data])
 
     useEffect(() => {
+        setFilteredData(() => {
+            const filtered = data.slice()
+                .filter((program) => selectedSport ? program.sportId === parseInt(selectedSport) : true)
+                .filter((program) => selectedGender ? program.gender?.includes(selectedGender) : true)
+                .filter((program) => selectedType ? program.type?.toLowerCase() === selectedType?.toLowerCase() : true)
+                .filter((program) => selectedBranch ? program.branchId === parseInt(selectedBranch) : true)
+            return filtered
+        })
+    }, [data, selectedSport, selectedGender, selectedType, selectedBranch])
+
+    useEffect(() => {
         if (!fetched) {
             fetchPrograms()
         }
@@ -322,10 +333,10 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
 
                     {/* Rows */}
                     {filteredData
-                        .filter((program) => selectedSport ? program.sportId === parseInt(selectedSport) : true)
-                        .filter((program) => selectedGender ? program.gender?.includes(selectedGender) : true)
-                        .filter((program) => selectedType ? program.type?.toLowerCase() === selectedType?.toLowerCase() : true)
-                        .filter((program) => selectedBranch ? program.branchId === parseInt(selectedBranch) : true)
+                        // .filter((program) => selectedSport ? program.sportId === parseInt(selectedSport) : true)
+                        // .filter((program) => selectedGender ? program.gender?.includes(selectedGender) : true)
+                        // .filter((program) => selectedType ? program.type?.toLowerCase() === selectedType?.toLowerCase() : true)
+                        // .filter((program) => selectedBranch ? program.branchId === parseInt(selectedBranch) : true)
                         .map((program) => (
                             <Fragment key={program.id}>
                                 <div className={cn("py-4 px-4 bg-main-white rounded-l-[20px] flex items-center justify-center font-bold font-inter", program.pending && 'opacity-60')}>
