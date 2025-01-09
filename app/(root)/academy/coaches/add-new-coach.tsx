@@ -33,6 +33,7 @@ import { getImageUrl, uploadImageToSupabase } from '@/lib/supabase-images';
 import Image from 'next/image';
 import { useOnboarding } from '@/providers/onboarding-provider';
 import { DateSelector } from '@/components/shared/date-selector';
+import { useToast } from '@/hooks/use-toast';
 
 type Props = {
     sports: {
@@ -58,6 +59,8 @@ export default function AddNewCoach({ sports, languages, academySports }: Props)
     const router = useRouter()
 
     const { mutate } = useOnboarding()
+
+    const { toast } = useToast()
 
     const inputRef = useRef<HTMLInputElement>(null)
 
@@ -196,6 +199,26 @@ export default function AddNewCoach({ sports, languages, academySports }: Props)
         }
     }
 
+    const handleToastValidation = () => {
+        const values = form.getValues()
+        const missingFields: string[] = [];
+
+        if (!values.title) missingFields.push('Job Title');
+        if (!values.name) missingFields.push('Name');
+        if (!values.gender) missingFields.push('Gender');
+        if (!values.bio) missingFields.push('Bio');
+        if (!selectedSports.length) missingFields.push('Sports');
+        if (!selectedLanguages.length) missingFields.push('Languages');
+
+        if (missingFields.length > 0) {
+            toast({
+                title: "Missing Required Fields",
+                description: `Please fill in the following required fields: ${missingFields.join(', ')}`,
+                variant: "destructive",
+            });
+        }
+    }
+
     return (
         <>
             <button onClick={() => setAddNewCoachOpen(true)} className='flex text-nowrap items-center justify-center gap-2 rounded-3xl px-4 py-2 bg-main-green text-sm text-white'>
@@ -209,7 +232,7 @@ export default function AddNewCoach({ sports, languages, academySports }: Props)
                             <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>
                                 <DialogTitle className='font-normal text-base'>New Coach</DialogTitle>
                                 <div className='flex items-center gap-2'>
-                                    <button disabled={loading} type='submit' className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5'>
+                                    <button onClick={handleToastValidation} disabled={loading} type='submit' className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5'>
                                         {loading && <Loader2 className='h-5 w-5 animate-spin' />}
                                         Create
                                     </button>

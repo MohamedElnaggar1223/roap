@@ -28,6 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { useOnboarding } from '@/providers/onboarding-provider';
 import { DateSelector } from '@/components/shared/date-selector';
+import { useToast } from '@/hooks/use-toast';
 
 const packageSchema = z.object({
     type: z.enum(["Term", "Monthly", "Full Season", "Assessment"]),
@@ -129,6 +130,8 @@ const months = [
 
 export default function AddPackage({ open, onOpenChange, programId, setCreatedPackages, packagesLength }: Props) {
     const router = useRouter()
+
+    const { toast } = useToast()
 
     const { mutate } = useOnboarding()
 
@@ -292,6 +295,56 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
         }
     };
 
+    const handleToastValidation = () => {
+        const values = form.getValues()
+        const missingFields: string[] = [];
+
+        // Check basic required fields
+        if (!values.price) missingFields.push('Price');
+
+        // Check dates based on package type
+        if (values.type === "Monthly") {
+            if (selectedMonths.length === 0) missingFields.push('Months');
+        } else {
+            if (!values.startDate) missingFields.push('Start Date');
+            if (!values.endDate) missingFields.push('End Date');
+        }
+
+        // Check sessions
+        if (!values.schedules || values.schedules.length === 0) {
+            missingFields.push('At least one session');
+        } else {
+            values.schedules.forEach((schedule, index) => {
+                if (!schedule.day) missingFields.push(`Session ${index + 1} Day`);
+                if (!schedule.from) missingFields.push(`Session ${index + 1} Start Time`);
+                if (!schedule.to) missingFields.push(`Session ${index + 1} End Time`);
+            });
+        }
+
+        // Check entry fees related fields if entry fees is set
+        const entryFees = parseFloat(values.entryFees || "0");
+        if (entryFees > 0) {
+            if (!values.entryFeesExplanation) {
+                missingFields.push('Entry Fees Explanation');
+            }
+            if (values.type === "Monthly" && (!values.entryFeesAppliedUntil || values.entryFeesAppliedUntil.length === 0)) {
+                missingFields.push('Entry Fees Applied For');
+            }
+            if (values.type !== "Monthly") {
+                if (!values.entryFeesStartDate) missingFields.push('Entry Fees Start Date');
+                if (!values.entryFeesEndDate) missingFields.push('Entry Fees End Date');
+            }
+        }
+
+        if (missingFields.length > 0) {
+            toast({
+                title: "Missing Required Fields",
+                description: `Please fill in the following required fields: ${missingFields.join(', ')}`,
+                variant: "destructive",
+            });
+        }
+    };
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className='bg-main-white min-w-[820px]'>
@@ -300,7 +353,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                         <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>
                             <DialogTitle className='font-normal text-base'>New Package</DialogTitle>
                             <div className='flex items-center gap-2'>
-                                <button disabled={loading} type='submit' className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5'>
+                                <button onClick={handleToastValidation} disabled={loading} type='submit' className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5'>
                                     {loading && <Loader2 className='h-5 w-5 animate-spin' />}
                                     Create
                                 </button>

@@ -29,6 +29,7 @@ import { getImageUrl, uploadImageToSupabase } from '@/lib/supabase-images'
 import Image from 'next/image'
 import { countries, nationalities } from '@/constants'
 import { DateSelector } from '@/components/shared/date-selector'
+import { useToast } from '@/hooks/use-toast'
 
 type FileState = {
     preview: string
@@ -47,6 +48,9 @@ const relationships = [
 
 export default function AddNewAthlete() {
     const router = useRouter()
+
+    const { toast } = useToast()
+
     const imageInputRef = useRef<HTMLInputElement>(null)
     const certificateInputRef = useRef<HTMLInputElement>(null)
     const [showOtherFirstGuardian, setShowOtherFirstGuardian] = useState(false)
@@ -232,6 +236,61 @@ export default function AddNewAthlete() {
         }
     }
 
+    const handleToastValidation = () => {
+        const values = form.getValues()
+        const missingFields: string[] = [];
+
+        // Basic Information
+        if (!values.firstName) missingFields.push('First Name');
+        if (!values.lastName) missingFields.push('Last Name');
+        if (!values.phoneNumber) missingFields.push('Mobile Number');
+        if (!values.gender) missingFields.push('Gender');
+        if (!values.birthday) missingFields.push('Date of Birth');
+
+        // First Guardian Information (Required)
+        if (!values.firstGuardianName) missingFields.push('First Guardian Name');
+        if (!values.firstGuardianRelationship) missingFields.push('First Guardian Relationship');
+        if (!values.firstGuardianEmail) missingFields.push('First Guardian Email');
+        if (!values.firstGuardianPhone) missingFields.push('First Guardian Phone');
+
+        // Validate email formats
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (values.email && !emailRegex.test(values.email)) {
+            toast({
+                title: "Invalid Email Format",
+                description: "Please enter a valid email address",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        if (values.firstGuardianEmail && !emailRegex.test(values.firstGuardianEmail)) {
+            toast({
+                title: "Invalid First Guardian Email Format",
+                description: "Please enter a valid email address for the first guardian",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        if (values.secondGuardianEmail && !emailRegex.test(values.secondGuardianEmail)) {
+            toast({
+                title: "Invalid Second Guardian Email Format",
+                description: "Please enter a valid email address for the second guardian",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        if (missingFields.length > 0) {
+            toast({
+                title: "Missing Required Fields",
+                description: `Please fill in the following required fields: ${missingFields.join(', ')}`,
+                variant: "destructive",
+            });
+        }
+    };
+
     return (
         <>
             <button onClick={() => setAddNewAthleteOpen(true)} className='flex text-nowrap items-center justify-center gap-2 rounded-3xl px-4 py-2 bg-main-green text-sm text-white'>
@@ -245,7 +304,7 @@ export default function AddNewAthlete() {
                             <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>
                                 <DialogTitle className='font-normal text-base'>New Athlete</DialogTitle>
                                 <div className='flex items-center gap-2'>
-                                    <button disabled={loading} type='submit' className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5'>
+                                    <button onClick={handleToastValidation} disabled={loading} type='submit' className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5'>
                                         {loading && <Loader2 className='h-5 w-5 animate-spin' />}
                                         Create
                                     </button>

@@ -33,6 +33,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { getImageUrl, uploadImageToSupabase } from '@/lib/supabase-images';
 import { useOnboarding } from '@/providers/onboarding-provider';
 import { DateSelector } from '@/components/shared/date-selector';
+import { useToast } from '@/hooks/use-toast';
 
 type Coach = {
     id: number
@@ -72,6 +73,8 @@ type FileState = {
 export default function EditCoach({ coachEdited, sports, languages, academySports }: Props) {
     const router = useRouter()
 
+    const { toast } = useToast()
+
     const { mutate } = useOnboarding()
 
     const inputRef = useRef<HTMLInputElement>(null)
@@ -95,7 +98,7 @@ export default function EditCoach({ coachEdited, sports, languages, academySport
             bio: coachEdited.bio ?? '',
             gender: coachEdited.gender ?? '',
             image: coachEdited.image ?? '',
-            dateOfBirth: coachEdited.dateOfBirth ? new Date(coachEdited.dateOfBirth) : new Date(),
+            dateOfBirth: coachEdited.dateOfBirth ? new Date(coachEdited.dateOfBirth) : undefined,
             privateSessionPercentage: coachEdited.privateSessionPercentage?.replaceAll('%', '') ?? '',
         }
     })
@@ -187,6 +190,26 @@ export default function EditCoach({ coachEdited, sports, languages, academySport
         }
     }
 
+    const handleToastValidation = () => {
+        const values = form.getValues()
+        const missingFields: string[] = [];
+
+        if (!values.title) missingFields.push('Job Title');
+        if (!values.name) missingFields.push('Name');
+        if (!values.gender) missingFields.push('Gender');
+        if (!values.bio) missingFields.push('Bio');
+        if (!selectedSports.length) missingFields.push('Sports');
+        if (!selectedLanguages.length) missingFields.push('Languages');
+
+        if (missingFields.length > 0) {
+            toast({
+                title: "Missing Required Fields",
+                description: `Please fill in the following required fields: ${missingFields.join(', ')}`,
+                variant: "destructive",
+            });
+        }
+    }
+
     return (
         <>
             <Button variant="ghost" size="icon" onClick={() => setEditOpen(true)}>
@@ -204,7 +227,7 @@ export default function EditCoach({ coachEdited, sports, languages, academySport
                             <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>
                                 <DialogTitle className='font-normal text-base'>Edit Coach</DialogTitle>
                                 <div className='flex items-center gap-2'>
-                                    <button disabled={loading} type='submit' className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5'>
+                                    <button onClick={handleToastValidation} disabled={loading} type='submit' className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5'>
                                         {loading && <Loader2 className='h-5 w-5 animate-spin' />}
                                         Save
                                     </button>
@@ -326,7 +349,7 @@ export default function EditCoach({ coachEdited, sports, languages, academySport
                                                 <FormItem className='flex-1'>
                                                     <FormLabel>Date of Birth <span className='text-xs text-gray-500'>(optional)</span></FormLabel>
                                                     <FormControl>
-                                                        <DateSelector field={field} />
+                                                        <DateSelector field={field} optional />
                                                     </FormControl>
                                                     <FormMessage />
                                                 </FormItem>

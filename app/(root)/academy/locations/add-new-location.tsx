@@ -28,6 +28,7 @@ import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { useOnboarding } from '@/providers/onboarding-provider';
+import { useToast } from '@/hooks/use-toast';
 
 type Props = {
     sports: {
@@ -41,6 +42,8 @@ type Props = {
 
 export default function AddNewLocation({ sports, academySports }: Props) {
     const router = useRouter()
+
+    const { toast } = useToast()
 
     const { mutate } = useOnboarding()
 
@@ -148,6 +151,25 @@ export default function AddNewLocation({ sports, academySports }: Props) {
         )
     }
 
+    const handleToastValidation = () => {
+        const values = form.getValues()
+        const missingFields: string[] = [];
+
+        if (!values.name) missingFields.push('Location Name');
+        if (!values.nameInGoogleMap) missingFields.push('Name in Google Map');
+        if (!values.url) missingFields.push('Google Maps Link');
+        if (!selectedSports.length) missingFields.push('Sports');
+        if (!selectedAmenities.length) missingFields.push('Amenities');
+
+        if (missingFields.length > 0) {
+            toast({
+                title: "Missing Required Fields",
+                description: `Please fill in the following required fields: ${missingFields.join(', ')}`,
+                variant: "destructive",
+            });
+        }
+    };
+
     return (
         <>
             <button onClick={() => setAddNewSportOpen(true)} className='flex text-nowrap items-center justify-center gap-2 rounded-3xl px-4 py-2 bg-main-green text-sm text-white'>
@@ -161,7 +183,7 @@ export default function AddNewLocation({ sports, academySports }: Props) {
                             <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>
                                 <DialogTitle className='font-normal text-base'>New Location</DialogTitle>
                                 <div className='flex items-center gap-2'>
-                                    <button disabled={loading} type='submit' className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5'>
+                                    <button onClick={handleToastValidation} disabled={loading} type='submit' className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5'>
                                         {loading && <Loader2 className='h-5 w-5 animate-spin' />}
                                         Create
                                     </button>

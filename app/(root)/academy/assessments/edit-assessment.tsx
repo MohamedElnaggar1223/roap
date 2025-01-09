@@ -37,6 +37,7 @@ import { getProgramPackages } from '@/lib/actions/packages.actions'
 import { getAllCoaches } from '@/lib/actions/coaches.actions'
 import { useOnboarding } from '@/providers/onboarding-provider'
 import { Checkbox } from '@/components/ui/checkbox'
+import { useToast } from '@/hooks/use-toast'
 
 const calculateAgeFromDate = (birthDate: string) => {
     const today = new Date();
@@ -170,6 +171,8 @@ interface Props {
 
 export default function EditAssessment({ assessment, sports, branches }: Props) {
     const router = useRouter()
+
+    const { toast } = useToast()
 
     const { mutate: mutateAssessment } = useOnboarding()
 
@@ -333,6 +336,26 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
         }
     }, [editPackageOpen])
 
+    const handleToastValidation = () => {
+        const values = form.getValues()
+        const missingFields: string[] = [];
+
+        if (!values.description) missingFields.push('Description');
+        if (!selectedGenders.length) missingFields.push('Gender');
+        if (values.startAge === undefined || values.startAge === null) missingFields.push('Start Age');
+        if (values.endAgeUnit !== 'unlimited' && (!values.endAge || values.endAge === undefined)) {
+            missingFields.push('End Age');
+        }
+
+        if (missingFields.length > 0) {
+            toast({
+                title: "Missing Required Fields",
+                description: `Please fill in the following required fields: ${missingFields.join(', ')}`,
+                variant: "destructive",
+            });
+        }
+    }
+
     return (
         <>
             <Button variant="ghost" size="icon" onClick={() => setDialogOpen(true)}>
@@ -350,7 +373,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                             <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>
                                 <DialogTitle className='font-normal text-base'>Edit Assessment</DialogTitle>
                                 <div className='flex items-center gap-2'>
-                                    <button disabled={loading} type='submit' className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5'>
+                                    <button onClick={handleToastValidation} disabled={loading} type='submit' className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5'>
                                         {loading && <Loader2 className='h-5 w-5 animate-spin' />}
                                         Save
                                     </button>

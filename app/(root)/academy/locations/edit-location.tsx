@@ -27,6 +27,7 @@ import { useState } from 'react';
 import useSWR from 'swr';
 import Image from 'next/image';
 import { useOnboarding } from '@/providers/onboarding-provider';
+import { useToast } from '@/hooks/use-toast';
 
 type Location = {
     id: number
@@ -45,6 +46,8 @@ type Props = {
 
 export default function EditLocation({ locationEdited, academySports }: Props) {
     const router = useRouter()
+
+    const { toast } = useToast()
 
     const { mutate } = useOnboarding()
 
@@ -119,6 +122,25 @@ export default function EditLocation({ locationEdited, academySports }: Props) {
         )
     }
 
+    const handleToastValidation = () => {
+        const values = form.getValues()
+        const missingFields: string[] = [];
+
+        if (!values.name) missingFields.push('Location Name');
+        if (!values.nameInGoogleMap) missingFields.push('Name in Google Map');
+        if (!values.url) missingFields.push('Google Maps Link');
+        if (!selectedSports.length) missingFields.push('Sports');
+        if (!selectedAmenities.length) missingFields.push('Amenities');
+
+        if (missingFields.length > 0) {
+            toast({
+                title: "Missing Required Fields",
+                description: `Please fill in the following required fields: ${missingFields.join(', ')}`,
+                variant: "destructive",
+            });
+        }
+    };
+
     return (
         <>
             <Button variant="ghost" size="icon" onClick={() => setEditOpen(true)}>
@@ -136,7 +158,7 @@ export default function EditLocation({ locationEdited, academySports }: Props) {
                             <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>
                                 <DialogTitle className='font-normal text-base'>Edit Location</DialogTitle>
                                 <div className='flex items-center gap-2'>
-                                    <button disabled={loading} type='submit' className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5'>
+                                    <button onClick={handleToastValidation} disabled={loading} type='submit' className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5'>
                                         {loading && <Loader2 className='h-5 w-5 animate-spin' />}
                                         Save
                                     </button>

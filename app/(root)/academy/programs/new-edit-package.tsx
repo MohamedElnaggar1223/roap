@@ -29,6 +29,7 @@ import { Package } from '@/stores/programs-store';
 import { useProgramsStore } from '@/providers/store-provider';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 const formatTimeValue = (value: string) => {
     if (!value) return '';
@@ -221,6 +222,9 @@ const getMonthsInRange = (startDate: Date, endDate: Date) => {
 
 export default function EditPackage({ packageEdited, open, onOpenChange, mutate, setEditedPackage, programId, index }: Props) {
     const router = useRouter()
+
+    const { toast } = useToast()
+
     const { mutate: mutatePackage } = useOnboarding()
     const [loading, setLoading] = useState(false)
     const [availableMonths, setAvailableMonths] = useState<Array<{ label: string, value: string }>>([])
@@ -502,6 +506,83 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
         }
     }
 
+    const handleToastValidation = () => {
+        const values = form.getValues()
+        const missingFields: string[] = [];
+
+        // Check basic fields
+        if (!values.type) missingFields.push('Package Type');
+        if (!values.price) missingFields.push('Price');
+        if (values.type === 'Term' && !values.termNumber) missingFields.push('Term Number');
+
+        // Check dates/months based on package type
+        if (values.type === 'Monthly') {
+            if (!values.months || values.months.length === 0) missingFields.push('Months');
+        } else {
+            if (!values.startDate) missingFields.push('Start Date');
+            if (!values.endDate) missingFields.push('End Date');
+        }
+
+        // Entry fees validation
+        const entryFees = parseFloat(values.entryFees || '0');
+        if (entryFees > 0) {
+            if (!values.entryFeesExplanation) missingFields.push('Entry Fees Explanation');
+            if (values.type === 'Monthly' && (!values.entryFeesAppliedUntil || values.entryFeesAppliedUntil.length === 0)) {
+                missingFields.push('Entry Fees Applied For');
+            }
+            if (values.type !== 'Monthly') {
+                if (!values.entryFeesStartDate) missingFields.push('Entry Fees Start Date');
+                if (!values.entryFeesEndDate) missingFields.push('Entry Fees End Date');
+            }
+        }
+
+        // Sessions validation
+        if (!values.schedules || values.schedules.length === 0) {
+            missingFields.push('Sessions');
+        } else {
+            values.schedules.forEach((schedule, index) => {
+                if (!schedule.day) missingFields.push(`Session ${index + 1} Day`);
+                if (!schedule.from) missingFields.push(`Session ${index + 1} Start Time`);
+                if (!schedule.to) missingFields.push(`Session ${index + 1} End Time`);
+
+                // Flexible package specific validations
+                if (program?.flexible) {
+                    if (schedule.capacityType === 'normal' && (!schedule.capacity || parseInt(schedule.capacity) <= 0)) {
+                        missingFields.push(`Session ${index + 1} Capacity`);
+                    }
+                }
+            });
+        }
+
+        // Flexible package validations
+        if (program?.flexible) {
+            if (!values.sessionPerWeek || values.sessionPerWeek <= 0) {
+                missingFields.push('Sessions Per Week');
+            }
+            if (!values.sessionDuration) {
+                missingFields.push('Session Duration');
+            }
+            if (values.sessionPerWeek && values.sessionPerWeek > values.schedules.length) {
+                missingFields.push('Sessions Per Week (cannot be greater than available schedules)');
+            }
+        } else {
+            // Regular package capacity validation
+            if (values.capacityType === 'normal' && (!values.capacity || parseInt(values.capacity) <= 0)) {
+                missingFields.push('Package Capacity');
+            }
+        }
+
+        console.log('Missing fields:', missingFields);
+        if (missingFields.length > 0) {
+            toast({
+                title: "Missing Required Fields",
+                description: `Please fill in the following required fields: ${missingFields.join(', ')}`,
+                variant: "destructive",
+            });
+            return;
+        }
+    };
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className='bg-main-white min-w-[820px]'>
@@ -510,7 +591,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                         <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>
                             <DialogTitle className='font-normal text-base'>Edit Package</DialogTitle>
                             <div className='flex items-center gap-2'>
-                                <button disabled={loading} type='submit' className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5'>
+                                <button onClick={handleToastValidation} disabled={loading} type='submit' className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5'>
                                     {loading && <Loader2 className='h-5 w-5 animate-spin' />}
                                     Save
                                 </button>

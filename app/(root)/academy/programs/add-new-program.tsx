@@ -306,40 +306,6 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
     const onSubmit = async (values: z.infer<typeof addProgramSchema>) => {
         try {
 
-            const missingFields: string[] = [];
-
-            console.log("Color", values.color)
-
-            if (!values.name) missingFields.push('Name');
-            if (!values.description) missingFields.push('Description');
-            if (!values.branchId) missingFields.push('Branch');
-            if (!values.sportId) missingFields.push('Sport');
-            if (!values.color) missingFields.push('Color');
-            if (!selectedGenders.length) missingFields.push('Gender');
-            if (!selectedCoaches.length) missingFields.push('Coaches');
-            if (values.startAge === undefined || values.startAge === null) missingFields.push('Start Age');
-            if (values.endAgeUnit !== 'unlimited' && (!values.endAge || values.endAge === undefined)) {
-                missingFields.push('End Age');
-            }
-
-            if (missingFields.length > 0) {
-                toast({
-                    title: "Missing Required Fields",
-                    description: `Please fill in the following required fields: ${missingFields.join(', ')}`,
-                    variant: "destructive",
-                });
-                return;
-            }
-
-            if (!selectedGenders.length) {
-                toast({
-                    title: "Gender Selection Required",
-                    description: "Please select at least one gender for the program",
-                    variant: "destructive",
-                });
-                return;
-            }
-
             if (!selectedGenders.length) return form.setError('root', {
                 type: 'custom',
                 message: 'Please select at least one gender'
