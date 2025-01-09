@@ -170,27 +170,32 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
 
     const isStepComplete = (stepId: StepId) => {
         const stepRequirements = requirements[stepId]
-        console.log("Step Requirements: ", stepRequirements)
         if (!stepRequirements) return false
-
-        const allRequirementsMet = Object.values(stepRequirements).every(Boolean)
-
-        if (allRequirementsMet && !steps.find(s => s.id === stepId)?.isCompleted) {
-            setSteps(prevSteps =>
-                prevSteps.map(step =>
-                    step.id === stepId ? { ...step, isCompleted: true } : step
-                )
-            )
-        } else if (!allRequirementsMet && steps.find(s => s.id === stepId)?.isCompleted) {
-            setSteps(prevSteps =>
-                prevSteps.map(step =>
-                    step.id === stepId ? { ...step, isCompleted: false } : step
-                )
-            )
-        }
-
-        return allRequirementsMet
+        return Object.values(stepRequirements).every(Boolean)
     }
+
+    useEffect(() => {
+        steps.forEach(step => {
+            const stepRequirements = requirements[step.id]
+            if (!stepRequirements) return
+
+            const allRequirementsMet = Object.values(stepRequirements).every(Boolean)
+
+            if (allRequirementsMet && !steps.find(s => s.id === step.id)?.isCompleted) {
+                setSteps(prevSteps =>
+                    prevSteps.map(s =>
+                        s.id === step.id ? { ...s, isCompleted: true } : s
+                    )
+                )
+            } else if (!allRequirementsMet && steps.find(s => s.id === step.id)?.isCompleted) {
+                setSteps(prevSteps =>
+                    prevSteps.map(s =>
+                        s.id === step.id ? { ...s, isCompleted: false } : s
+                    )
+                )
+            }
+        })
+    }, [requirements, steps])
 
     console.log(finalAcademyDetails)
     console.log(

@@ -30,6 +30,13 @@ export default function AcademyHeader({ academyId, children }: Readonly<{ academ
 		academyName
 	} = useOnboarding()
 
+	const stepCompletionStatus = React.useMemo(() => {
+		return steps.map(step => ({
+			...step,
+			isComplete: isStepComplete(step.id)
+		}))
+	}, [steps, isStepComplete])
+
 	const generateBreadcrumbs = () => {
 		const paths = pathname?.replace('/', '').split('/').filter(Boolean);
 
@@ -124,15 +131,14 @@ export default function AcademyHeader({ academyId, children }: Readonly<{ academ
 						</PopoverTrigger>
 						<PopoverContent className="w-64" align="center">
 							<div className="flex flex-col gap-2">
-								{steps.map((step) => (
+								{stepCompletionStatus.map((step) => (
 									<div
 										key={step.id}
-										className={`flex items-center justify-between p-2 rounded-lg ${currentStep.id === step.id ? 'bg-[#E0E4D9]' : ''
-											}`}
+										className={`flex items-center justify-between p-2 rounded-lg ${currentStep.id === step.id ? 'bg-[#E0E4D9]' : ''}`}
 									>
 										<span className="text-sm font-medium">{step.title}</span>
 										<div className="flex items-center justify-center w-6 h-6 rounded-full">
-											{isStepComplete(step.id) ? (
+											{step.isComplete ? (
 												<Check className="h-4 w-4 text-green-500" />
 											) : (
 												<X className="h-4 w-4 text-red-500" />

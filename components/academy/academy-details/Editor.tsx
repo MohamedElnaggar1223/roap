@@ -66,6 +66,7 @@ const TipTapEditor = forwardRef<HTMLDivElement, TipTapEditorProps>(({ value, onV
             }),
         ],
         content: value,
+        immediatelyRender: false,
         editorProps: {
             attributes: {
                 class: cn(
