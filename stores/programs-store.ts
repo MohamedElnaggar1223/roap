@@ -304,7 +304,7 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
                 programs: get().programs.map(p => {
                     if (p.id !== program.id) return p
 
-                    console.log("Package Data", packageData, program.flexible)
+                    console.log("Package Data Inside", packageData, program.flexible)
 
                     return {
                         ...program,

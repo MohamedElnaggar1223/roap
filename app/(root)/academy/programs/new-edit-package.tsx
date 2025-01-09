@@ -376,18 +376,20 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
     const sessionDurationChange = form.watch('sessionDuration')
 
     useEffect(() => {
-        form.setValue('schedules', form.getValues('schedules').map(s => {
-            const duration = form.watch("sessionDuration");
-            const [hours, minutes] = s.from.split(':').map(Number);
-            const startDate = new Date();
-            startDate.setHours(hours, minutes, 0);
-            const endDate = new Date(startDate.getTime() + (duration ?? 0) * 60000);
-            const to = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`;
-            return {
-                ...s,
-                to
-            }
-        }))
+        if (program?.flexible) {
+            form.setValue('schedules', form.getValues('schedules').map(s => {
+                const duration = form.watch("sessionDuration");
+                const [hours, minutes] = s.from.split(':').map(Number);
+                const startDate = new Date();
+                startDate.setHours(hours, minutes, 0);
+                const endDate = new Date(startDate.getTime() + (duration ?? 0) * 60000);
+                const to = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`;
+                return {
+                    ...s,
+                    to
+                }
+            }))
+        }
     }, [sessionDurationChange])
 
     useEffect(() => {
@@ -419,6 +421,8 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
 
                 console.log("Capacity", program?.flexible ? null : (values.capacityType === "unlimited" ? 9999 : parseInt(values.capacity)))
 
+                console.log("JUST BEFORE EDITING------------------------")
+                console.log(values.schedules)
                 editPackage({
                     ...packageData,
                     name: packageName!,
@@ -590,8 +594,8 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                     <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full'>
                         <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>
                             <DialogTitle className='font-normal text-base'>Edit Package</DialogTitle>
-                            <div className='flex items-center gap-2'>
-                                <button onClick={handleToastValidation} disabled={loading} type='submit' className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5'>
+                            <div onClick={handleToastValidation} className='flex items-center gap-2'>
+                                <button disabled={loading} type='submit' className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5'>
                                     {loading && <Loader2 className='h-5 w-5 animate-spin' />}
                                     Save
                                 </button>

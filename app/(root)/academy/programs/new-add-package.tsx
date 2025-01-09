@@ -372,6 +372,25 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
         }
     }
 
+    const sessionDurationChange = form.watch('sessionDuration')
+
+    useEffect(() => {
+        if (program?.flexible) {
+            form.setValue('schedules', form.getValues('schedules').map(s => {
+                const duration = form.watch("sessionDuration");
+                const [hours, minutes] = s.from.split(':').map(Number);
+                const startDate = new Date();
+                startDate.setHours(hours, minutes, 0);
+                const endDate = new Date(startDate.getTime() + (duration ?? 0) * 60000);
+                const to = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`;
+                return {
+                    ...s,
+                    to
+                }
+            }))
+        }
+    }, [sessionDurationChange])
+
     const handleToastValidation = () => {
         const values = form.getValues()
         const missingFields: string[] = [];
