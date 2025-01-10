@@ -10,6 +10,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import useSWR from 'swr'
+import { getQueryClient } from '../get-query-client';
 
 type Props = {
     sports: {
@@ -22,6 +23,8 @@ type Props = {
 
 export default function AddNewSport({ sports }: Props) {
     const router = useRouter()
+
+    const queryClient = getQueryClient()
 
     console.log(sports)
 
@@ -51,6 +54,9 @@ export default function AddNewSport({ sports }: Props) {
         router.refresh()
         await fetchSports()
         await fetchRemainingSports()
+        queryClient.invalidateQueries({
+            queryKey: ['academyDetails']
+        })
     }
 
     return (

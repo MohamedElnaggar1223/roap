@@ -1159,6 +1159,19 @@ export async function updateAcademyDetails(data: UpdateAcademyDetailsInput) {
 					eq(academicTranslations.locale, 'en')
 				))
 
+			if (sportsToRemove.length > 0) {
+				// First remove the sport from all branches
+				await tx.delete(branchSport)
+					.where(inArray(branchSport.sportId, sportsToRemove))
+
+				// Then remove all assessments for this sport
+				await tx.delete(programs)
+					.where(and(
+						eq(programs.academicId, academy.id),
+						inArray(programs.sportId, sportsToRemove),
+					))
+			}
+
 			await Promise.all([
 				sportsToRemove.length > 0 ?
 					tx.delete(academicSport)

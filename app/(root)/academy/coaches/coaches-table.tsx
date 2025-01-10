@@ -232,7 +232,7 @@ export function CoachesDataTable({ data, sports, languages, academySports }: Coa
                                     {coach.name}
                                 </div>
                                 <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                    {calculateAge(new Date(coach.dateOfBirth!))}
+                                    {coach.dateOfBirth ? calculateAge(new Date(coach.dateOfBirth!)) : 'N/A'}
                                 </div>
                                 <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
                                     {(coach.gender?.slice(0, 1).toUpperCase() ?? '') + coach.gender?.slice(1)}

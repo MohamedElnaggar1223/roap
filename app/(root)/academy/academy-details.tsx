@@ -131,6 +131,10 @@ export default function AcademyDetails() {
         }
     };
 
+    useEffect(() => {
+        setSelectedSports(data?.academyDetails.sports ?? [])
+    }, [data])
+
     const handleGalleryDrop = async (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();

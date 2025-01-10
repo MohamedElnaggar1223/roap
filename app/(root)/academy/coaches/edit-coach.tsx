@@ -123,7 +123,7 @@ export default function EditCoach({ coachEdited, sports, languages, academySport
 
         await updateCoach(coachEdited.id, {
             ...values,
-            dateOfBirth: values.dateOfBirth ?? new Date(),
+            dateOfBirth: values.dateOfBirth ?? undefined,
             image: imagePath || '',
             sports: selectedSports,
             languages: selectedLanguages,

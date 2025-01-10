@@ -109,7 +109,7 @@ export default function AddNewCoach({ sports, languages, academySports }: Props)
 
             const result = await createCoach({
                 ...values,
-                dateOfBirth: values.dateOfBirth ?? new Date(),
+                dateOfBirth: values.dateOfBirth ?? undefined,
                 image: imagePath || '',
                 sports: selectedSports,
                 languages: selectedLanguages,

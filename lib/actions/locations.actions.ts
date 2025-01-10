@@ -417,6 +417,13 @@ export async function updateLocation(id: number, data: {
                         inArray(branchSport.sportId, sportsToRemove)
                     )) : Promise.resolve(),
 
+            sportsToRemove.length > 0 ?
+                db.delete(programs)
+                    .where(and(
+                        eq(programs.branchId, id),
+                        inArray(programs.sportId, sportsToRemove),
+                    )) : Promise.resolve(),
+
             sportsToAdd.length > 0 ?
                 db.insert(branchSport)
                     .values(sportsToAdd.map(sportId => ({

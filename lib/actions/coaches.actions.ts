@@ -144,7 +144,7 @@ export async function createCoach(data: {
     image: string
     bio: string
     gender: string
-    dateOfBirth: Date
+    dateOfBirth: Date | undefined
     privateSessionPercentage: string
     sports: number[]
     languages: number[]
@@ -190,7 +190,7 @@ export async function createCoach(data: {
                     image: data.image ? 'images/' + data.image : null,
                     bio: data.bio,
                     gender: data.gender,
-                    dateOfBirth: formatDateForDB(data.dateOfBirth),
+                    dateOfBirth: data.dateOfBirth ? formatDateForDB(data.dateOfBirth) : null,
                     privateSessionPercentage: data.privateSessionPercentage + '%',
                     academicId: academy.id,
                     createdAt: sql`now()`,
@@ -242,7 +242,7 @@ export async function updateCoach(id: number, data: {
     image: string
     bio: string
     gender: string
-    dateOfBirth: Date
+    dateOfBirth: Date | undefined
     privateSessionPercentage: string
     sports: number[]
     languages: number[]
@@ -287,7 +287,7 @@ export async function updateCoach(id: number, data: {
                 image: data.image ? data.image.includes('images/') ? data.image.startsWith('images/') ? data.image : 'images/' + data.image?.split('images/')[1] : 'images/' + data.image : null,
                 bio: data.bio,
                 gender: data.gender,
-                dateOfBirth: formatDateForDB(data.dateOfBirth),
+                dateOfBirth: data.dateOfBirth ? formatDateForDB(data.dateOfBirth) : null,
                 privateSessionPercentage: data.privateSessionPercentage + '%',
                 updatedAt: sql`now()`
             })
