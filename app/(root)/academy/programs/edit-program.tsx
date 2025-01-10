@@ -48,6 +48,16 @@ import { Discount, Package, Program } from '@/stores/programs-store';
 import { useProgramsStore } from '@/providers/store-provider';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 const calculateAge = (birthDate: string): number => {
     const today = new Date();
@@ -245,6 +255,28 @@ const calculateDateFromAge = (age: number, unit: string): Date => {
     return date;
 };
 
+interface ChangedFields {
+    form: string[];
+    coaches: boolean;
+    genders: boolean;
+    packages: {
+        changed: boolean;
+        count: {
+            added: number;
+            edited: number;
+            deleted: number;
+        };
+    };
+    discounts: {
+        changed: boolean;
+        count: {
+            added: number;
+            edited: number;
+            deleted: number;
+        };
+    };
+}
+
 export default function EditProgram({ branches, sports, programEdited, academySports, takenColors }: Props) {
     const router = useRouter()
 
@@ -272,6 +304,31 @@ export default function EditProgram({ branches, sports, programEdited, academySp
     const [discountsOpen, setDiscountsOpen] = useState(false);
     const [editDiscountOpen, setEditDiscountOpen] = useState(false);
     const [editedDiscount, setEditedDiscount] = useState<{ editedDiscount: Discount, index?: number } | null>(null);
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
+    const [originalPackages] = useState(programEdited.packages);
+    const [originalDiscounts] = useState(programEdited.discounts);
+    const [changedFields, setChangedFields] = useState<ChangedFields>({
+        form: [],
+        coaches: false,
+        genders: false,
+        packages: {
+            changed: false,
+            count: {
+                added: 0,
+                edited: 0,
+                deleted: 0
+            }
+        },
+        discounts: {
+            changed: false,
+            count: {
+                added: 0,
+                edited: 0,
+                deleted: 0
+            }
+        }
+    });
 
     const editProgram = useProgramsStore((state) => state.editProgram)
     const program = useProgramsStore((state) => state.programs.find(p => p.id === programEdited.id))
@@ -493,6 +550,124 @@ export default function EditProgram({ branches, sports, programEdited, academySp
         }
     }
 
+    useEffect(() => {
+        const formSubscription = form.watch(() => {
+            checkForChanges();
+        });
+
+        return () => {
+            formSubscription.unsubscribe();
+        };
+    }, []);
+
+    // Add this function to check for changes
+    const checkForChanges = () => {
+        const formValues = form.getValues();
+        const initialFormValues = {
+            name: programEdited.name ?? '',
+            description: programEdited.description ?? '',
+            branchId: programEdited.branchId?.toString() ?? '',
+            sportId: programEdited.sportId?.toString() ?? '',
+            numberOfSeats: programEdited.numberOfSeats?.toString() ?? '',
+            type: programEdited.type,
+            color: programEdited.color ?? '',
+            flexible: programEdited.flexible ?? false,
+            startAge: (() => {
+                if (!programEdited.startDateOfBirth) return 0;
+                const { age } = calculateAgeFromDate(programEdited.startDateOfBirth);
+                return age;
+            })(),
+            startAgeUnit: (() => {
+                if (!programEdited.startDateOfBirth) return 'years';
+                return calculateAgeFromDate(programEdited.startDateOfBirth).unit;
+            })(),
+            endAge: (() => {
+                if (!programEdited.endDateOfBirth) return undefined;
+                const { age } = calculateAgeFromDate(programEdited.endDateOfBirth);
+                if (age >= 100) return undefined;
+                return age;
+            })(),
+            endAgeUnit: (() => {
+                if (!programEdited.endDateOfBirth) return 'unlimited';
+                const { age } = calculateAgeFromDate(programEdited.endDateOfBirth);
+                if (age >= 100) return 'unlimited';
+                return calculateAgeFromDate(programEdited.endDateOfBirth).unit;
+            })(),
+        };
+
+        // Check which form fields have changed
+        const changedFormFields = Object.keys(formValues).filter(key =>
+            JSON.stringify(formValues[key as keyof typeof formValues]) !== JSON.stringify(initialFormValues[key as keyof typeof initialFormValues])
+        );
+
+        // Count package changes
+        const packageChanges = {
+            added: program?.packages?.filter(p => !p.id && !p.deleted).length || 0,
+            edited: program?.packages?.filter(p => {
+                const original = originalPackages?.find(op => op.id === p.id);
+                return original && JSON.stringify(original) !== JSON.stringify(p) && !p.deleted;
+            }).length || 0,
+            deleted: program?.packages?.filter(p => p.deleted).length || 0
+        };
+
+        // Count discount changes
+        const discountChanges = {
+            added: program?.discounts?.filter(d => !d.id).length || 0,
+            edited: program?.discounts?.filter(d => {
+                const original = originalDiscounts?.find(od => od.id === d.id);
+                return original && JSON.stringify(original) !== JSON.stringify(d);
+            }).length || 0,
+            deleted: originalDiscounts?.filter(d =>
+                !program?.discounts?.find(pd => pd.id === d.id)
+            ).length || 0
+        };
+
+        const formChanged = changedFormFields.length > 0;
+        const coachesChanged = JSON.stringify(selectedCoaches) !== JSON.stringify(programEdited.coachPrograms.map(coach => coach.coach.id));
+        const gendersChanged = JSON.stringify(selectedGenders) !== JSON.stringify(programEdited.gender?.split(',') ?? []);
+        const packagesChanged = JSON.stringify(program?.packages) !== JSON.stringify(originalPackages);
+        const discountsChanged = JSON.stringify(program?.discounts) !== JSON.stringify(originalDiscounts);
+
+        const hasChanges = formChanged || coachesChanged || gendersChanged || packagesChanged || discountsChanged;
+
+        setChangedFields({
+            form: changedFormFields,
+            coaches: coachesChanged,
+            genders: gendersChanged,
+            packages: {
+                changed: packagesChanged,
+                count: packageChanges
+            },
+            discounts: {
+                changed: discountsChanged,
+                count: discountChanges
+            }
+        });
+
+        setHasUnsavedChanges(hasChanges);
+    };
+
+    // Add these useEffects to track packages and discounts changes
+    useEffect(() => {
+        checkForChanges();
+    }, [program?.packages]);
+
+    useEffect(() => {
+        checkForChanges();
+    }, [program?.discounts]);
+
+    useEffect(() => {
+        checkForChanges();
+    }, [selectedCoaches, selectedGenders]);
+
+    const handleDialogClose = (open: boolean) => {
+        if (!open && hasUnsavedChanges) {
+            setShowUnsavedChangesDialog(true);
+            return;
+        }
+        setEditProgramOpen(open);
+    }
+
     return (
         <>
             <Button variant="ghost" size="icon" onClick={() => setEditProgramOpen(true)}>
@@ -503,7 +678,93 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                     height={20}
                 />
             </Button>
-            <Dialog open={editProgramOpen} onOpenChange={setEditProgramOpen}>
+            <AlertDialog open={showUnsavedChangesDialog} onOpenChange={setShowUnsavedChangesDialog}>
+                <AlertDialogContent className="max-w-md">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
+                        <AlertDialogDescription className="space-y-2">
+                            <p>The following changes will be discarded:</p>
+
+                            <div className="pl-4 space-y-1 text-sm">
+                                {changedFields.form.length > 0 && (
+                                    <p>• Form fields changed: {changedFields.form.map(field => {
+                                        const fieldNames: Record<string, string> = {
+                                            name: 'Name',
+                                            description: 'Description',
+                                            branchId: 'Branch',
+                                            sportId: 'Sport',
+                                            numberOfSeats: 'Number of Seats',
+                                            type: 'Type',
+                                            color: 'Color',
+                                            flexible: 'Flexible Schedule',
+                                            startAge: 'Start Age',
+                                            startAgeUnit: 'Start Age Unit',
+                                            endAge: 'End Age',
+                                            endAgeUnit: 'End Age Unit'
+                                        };
+                                        return fieldNames[field] || field;
+                                    }).join(', ')}</p>
+                                )}
+
+                                {changedFields.coaches && (
+                                    <p>• Selected coaches have been modified</p>
+                                )}
+
+                                {changedFields.genders && (
+                                    <p>• Gender selection has been modified</p>
+                                )}
+
+                                {changedFields.packages.changed && (
+                                    <p>• Package changes: {[
+                                        changedFields.packages.count.added > 0 && `${changedFields.packages.count.added} added`,
+                                        changedFields.packages.count.edited > 0 && `${changedFields.packages.count.edited} edited`,
+                                        changedFields.packages.count.deleted > 0 && `${changedFields.packages.count.deleted} deleted`
+                                    ].filter(Boolean).join(', ')}</p>
+                                )}
+
+                                {changedFields.discounts.changed && (
+                                    <p>• Discount changes: {[
+                                        changedFields.discounts.count.added > 0 && `${changedFields.discounts.count.added} added`,
+                                        changedFields.discounts.count.edited > 0 && `${changedFields.discounts.count.edited} edited`,
+                                        changedFields.discounts.count.deleted > 0 && `${changedFields.discounts.count.deleted} deleted`
+                                    ].filter(Boolean).join(', ')}</p>
+                                )}
+                            </div>
+
+                            <p className="pt-2">Are you sure you want to discard these changes?</p>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5 hover:bg-main-green hover:text-main-yellow'>
+                            Continue Editing
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => {
+                                setShowUnsavedChangesDialog(false);
+                                setEditProgramOpen(false);
+                                // Reset form to initial values
+                                form.reset();
+                                setSelectedCoaches(programEdited.coachPrograms.map(coach => coach.coach.id));
+                                setSelectedGenders(programEdited.gender?.split(',') ?? []);
+
+                                // Reset packages and discounts to their initial state
+                                if (program?.id) {
+                                    editProgram({
+                                        ...programEdited,
+                                        id: program.id,
+                                        packages: originalPackages,
+                                        discounts: originalDiscounts
+                                    }, mutateProgram);
+                                }
+                            }}
+                            className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-white bg-red-500 px-4 py-2.5 hover:bg-red-500 hover:text-white'
+                        >
+                            Discard Changes
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+            <Dialog open={editProgramOpen} onOpenChange={handleDialogClose}>
                 <DialogContent className='bg-main-white min-w-[920px] max-w-[920px]'>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full'>

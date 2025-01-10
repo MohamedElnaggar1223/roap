@@ -29,6 +29,7 @@ import { useOnboarding } from '@/providers/onboarding-provider';
 import { cn } from '@/lib/utils';
 import { useSportsStore } from '@/providers/store-provider';
 import { useSuspenseQuery } from '@tanstack/react-query';
+import { getQueryClient } from '../get-query-client';
 
 // type Props = {
 //     academyDetails: {
@@ -68,6 +69,8 @@ export default function AcademyDetails() {
     const router = useRouter()
     const { toast } = useToast()
     const { mutate } = useOnboarding()
+
+    const queryClient = getQueryClient()
 
     const { data } = useSuspenseQuery({
         queryKey: ['academyDetails'],
@@ -244,6 +247,10 @@ export default function AcademyDetails() {
             toast({
                 title: "Success",
                 description: "Academy details updated successfully",
+            })
+
+            queryClient.invalidateQueries({
+                queryKey: ['academyDetails']
             })
 
             mutate()
