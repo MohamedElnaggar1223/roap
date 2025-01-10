@@ -441,9 +441,9 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                 New Program
             </button>
             <Dialog open={addNewProgramOpen} onOpenChange={setAddNewProgramOpen}>
-                <DialogContent className='bg-main-white min-w-[920px] max-w-[920px]'>
+                <DialogContent className='bg-main-white min-w-[920px] max-w-[920px] min-h-[650px]'>
                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full'>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full h-full min-h-[650px]'>
                             <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>
                                 <DialogTitle className='font-normal text-base'>New Program</DialogTitle>
                                 <div className='flex items-center gap-2'>
@@ -453,7 +453,7 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                                     </button>
                                 </div>
                             </DialogHeader>
-                            <div className="w-full max-h-[380px] overflow-y-auto">
+                            <div className="w-full max-h-[650px] overflow-y-auto">
                                 <div className="flex flex-col gap-6 w-full px-2">
                                     <div className="flex w-full gap-4 items-start justify-between">
 
