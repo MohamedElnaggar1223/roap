@@ -5,7 +5,7 @@ export const addCoachSchema = z.object({
     title: z.string().min(1, "Title is required"),
     bio: z.string().min(1, "Bio is required"),
     gender: z.string().min(1, "Gender is required"),
-    dateOfBirth: z.date(),
+    dateOfBirth: z.date().optional(),
     privateSessionPercentage: z.string(),
     image: z.string().optional(),
 })

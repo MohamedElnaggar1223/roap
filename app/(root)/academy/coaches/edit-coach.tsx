@@ -123,6 +123,7 @@ export default function EditCoach({ coachEdited, sports, languages, academySport
 
         await updateCoach(coachEdited.id, {
             ...values,
+            dateOfBirth: values.dateOfBirth ?? new Date(),
             image: imagePath || '',
             sports: selectedSports,
             languages: selectedLanguages,
@@ -223,7 +224,7 @@ export default function EditCoach({ coachEdited, sports, languages, academySport
             <Dialog open={editOpen} onOpenChange={setEditOpen}>
                 <DialogContent className='bg-main-white min-w-[720px]'>
                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full'>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full z-10'>
                             <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>
                                 <DialogTitle className='font-normal text-base'>Edit Coach</DialogTitle>
                                 <div className='flex items-center gap-2'>
@@ -413,7 +414,7 @@ export default function EditCoach({ coachEdited, sports, languages, academySport
                                                         Select sports
                                                     </Button>
                                                 </PopoverTrigger>
-                                                <PopoverContent className="w-56 p-0 overflow-hidden" align="start">
+                                                <PopoverContent className="w-56 p-0 overflow-hidden z-20" align="start">
                                                     <div
                                                         className="max-h-64 overflow-y-scroll overscroll-contain"
                                                         style={{
