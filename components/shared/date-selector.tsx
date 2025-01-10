@@ -5,6 +5,8 @@ import { format, setYear, setMonth, setDate, getDaysInMonth } from 'date-fns'
 import { FormControl } from "@/components/ui/form"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { TextMorph } from '../ui/text-morph'
+import { X } from 'lucide-react'
+import { Button } from "@/components/ui/button"
 
 interface DateSelectorProps {
     field: {
@@ -15,61 +17,78 @@ interface DateSelectorProps {
 }
 
 export function DateSelector({ field, optional }: DateSelectorProps) {
-    // Initialize with undefined to match field state
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(field.value)
 
     const years = Array.from({ length: 105 }, (_, i) => (new Date().getFullYear()) + 5 - i)
     const months = Array.from({ length: 12 }, (_, i) => i)
-    // Get days in month based on selected date or current date
-    const daysInMonth = selectedDate ? getDaysInMonth(selectedDate) : getDaysInMonth(new Date())
+    const daysInMonth = selectedDate ? getDaysInMonth(selectedDate) : 31 // Default to 31 days when no date is selected
     const days = Array.from({ length: daysInMonth }, (_, i) => i + 1)
 
+    // Skip the initial effect when field.value is undefined
+    const [initialValue] = useState(field.value)
+
+    const areDatesEqual = (date1: Date | undefined, date2: Date | undefined) => {
+        if (date1 === undefined && date2 === undefined) return true
+        if (date1 === undefined || date2 === undefined) return false
+        return date1.getTime() === date2.getTime()
+    }
+
     useEffect(() => {
-        setSelectedDate(field.value)
-    }, [field.value])
+        if (!areDatesEqual(field.value, selectedDate) && !areDatesEqual(field.value, initialValue)) {
+            setSelectedDate(field.value)
+        }
+    }, [field.value, selectedDate, initialValue])
 
     const handleDateChange = (type: 'day' | 'month' | 'year', value: number) => {
-        // If no date is selected yet, start with current date
+        // If there's no selected date, create a new one from the current date
+        // but only if this is the first interaction
         const baseDate = selectedDate || new Date()
-        let newDate: Date
+        const currentYear = baseDate.getFullYear()
+        const currentMonth = baseDate.getMonth()
+        const currentDay = baseDate.getDate()
+
+        let newDate = new Date(currentYear, currentMonth, currentDay)
 
         switch (type) {
             case 'day':
-                newDate = setDate(baseDate, value)
+                newDate = setDate(newDate, value)
                 break
             case 'month':
-                const daysInNewMonth = getDaysInMonth(setMonth(baseDate, value))
-                const newDay = Math.min(baseDate.getDate(), daysInNewMonth)
-                newDate = setDate(setMonth(baseDate, value), newDay)
+                const daysInNewMonth = getDaysInMonth(setMonth(newDate, value))
+                const newDay = Math.min(currentDay, daysInNewMonth)
+                newDate = setDate(setMonth(newDate, value), newDay)
                 break
             case 'year':
-                const daysInNewYear = getDaysInMonth(setYear(baseDate, value))
-                const adjustedDay = Math.min(baseDate.getDate(), daysInNewYear)
-                newDate = setDate(setYear(baseDate, value), adjustedDay)
+                const daysInNewYear = getDaysInMonth(setYear(newDate, value))
+                const adjustedDay = Math.min(currentDay, daysInNewYear)
+                newDate = setDate(setYear(newDate, value), adjustedDay)
                 break
             default:
-                newDate = baseDate
+                return // Do nothing if type is invalid
         }
 
         setSelectedDate(newDate)
         field.onChange(newDate)
     }
 
-    const displayDate = selectedDate || new Date()
+    const handleClear = () => {
+        setSelectedDate(undefined)
+        field.onChange(undefined)
+    }
 
     return (
         <FormControl>
             <div className="flex flex-col gap-2">
-                <div className="flex space-x-2">
+                <div className="flex items-center space-x-2">
                     <Select
                         onValueChange={(value) => handleDateChange('day', parseInt(value))}
-                        value={displayDate.getDate().toString()}
+                        value={selectedDate ? selectedDate.getDate().toString() : ""}
                     >
                         <SelectTrigger
                             className={`w-[80px] ${!selectedDate ? 'text-muted-foreground' : ''}`}
                         >
                             <SelectValue placeholder="Day">
-                                {selectedDate ? displayDate.getDate().toString() : "Day"}
+                                {selectedDate ? selectedDate.getDate().toString() : "Day"}
                             </SelectValue>
                         </SelectTrigger>
                         <SelectContent className='bg-[#F1F2E9]'>
@@ -84,13 +103,13 @@ export function DateSelector({ field, optional }: DateSelectorProps) {
                     </Select>
                     <Select
                         onValueChange={(value) => handleDateChange('month', parseInt(value))}
-                        value={displayDate.getMonth().toString()}
+                        value={selectedDate ? selectedDate.getMonth().toString() : ""}
                     >
                         <SelectTrigger
                             className={`w-[110px] ${!selectedDate ? 'text-muted-foreground' : ''}`}
                         >
                             <SelectValue placeholder="Month">
-                                {selectedDate ? format(displayDate, 'MMMM') : "Month"}
+                                {selectedDate ? format(selectedDate, 'MMMM') : "Month"}
                             </SelectValue>
                         </SelectTrigger>
                         <SelectContent className='bg-[#F1F2E9]'>
@@ -105,13 +124,13 @@ export function DateSelector({ field, optional }: DateSelectorProps) {
                     </Select>
                     <Select
                         onValueChange={(value) => handleDateChange('year', parseInt(value))}
-                        value={displayDate.getFullYear().toString()}
+                        value={selectedDate ? selectedDate.getFullYear().toString() : ""}
                     >
                         <SelectTrigger
                             className={`w-[90px] ${!selectedDate ? 'text-muted-foreground' : ''}`}
                         >
                             <SelectValue placeholder="Year">
-                                {selectedDate ? displayDate.getFullYear().toString() : "Year"}
+                                {selectedDate ? selectedDate.getFullYear().toString() : "Year"}
                             </SelectValue>
                         </SelectTrigger>
                         <SelectContent className='bg-[#F1F2E9]'>
@@ -124,6 +143,17 @@ export function DateSelector({ field, optional }: DateSelectorProps) {
                             ))}
                         </SelectContent>
                     </Select>
+                    {optional && selectedDate && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            onClick={handleClear}
+                            type="button"
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
+                    )}
                 </div>
                 {!selectedDate && !optional && (
                     <p className="text-xs text-red-500 mt-1">Please select a date</p>
