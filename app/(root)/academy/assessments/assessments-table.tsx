@@ -121,7 +121,7 @@ export function AssessmentsTable({ data, branches, sports, academySports }: Asse
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className='max-h-48 overflow-auto bg-[#F1F2E9]'>
                                 <DropdownMenuItem onClick={() => setSelectedGender(null)}>All</DropdownMenuItem>
-                                {['male', 'female', 'adults', 'adults men', 'ladies only'].map(gender => (
+                                {['male', 'female', 'adults', 'adults men', 'ladies only'].filter(g => data.map(p => p.gender?.split(',')).flat().includes(g)).map(gender => (
                                     <DropdownMenuItem
                                         key={gender}
                                         onClick={() => setSelectedGender(gender)}
