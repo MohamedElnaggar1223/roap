@@ -23,33 +23,34 @@ import { useEffect, useRef, useState } from 'react';
 import { Loader2, Play, Plus, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { updateAcademyDetails } from '@/lib/actions/academics.actions';
+import { getAcademyDetailsPage, updateAcademyDetails } from '@/lib/actions/academics.actions';
 import AddNewSport from './add-new-sport';
 import { useOnboarding } from '@/providers/onboarding-provider';
 import { cn } from '@/lib/utils';
 import { useSportsStore } from '@/providers/store-provider';
+import { useQuery } from '@tanstack/react-query';
 
-type Props = {
-    academyDetails: {
-        gallery: (string)[];
-        logo: string | null;
-        sports?: number[] | undefined;
-        id?: number | undefined;
-        slug?: string | undefined;
-        policy?: string | null | undefined;
-        entryFees?: number | undefined;
-        extra?: string | null | undefined;
-        name?: string | undefined;
-        description?: string | undefined;
-        locale?: string | undefined;
-    }
-    sports: {
-        id: number;
-        image: string | null;
-        name: string;
-        locale: string;
-    }[];
-}
+// type Props = {
+//     academyDetails: {
+//         gallery: (string)[];
+//         logo: string | null;
+//         data?.sports?: number[] | undefined;
+//         id?: number | undefined;
+//         slug?: string | undefined;
+//         policy?: string | null | undefined;
+//         entryFees?: number | undefined;
+//         extra?: string | null | undefined;
+//         name?: string | undefined;
+//         description?: string | undefined;
+//         locale?: string | undefined;
+//     }
+//     sports: {
+//         id: number;
+//         image: string | null;
+//         name: string;
+//         locale: string;
+//     }[];
+// }
 
 type FileState = {
     preview: string;
@@ -62,29 +63,34 @@ type GalleryState = {
     type: 'image' | 'video'
 }
 
-export default function AcademyDetails({ academyDetails, sports }: Props) {
+export default function AcademyDetails() {
 
     const router = useRouter()
     const { toast } = useToast()
     const { mutate } = useOnboarding()
 
+    const { data } = useQuery({
+        queryKey: ['academyDetails'],
+        queryFn: () => getAcademyDetailsPage(),
+    })
+
     const { fetchSports, fetchRemainingSports } = useSportsStore((state) => state)
 
     const inputRef = useRef<HTMLInputElement>(null)
 
-    const [selectedSports, setSelectedSports] = useState<number[]>(academyDetails.sports ?? [])
+    const [selectedSports, setSelectedSports] = useState<number[]>(data?.academyDetails.sports ?? [])
     const [sportsOpen, setSportsOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [selectedImage, setSelectedImage] = useState<FileState>({
-        preview: academyDetails.logo ?? '',
+        preview: data?.academyDetails.logo ?? '',
         file: null
     });
     const [selectedGalleryImages, setSelectedGalleryImages] = useState<GalleryState[]>(
-        academyDetails.gallery.map(url => ({
+        data?.academyDetails?.gallery?.map((url: string) => ({
             preview: url,
             file: null,
             type: url?.toLowerCase().endsWith('.mp4') ? 'video' : 'image'
-        }))
+        })) as GalleryState[]
     );
 
     const [isDraggingLogo, setIsDraggingLogo] = useState(false);
@@ -144,13 +150,13 @@ export default function AcademyDetails({ academyDetails, sports }: Props) {
     const form = useForm({
         resolver: zodResolver(academyDetailsSchema),
         defaultValues: {
-            policy: academyDetails.policy ?? '',
+            policy: data?.academyDetails.policy ?? '',
             entryFees: 0,
-            extra: academyDetails.extra ?? '',
-            name: academyDetails.name ?? '',
-            logo: academyDetails.logo ?? '',
-            description: academyDetails.description ?? '',
-            gallery: academyDetails.gallery.length > 0 ? academyDetails.gallery.filter(Boolean) : [] as string[],
+            extra: data?.academyDetails.extra ?? '',
+            name: data?.academyDetails.name ?? '',
+            logo: data?.academyDetails.logo ?? '',
+            description: data?.academyDetails.description ?? '',
+            gallery: (data?.academyDetails?.gallery?.length ?? 0) > 0 ? data?.academyDetails.gallery.filter(Boolean) as string[] : [] as string[],
         }
     })
 
@@ -390,19 +396,19 @@ export default function AcademyDetails({ academyDetails, sports }: Props) {
                                         variant="default"
                                         className="flex items-center gap-1 hover:bg-[#E0E4D9] pr-0.5 bg-[#E0E4D9] rounded-3xl text-main-green font-semibold font-inter text-sm"
                                     >
-                                        <span className="text-xs">{sports?.find(s => s.id === sport)?.name}</span>
+                                        <span className="text-xs">{data?.sports?.find(s => s.id === sport)?.name}</span>
                                         <button
                                             onClick={() => handleSelectSport(sport)}
                                             disabled={loading}
                                             className="ml-1 rounded-full p-0.5 hover:bg-secondary-foreground/20"
                                         >
                                             <X className="size-3" fill='#1f441f' />
-                                            <span className="sr-only">Remove {sports?.find(s => s.id === sport)?.name}</span>
+                                            <span className="sr-only">Remove {data?.sports?.find(s => s.id === sport)?.name}</span>
                                         </button>
                                     </Badge>
                                 ))}
                             </div>
-                            <AddNewSport sports={sports.filter(s => academyDetails.sports?.includes(s.id))!} />
+                            <AddNewSport sports={data?.sports?.filter(s => data?.academyDetails?.sports?.includes(s.id))!} />
                             {/* <Popover open={sportsOpen} onOpenChange={setSportsOpen}>
                                 <PopoverTrigger asChild>
                                     <Button
@@ -426,7 +432,7 @@ export default function AcademyDetails({ academyDetails, sports }: Props) {
                                         }}
                                     >
                                         <div className="p-2">
-                                            {sports?.map(sport => (
+                                            {data?.sports?.map(sport => (
                                                 <p
                                                     key={sport.id}
                                                     onClick={() => handleSelectSport(sport.id)}

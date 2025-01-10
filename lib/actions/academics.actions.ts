@@ -1262,3 +1262,31 @@ export const getAcademySports = async () => {
 		error: null,
 	}
 }
+
+export const getAcademyDetailsPage = async () => {
+	const { data: academyDetails, error } = await getAcademyDetails()
+	const sports = await getAllSports('sports')
+
+	if (error) return null
+
+	const [gallery, logo] = await Promise.all([
+		Promise.all(academyDetails?.gallery?.map(async (image) => {
+			console.log(image)
+			const imageUrl = await getImageUrl(image)
+			return imageUrl
+		})!),
+		getImageUrl(academyDetails?.logo!)
+	])
+
+	const finalAcademyDetails = {
+		...academyDetails,
+		gallery: gallery as unknown as string[],
+		sports: academyDetails?.sports.filter(s => !isNaN(s)) ?? [],
+		logo
+	}
+
+	return {
+		academyDetails: finalAcademyDetails,
+		sports
+	}
+}
