@@ -7,11 +7,12 @@ import AcademyDetails from "./academy-details"
 import { Suspense } from "react"
 import { AcademyFormLoading } from "./academy-details-loader"
 import { getAcademyDetailsPage } from '@/lib/actions/academics.actions'
+import { getQueryClient } from '../get-query-client'
 
-async function AcademyDetailsPage() {
-    const queryClient = new QueryClient()
+function AcademyDetailsPage() {
+    const queryClient = getQueryClient()
 
-    await queryClient.prefetchQuery({
+    queryClient.prefetchQuery({
         queryKey: ['academyDetails'],
         queryFn: getAcademyDetailsPage,
     })

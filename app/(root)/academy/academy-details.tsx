@@ -28,7 +28,7 @@ import AddNewSport from './add-new-sport';
 import { useOnboarding } from '@/providers/onboarding-provider';
 import { cn } from '@/lib/utils';
 import { useSportsStore } from '@/providers/store-provider';
-import { useQuery } from '@tanstack/react-query';
+import { useSuspenseQuery } from '@tanstack/react-query';
 
 // type Props = {
 //     academyDetails: {
@@ -69,7 +69,7 @@ export default function AcademyDetails() {
     const { toast } = useToast()
     const { mutate } = useOnboarding()
 
-    const { data } = useQuery({
+    const { data } = useSuspenseQuery({
         queryKey: ['academyDetails'],
         queryFn: () => getAcademyDetailsPage(),
     })
