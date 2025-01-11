@@ -294,7 +294,13 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                 endDateOfBirth: endDate,
                 numberOfSeats: 0,
                 coaches: selectedCoaches,
-                packagesData: createdPackages,
+                packagesData: createdPackages.map((p) => ({
+                    ...p,
+                    startDate: p.startDate.toLocaleString(),
+                    endDate: p.endDate.toLocaleString(),
+                    entryFeesStartDate: p.entryFeesStartDate ? p.entryFeesStartDate.toLocaleString() : undefined,
+                    entryFeesEndDate: p.entryFeesEndDate ? p.entryFeesEndDate.toLocaleString() : undefined,
+                })),
                 assessmentDeductedFromProgram: values.assessmentDeductedFromProgram ? values.assessmentDeductedFromProgram : false
             })
 

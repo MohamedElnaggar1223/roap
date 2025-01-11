@@ -20,8 +20,8 @@ interface Package {
     termNumber?: number
     name: string
     price: number
-    startDate: Date
-    endDate: Date
+    startDate: string
+    endDate: string
     schedules: Schedule[]
     memo: string | null
     id?: number
@@ -218,8 +218,8 @@ export async function updateAssessment(id: number, data: {
                                 programId: id,
                                 name: packageData.name,
                                 price: packageData.price,
-                                startDate: formatDateForDB(packageData.startDate),
-                                endDate: formatDateForDB(packageData.endDate),
+                                startDate: packageData.startDate,
+                                endDate: packageData.endDate,
                                 sessionPerWeek: packageData.schedules.length,
                                 memo: packageData.memo,
                                 createdAt: sql`now()`,
@@ -260,8 +260,8 @@ export async function updateAssessment(id: number, data: {
                                 .set({
                                     name: packageData.name,
                                     price: packageData.price,
-                                    startDate: formatDateForDB(packageData.startDate),
-                                    endDate: formatDateForDB(packageData.endDate),
+                                    startDate: packageData.startDate,
+                                    endDate: packageData.endDate,
                                     sessionPerWeek: packageData.schedules.length,
                                     memo: packageData.memo,
                                     updatedAt: sql`now()`,
