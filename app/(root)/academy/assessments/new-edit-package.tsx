@@ -205,8 +205,8 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                 const result = await updatePackage(packageEdited.id, {
                     name: packageName!,
                     price: parseFloat(values.price),
-                    startDate: values.startDate,
-                    endDate: values.endDate,
+                    startDate: values.startDate.toLocaleString(),
+                    endDate: values.endDate.toLocaleString(),
                     schedules: values.schedules.map(schedule => ({
                         id: (schedule as any).id,
                         day: schedule.day,
@@ -220,9 +220,9 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                     entryFeesAppliedUntil: values.type === "Monthly" && showEntryFeesFields ?
                         values.entryFeesAppliedUntil : undefined,
                     entryFeesStartDate: values.type !== "Monthly" && showEntryFeesFields ?
-                        values.entryFeesStartDate : undefined,
+                        values.entryFeesStartDate?.toLocaleString() : undefined,
                     entryFeesEndDate: values.type !== "Monthly" && showEntryFeesFields ?
-                        values.entryFeesEndDate : undefined,
+                        values.entryFeesEndDate?.toLocaleString() : undefined,
                     capacity: 9999,
                     type: values.type
                 })
