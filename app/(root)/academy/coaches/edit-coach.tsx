@@ -414,7 +414,7 @@ export default function EditCoach({ coachEdited, sports, languages, academySport
                                                         Select sports
                                                     </Button>
                                                 </PopoverTrigger>
-                                                <PopoverContent className="w-56 p-0 overflow-hidden z-20" align="start">
+                                                <PopoverContent className="w-56 p-0 overflow-hidden" align="start">
                                                     <div
                                                         className="max-h-64 overflow-y-scroll overscroll-contain"
                                                         style={{
