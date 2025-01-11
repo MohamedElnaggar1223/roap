@@ -30,25 +30,11 @@ export function slugify(text: string): string {
 }
 
 export const formatDateForDB = (date: Date) => {
-  // Convert to UTC
-  const utcDate = new Date(Date.UTC(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-    12, // Set to noon UTC to avoid any day boundary issues
-    0,
-    0,
-    0
-  ));
+  // Get the date components in local time
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
 
-  const pad = (num: number) => num.toString().padStart(2, '0');
-
-  const year = utcDate.getUTCFullYear();
-  const month = pad(utcDate.getUTCMonth() + 1);
-  const day = pad(utcDate.getUTCDate());
-  const hours = pad(utcDate.getUTCHours());
-  const minutes = pad(utcDate.getUTCMinutes());
-  const seconds = pad(utcDate.getUTCSeconds());
-
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  // Set time to middle of the day in local time to avoid any boundary issues
+  return `${year}-${month}-${day} 12:00:00`;
 }
