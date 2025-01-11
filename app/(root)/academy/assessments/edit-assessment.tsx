@@ -38,6 +38,7 @@ import { getAllCoaches } from '@/lib/actions/coaches.actions'
 import { useOnboarding } from '@/providers/onboarding-provider'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/hooks/use-toast'
+import { format } from 'date-fns'
 
 const calculateAgeFromDate = (birthDate: string) => {
     const today = new Date();
@@ -296,10 +297,10 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                 coaches: selectedCoaches,
                 packagesData: createdPackages.map((p) => ({
                     ...p,
-                    startDate: p.startDate.toLocaleString(),
-                    endDate: p.endDate.toLocaleString(),
-                    entryFeesStartDate: p.entryFeesStartDate ? p.entryFeesStartDate.toLocaleString() : undefined,
-                    entryFeesEndDate: p.entryFeesEndDate ? p.entryFeesEndDate.toLocaleString() : undefined,
+                    startDate: format(p.startDate, 'yyyy-MM-dd 00:00:00'),
+                    endDate: format(p.endDate, 'yyyy-MM-dd 00:00:00'),
+                    entryFeesStartDate: p.entryFeesStartDate ? format(p.entryFeesStartDate, 'yyyy-MM-dd 00:00:00') : undefined,
+                    entryFeesEndDate: p.entryFeesEndDate ? format(p.entryFeesEndDate, 'yyyy-MM-dd 00:00:00') : undefined,
                 })),
                 assessmentDeductedFromProgram: values.assessmentDeductedFromProgram ? values.assessmentDeductedFromProgram : false
             })
