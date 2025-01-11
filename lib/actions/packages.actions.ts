@@ -157,6 +157,9 @@ export async function updatePackage(id: number, data: {
                 endDate = formatDateForDB(dates.endDate);
             }
 
+            console.log("START DATE FROM UPDATE", startDate)
+            console.log("END DATE FROM UPDATE", endDate)
+
             await tx
                 .update(packages)
                 .set({
