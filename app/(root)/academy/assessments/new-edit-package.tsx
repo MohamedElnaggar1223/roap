@@ -199,7 +199,9 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                     values.type === "Monthly" ?
                         `Monthly ${values.name}` :
                         values.name
-
+                console.log("JUST BEFORE EDITING------------------------")
+                console.log(values.startDate)
+                console.log(values.endDate)
                 const result = await updatePackage(packageEdited.id, {
                     name: packageName!,
                     price: parseFloat(values.price),
