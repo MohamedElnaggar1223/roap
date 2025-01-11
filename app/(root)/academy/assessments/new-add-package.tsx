@@ -41,7 +41,7 @@ const packageSchema = z.object({
     endDate: z.date({
         required_error: "End date is required",
     }),
-    memo: z.string(),
+    memo: z.string().optional(),
     entryFees: z.string().default("0"),
     entryFeesExplanation: z.string().optional(),
     entryFeesAppliedUntil: z.array(z.string()).default([]).optional(),
@@ -51,7 +51,7 @@ const packageSchema = z.object({
         day: z.string().min(1, "Day is required"),
         from: z.string().min(1, "Start time is required"),
         to: z.string().min(1, "End time is required"),
-        memo: z.string(),
+        memo: z.string().optional(),
         id: z.number().optional()
     }))
 }).refine((data) => {
@@ -230,8 +230,11 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                     price: parseFloat(values.price),
                     startDate: values.startDate,
                     endDate: values.endDate,
-                    schedules: values.schedules,
-                    memo: values.memo,
+                    schedules: values.schedules.map(schedule => ({
+                        ...schedule,
+                        memo: schedule.memo ?? ''
+                    })),
+                    memo: values.memo ?? '',
                     entryFees: parseFloat(values.entryFees),
                     entryFeesExplanation: showEntryFeesFields ? values.entryFeesExplanation : undefined,
                     entryFeesAppliedUntil: values.type === "Monthly" && showEntryFeesFields ?
