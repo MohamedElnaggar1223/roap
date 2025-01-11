@@ -184,8 +184,8 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                 const result = await createPackage({
                     name: packageName!,
                     price: parseFloat(values.price),
-                    startDate: finalStartDate,
-                    endDate: finalEndDate,
+                    startDate: finalStartDate.toLocaleString(),
+                    endDate: finalEndDate.toLocaleString(),
                     programId,
                     memo: values.memo,
                     entryFees: parseFloat(values.entryFees),
@@ -193,9 +193,9 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                     entryFeesAppliedUntil: values.type === "Monthly" && showEntryFeesFields ?
                         values.entryFeesAppliedUntil : undefined,
                     entryFeesStartDate: values.type !== "Monthly" && showEntryFeesFields ?
-                        values.entryFeesStartDate : undefined,
+                        values.entryFeesStartDate?.toLocaleString() : undefined,
                     entryFeesEndDate: values.type !== "Monthly" && showEntryFeesFields ?
-                        values.entryFeesEndDate : undefined,
+                        values.entryFeesEndDate?.toLocaleString() : undefined,
                     schedules: values.schedules.map(schedule => ({
                         day: schedule.day,
                         from: schedule.from,

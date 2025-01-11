@@ -40,16 +40,16 @@ function getFirstAndLastDayOfMonths(months: string[]) {
 export async function createPackage(data: {
     name: string
     price: number
-    startDate?: Date
-    endDate?: Date
+    startDate?: string
+    endDate?: string
     months?: string[]
     programId: number
     memo?: string | null
     entryFees: number
     entryFeesExplanation?: string
     entryFeesAppliedUntil?: string[]
-    entryFeesStartDate?: Date
-    entryFeesEndDate?: Date
+    entryFeesStartDate?: string
+    entryFeesEndDate?: string
     schedules: Schedule[]
     capacity: number
     type: 'Monthly' | 'Term' | 'Full Season' | 'Assessment'
@@ -68,8 +68,8 @@ export async function createPackage(data: {
 
             if (data.type === 'Monthly' && data.months && data.months.length > 0) {
                 const dates = getFirstAndLastDayOfMonths(data.months);
-                startDate = dates.startDate;
-                endDate = dates.endDate;
+                startDate = formatDateForDB(dates.startDate);
+                endDate = formatDateForDB(dates.endDate);
             }
 
             const [newPackage] = await tx
@@ -77,8 +77,8 @@ export async function createPackage(data: {
                 .values({
                     name: data.name,
                     price: data.price,
-                    startDate: formatDateForDB(startDate!),
-                    endDate: formatDateForDB(endDate!),
+                    startDate: startDate!,
+                    endDate: endDate!,
                     months: data.type === 'Monthly' ? data.months : null,
                     programId: data.programId,
                     memo: data.memo,
@@ -86,9 +86,9 @@ export async function createPackage(data: {
                     entryFeesExplanation: data.entryFeesExplanation,
                     entryFeesAppliedUntil: data.entryFeesAppliedUntil || null,
                     entryFeesStartDate: data.entryFeesStartDate ?
-                        formatDateForDB(data.entryFeesStartDate) : null,
+                        data.entryFeesStartDate : null,
                     entryFeesEndDate: data.entryFeesEndDate ?
-                        formatDateForDB(data.entryFeesEndDate) : null,
+                        data.entryFeesEndDate : null,
                     createdAt: sql`now()`,
                     updatedAt: sql`now()`,
                     sessionPerWeek: data.schedules.length,
