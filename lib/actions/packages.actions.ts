@@ -162,17 +162,17 @@ export async function updatePackage(id: number, data: {
                 .set({
                     name: data.name,
                     price: data.price,
-                    startDate: formatDateForDB(startDate!),
-                    endDate: formatDateForDB(endDate!),
+                    startDate: startDate?.toLocaleString(),
+                    endDate: endDate?.toLocaleString(),
                     months: data.type === 'Monthly' ? data.months : null,
                     memo: data.memo,
                     entryFees: data.entryFees,
                     entryFeesExplanation: data.entryFeesExplanation,
                     entryFeesAppliedUntil: data.entryFeesAppliedUntil || null,
                     entryFeesStartDate: data.entryFeesStartDate ?
-                        formatDateForDB(data.entryFeesStartDate) : null,
+                        data.entryFeesStartDate?.toLocaleString() : null,
                     entryFeesEndDate: data.entryFeesEndDate ?
-                        formatDateForDB(data.entryFeesEndDate) : null,
+                        data.entryFeesEndDate?.toLocaleString() : null,
                     updatedAt: sql`now()`,
                     sessionPerWeek: data.schedules.length,
                     capacity: data.capacity
