@@ -670,7 +670,7 @@ export const programs = pgTable("programs", {
     sportId: bigint("sport_id", { mode: "number" }),
     gender: varchar({ length: 255 }).default(sql`NULL`),
     name: varchar({ length: 255 }).default(sql`NULL`),
-    description: varchar({ length: 255 }).default(sql`NULL`),
+    description: text("description").default(sql`NULL`),
     startDateOfBirth: date("start_date_of_birth"),
     endDateOfBirth: date("end_date_of_birth"),
     createdAt: timestamp("created_at", { mode: 'string' }),

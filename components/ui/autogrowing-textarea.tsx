@@ -18,7 +18,7 @@ export default function AutoGrowingTextarea({ className, field, disabled }: {
     }
     disabled?: boolean;
 }) {
-    const maxLength = 254;
+    const maxLength = 5001;
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const defaultRows = 1;
     const maxRows = undefined;
