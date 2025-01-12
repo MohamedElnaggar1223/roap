@@ -903,7 +903,7 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                                                         {new Date(packageData.endDate).toLocaleDateString()}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                                        {packageData.schedules.length}
+                                                        {packageData.schedules.length}, {program.flexible && `${packageData.sessionPerWeek} per week`}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white gap-4 rounded-r-[20px] flex items-center justify-end font-bold font-inter">
                                                         <Button

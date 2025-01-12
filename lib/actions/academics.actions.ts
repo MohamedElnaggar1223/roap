@@ -1277,6 +1277,7 @@ export const getAcademySports = async () => {
 }
 
 export const getAcademyDetailsPage = async () => {
+	console.log("ACADEMY PAGE FETCHED----------------------------")
 	const { data: academyDetails, error } = await getAcademyDetails()
 	const sports = await getAllSports('sports')
 

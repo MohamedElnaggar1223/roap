@@ -101,7 +101,8 @@ export type Program = {
     // }[];
     // } | null;
     coachPrograms: {
-        id: number;
+        id: number | undefined;
+        deleted?: boolean;
         // createdAt: string | null;
         // updatedAt: string | null;
         // programId: number;
@@ -187,10 +188,40 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
             })
         },
         editProgram: async (program: Program, mutate?: () => void) => {
+            function createComprehensiveCoachList(oldProgram: Program, program: Program) {
+                const newCoachIds = new Set(program.coachPrograms.map(item => item.coach.id));
+
+                console.log("New Coach Ids", newCoachIds)
+
+                const processedOldCoaches = oldProgram.coachPrograms.map(item => ({
+                    ...item,
+                    deleted: !newCoachIds.has(item.coach.id)
+                }));
+
+                console.log("Processed Old Coaches", processedOldCoaches)
+
+                const oldCoachIds = new Set(oldProgram.coachPrograms.map(item => item.coach.id));
+
+                console.log("Old Coach Ids", oldCoachIds)
+
+                const newCoaches = program.coachPrograms.filter(item => !oldCoachIds.has(item.coach.id));
+
+                console.log("New Coaches", newCoaches)
+
+                return [
+                    ...processedOldCoaches,
+                    ...newCoaches
+                ];
+            }
             const oldProgram = get().programs.find(p => p.id === program.id) as Program
+
+            const newCoachProgram = createComprehensiveCoachList(oldProgram, program);
+
+            console.log("New Coach Program", newCoachProgram)
 
             const updatedProgram = {
                 ...program,
+                coachPrograms: newCoachProgram,
                 packages: program.packages.map(pkg => ({
                     ...pkg,
                     flexible: program.flexible,
@@ -210,7 +241,7 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
                 programs: get().programs.map(p => p.id === program.id ? updatedProgram : p),
             })
 
-            const result = await updateProgramStore(program, oldProgram)
+            const result = await updateProgramStore({ ...program, coachPrograms: newCoachProgram }, oldProgram)
 
             if (result?.error) {
                 set({

@@ -773,21 +773,21 @@ export async function updateProgramStore(program: Program, oldProgram: Program) 
                 })
                 .where(eq(programs.id, program.id))
 
-            const currentCoaches = oldProgram.coachPrograms
+            const currentCoaches = program.coachPrograms
             const currentPackages = oldProgram.packages
             const currentDiscounts = oldProgram.discounts
 
-            const currentCoachIds = currentCoaches.map(c => c.coach.id)
-            const coachesToAdd = program.coachPrograms.map(cp => cp.coach.id).filter(id => !currentCoachIds.includes(id))
-            const coachesToRemove = currentCoachIds.filter(id => !program.coachPrograms.map(cp => cp.coach.id).includes(id))
+            const currentCoachIds = currentCoaches.filter(c => c.id !== undefined).map(c => c.id as number)
+            const coachesToAdd = currentCoaches.filter(c => !c.id).map(c => c.coach.id)
+            const coachesToRemove = currentCoaches.filter(c => c.deleted).filter(c => !!c.id).map(c => c.coach.id as number)
 
             const currentPackageIds = currentPackages.filter(p => p.id !== undefined).map(p => p.id as number)
             const packagesToAdd = program.packages.filter(p => !p.id || !currentPackageIds.includes(p?.id))
             const packagesToRemove = program.packages.filter(p => p.deleted).filter(p => !!p.id).map(p => p.id as number)
             const packagesToUpdate = program.packages.filter(p => p.id && currentPackageIds.includes(p.id) && !p.deleted)
 
-            console.log("Packages to remove", packagesToRemove)
-            console.log("Packages to update", packagesToUpdate)
+            console.log("Current Coaches", currentCoaches)
+            console.log("Coaches to remove", coachesToRemove)
 
             const currentDiscountIds = currentDiscounts.filter(d => d.id !== undefined).map(d => d.id as number)
             const discountsToAdd = program.discounts.filter(d => !d.id || !currentDiscountIds.includes(d.id))

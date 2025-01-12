@@ -330,6 +330,8 @@ export default function EditProgram({ branches, sports, programEdited, academySp
         }
     });
 
+    console.log("selectedCoaches: ", selectedCoaches)
+
     const editProgram = useProgramsStore((state) => state.editProgram)
     const program = useProgramsStore((state) => state.programs.find(p => p.id === programEdited.id))
     const deleteDiscount = useProgramsStore((state) => state.deleteDiscount)
@@ -439,11 +441,26 @@ export default function EditProgram({ branches, sports, programEdited, academySp
             //     discountsData: createdDiscounts
             // })
 
+            const newCoachPrograms = selectedCoaches.reduce((acc: any, coachId: number) => {
+                const existingCoach = programEdited.coachPrograms.find(cp => cp.coach.id === coachId);
+
+                if (existingCoach) {
+                    return [...acc, existingCoach];
+                }
+                return [...acc, {
+                    coach: {
+                        id: coachId
+                    },
+                    id: undefined
+                }]
+            }, [] as { coach: { id: number }, id: number | undefined }[])
+
             editProgram({
                 ...values,
                 ...programEdited,
                 id: programEdited.id,
                 name: values.name,
+                coachPrograms: newCoachPrograms,
                 description: values.description,
                 branchId: parseInt(values.branchId),
                 color: values.color,
@@ -551,6 +568,10 @@ export default function EditProgram({ branches, sports, programEdited, academySp
     }
 
     useEffect(() => {
+        setSelectedCoaches(program?.coachPrograms.map(cp => cp.coach.id) ?? [])
+    }, [program])
+
+    useEffect(() => {
         const formSubscription = form.watch(() => {
             checkForChanges();
         });
@@ -605,7 +626,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
             added: program?.packages?.filter(p => !p.id && !p.deleted).length || 0,
             edited: program?.packages?.filter(p => {
                 const original = originalPackages?.find(op => op.id === p.id);
-                return original && JSON.stringify(original) !== JSON.stringify(p) && !p.deleted;
+                return original && JSON.stringify({ ...original, updatedAt: undefined, schedules: original.schedules.map(s => ({ ...s, updatedAt: undefined, id: undefined })) }) !== JSON.stringify({ ...p, updatedAt: undefined, schedules: p.schedules.map(s => ({ ...s, updatedAt: undefined, id: undefined })) }) && !p.deleted;
             }).length || 0,
             deleted: program?.packages?.filter(p => p.deleted).length || 0
         };
@@ -615,7 +636,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
             added: program?.discounts?.filter(d => !d.id).length || 0,
             edited: program?.discounts?.filter(d => {
                 const original = originalDiscounts?.find(od => od.id === d.id);
-                return original && JSON.stringify(original) !== JSON.stringify(d);
+                return original && JSON.stringify({ ...original, updatedAt: undefined }) !== JSON.stringify({ ...d, updatedAt: undefined });
             }).length || 0,
             deleted: originalDiscounts?.filter(d =>
                 !program?.discounts?.find(pd => pd.id === d.id)
@@ -625,8 +646,11 @@ export default function EditProgram({ branches, sports, programEdited, academySp
         const formChanged = changedFormFields.length > 0;
         const coachesChanged = JSON.stringify(selectedCoaches) !== JSON.stringify(programEdited.coachPrograms.map(coach => coach.coach.id));
         const gendersChanged = JSON.stringify(selectedGenders) !== JSON.stringify(programEdited.gender?.split(',') ?? []);
-        const packagesChanged = JSON.stringify(program?.packages) !== JSON.stringify(originalPackages);
-        const discountsChanged = JSON.stringify(program?.discounts) !== JSON.stringify(originalDiscounts);
+        const packagesChanged = JSON.stringify(program?.packages.map(p => ({ ...p, updatedAt: undefined, schedules: p.schedules.map(s => ({ ...s, updatedAt: undefined, id: undefined, createdAt: undefined })), createdAt: undefined }))) !== JSON.stringify(originalPackages.map(pk => ({ ...pk, updatedAt: undefined, schedules: pk.schedules.map(sk => ({ ...sk, updatedAt: undefined, id: undefined, createdAt: undefined })), createdAt: undefined })));
+        const discountsChanged = JSON.stringify(program?.discounts.map(d => ({ ...d, updatedAt: undefined }))) !== JSON.stringify(originalDiscounts.map(d => ({ ...d, updatedAt: undefined })));
+
+        console.log("NOW Packages", JSON.stringify(program?.packages.map(p => ({ ...p, updatedAt: undefined, schedules: p.schedules.map(s => ({ ...s, updatedAt: undefined, id: undefined })) }))))
+        console.log("Original Packages", JSON.stringify(originalPackages.map(pk => ({ ...pk, updatedAt: undefined, schedules: pk.schedules.map(sk => ({ ...sk, updatedAt: undefined, id: undefined })) }))))
 
         const hasChanges = formChanged || coachesChanged || gendersChanged || packagesChanged || discountsChanged;
 
@@ -644,7 +668,9 @@ export default function EditProgram({ branches, sports, programEdited, academySp
             }
         });
 
+
         setHasUnsavedChanges(hasChanges);
+        return { hasChanges, changedFields };
     };
 
     // Add these useEffects to track packages and discounts changes
@@ -660,8 +686,20 @@ export default function EditProgram({ branches, sports, programEdited, academySp
         checkForChanges();
     }, [selectedCoaches, selectedGenders]);
 
+    useEffect(() => {
+        checkForChanges();
+    }, [program])
+
+    useEffect(() => {
+        checkForChanges();
+    }, [])
+
     const handleDialogClose = (open: boolean) => {
-        if (!open && hasUnsavedChanges) {
+        const { hasChanges, changedFields } = checkForChanges();
+
+        console.log("Changed Fields", changedFields)
+
+        if (!open && hasChanges) {
             setShowUnsavedChangesDialog(true);
             return;
         }
@@ -1231,7 +1269,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                         {new Date(packageData.endDate).toLocaleDateString()}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                                        {packageData.schedules.length}
+                                                        {packageData.schedules.length}, {program.flexible && `${packageData.sessionPerWeek} per week`}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white gap-4 rounded-r-[20px] flex items-center justify-end font-bold font-inter">
                                                         <Button

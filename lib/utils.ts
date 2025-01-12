@@ -31,19 +31,11 @@ export function slugify(text: string): string {
 
 export const formatDateForDB = (date: Date) => {
   // Get the date components in local time
-  console.log("FORMAT DATE FOR DB------------------------")
-  console.log("DATE", date)
-  console.log("DATE LOCALE STRING", date.toLocaleString())
-  console.log("DATE LOCALE STRING EN", date.toLocaleString('en-US'))
-  console.log("DATE LOCALE STRING EN UTC", date.toLocaleString('en-US', { timeZone: 'UTC' }))
 
 
   const year = date.getFullYear();
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const day = date.getDate().toString().padStart(2, '0');
-  console.log("YEAR", year)
-  console.log("MONTH", month)
-  console.log("DAY", day)
 
   // Set time to middle of the day in local time to avoid any boundary issues
   return `${year}-${month}-${day} 12:00:00`;
