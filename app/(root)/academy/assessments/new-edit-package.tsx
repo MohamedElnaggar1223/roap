@@ -42,7 +42,7 @@ const packageSchema = z.object({
     endDate: z.date({
         required_error: "End date is required",
     }),
-    memo: z.string().optional(),
+    memo: z.string().optional().nullable(),
     entryFees: z.string().default("0"),
     entryFeesExplanation: z.string().optional(),
     entryFeesAppliedUntil: z.array(z.string()).default([]).optional(),
@@ -52,7 +52,7 @@ const packageSchema = z.object({
         day: z.string().min(1, "Day is required"),
         from: z.string().min(1, "Start time is required"),
         to: z.string().min(1, "End time is required"),
-        memo: z.string().optional(),
+        memo: z.string().optional().nullable(),
         id: z.number().optional()
     }))
 }).refine((data) => {
@@ -212,7 +212,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                         day: schedule.day,
                         from: schedule.from,
                         to: schedule.to,
-                        memo: schedule.memo
+                        memo: schedule.memo ?? ''
                     })),
                     memo: values.memo,
                     entryFees: parseFloat(values.entryFees),
@@ -249,7 +249,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                             day: schedule.day,
                             from: schedule.from,
                             to: schedule.to,
-                            memo: schedule.memo
+                            memo: schedule.memo ?? ''
                         })),
                         memo: values.memo ?? '',
                         entryFees: parseFloat(values.entryFees),
@@ -277,7 +277,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                             day: schedule.day,
                             from: schedule.from,
                             to: schedule.to,
-                            memo: schedule.memo
+                            memo: schedule.memo ?? ''
                         })),
                         memo: values.memo ?? '',
                         entryFees: parseFloat(values.entryFees),
@@ -316,7 +316,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                             day: schedule.day,
                             from: schedule.from,
                             to: schedule.to,
-                            memo: schedule.memo
+                            memo: schedule.memo ?? ''
                         })),
                         memo: values.memo ?? '',
                         entryFees: parseFloat(values.entryFees),
@@ -811,6 +811,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                                         <FormControl>
                                                             <Textarea
                                                                 {...field}
+                                                                value={field.value ?? ''}
                                                                 className="min-h-[60px] rounded-[10px] border border-gray-500 font-inter"
                                                             />
                                                         </FormControl>
@@ -831,6 +832,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                             <FormControl>
                                                 <Textarea
                                                     {...field}
+                                                    value={field.value ?? ''}
                                                     className="min-h-[100px] rounded-[10px] border border-gray-500 font-inter"
                                                 />
                                             </FormControl>
