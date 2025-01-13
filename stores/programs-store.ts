@@ -224,7 +224,7 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
                 coachPrograms: newCoachProgram,
                 packages: program.packages.map(pkg => ({
                     ...pkg,
-                    flexible: program.flexible,
+                    flexible: program.flexible ?? false,
                     // Update capacity and other fields based on flexibility
                     capacity: program.flexible ? null : pkg.capacity,
                     sessionDuration: program.flexible ? pkg.sessionDuration : null,
@@ -344,7 +344,7 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
                                 (packageData.tempId && pkg.tempId === packageData.tempId)) {
                                 return {
                                     ...packageData,
-                                    flexible: program.flexible, // Use program's flexibility
+                                    flexible: program.flexible ?? false, // Use program's flexibility
                                     capacity: packageData.capacity,
                                     sessionDuration: program.flexible ? packageData.sessionDuration : null,
                                     sessionPerWeek: program.flexible ? packageData.sessionPerWeek : packageData.schedules.length,
