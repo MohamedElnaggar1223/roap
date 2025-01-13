@@ -1239,7 +1239,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                         {new Date(packageData.endDate).toLocaleDateString()}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                                        {packageData.schedules.length}{program.flexible && `, ${packageData.sessionPerWeek} per week`}
+                                                        {packageData.schedules.length}{program.flexible && `, ${packageData.sessionPerWeek} per week ${packageData.sessionDuration ? `(${packageData.sessionDuration} minutes)` : ''}`}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white gap-4 rounded-r-[20px] flex items-center justify-end font-bold font-inter">
                                                         <Button
