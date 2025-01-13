@@ -19,17 +19,37 @@ interface OnboardingLocationData {
 }
 
 async function manageAssessmentPrograms(tx: any, branchId: number, academicId: number, sportIds: number[]) {
-    await tx.insert(programs).values(
-        sportIds.map(sportId => ({
-            name: 'Assessment',
-            type: 'TEAM',
-            academicId: academicId,
-            branchId: branchId,
-            sportId: sportId,
-            createdAt: sql`now()`,
-            updatedAt: sql`now()`
-        }))
-    )
+    const existingPrograms = await tx
+        .select({ branchId: programs.branchId, sportId: programs.sportId })
+        .from(programs)
+        .where(
+            and(
+                eq(programs.branchId, branchId),
+                inArray(programs.sportId, sportIds)
+            )
+        );
+
+    const existingCombinations = new Set(
+        existingPrograms.map((prog: any) => `${prog.branchId}-${prog.sportId}`)
+    );
+
+    const newSportIds = sportIds.filter(
+        sportId => !existingCombinations.has(`${branchId}-${sportId}`)
+    );
+
+    if (newSportIds.length > 0) {
+        await tx.insert(programs).values(
+            newSportIds.map(sportId => ({
+                name: 'Assessment',
+                type: 'TEAM',
+                academicId: academicId,
+                branchId: branchId,
+                sportId: sportId,
+                createdAt: sql`now()`,
+                updatedAt: sql`now()`
+            }))
+        );
+    }
 }
 
 export const createOnboardingLocation = async (data: OnboardingLocationData) => {

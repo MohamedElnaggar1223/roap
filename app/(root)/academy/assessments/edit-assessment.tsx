@@ -39,6 +39,7 @@ import { useOnboarding } from '@/providers/onboarding-provider'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
+import { useGendersStore } from '@/providers/store-provider'
 
 const calculateAgeFromDate = (birthDate: string) => {
     const today = new Date();
@@ -185,6 +186,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
         }
     )
 
+    const genders = useGendersStore((state) => state.genders).map((g) => g.name)
 
     const [dialogOpen, setDialogOpen] = useState(false)
     const { data: coachesData } = useSWR(dialogOpen ? 'coaches' : null, getAllCoaches)
@@ -458,7 +460,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                                                 </PopoverTrigger>
                                                 <PopoverContent className="w-56 p-0" align="start">
                                                     <div className="p-2">
-                                                        {['male', 'female', 'adults', 'adults men', 'ladies only'].map(gender => (
+                                                        {genders.map(gender => (
                                                             <p
                                                                 key={gender}
                                                                 onClick={() => handleSelectGender(gender)}

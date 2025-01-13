@@ -19,7 +19,7 @@ import { deletePrograms } from '@/lib/actions/programs.actions'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import Image from 'next/image'
 import { useOnboarding } from '@/providers/onboarding-provider'
-import { useProgramsStore, useSportsStore } from '@/providers/store-provider'
+import { useGendersStore, useProgramsStore, useSportsStore } from '@/providers/store-provider'
 import { Program } from '@/stores/programs-store'
 import { cn } from '@/lib/utils'
 
@@ -49,6 +49,8 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
     const fetched = useProgramsStore((state) => state.fetched)
     const fetchPrograms = useProgramsStore((state) => state.fetchPrograms)
     const deletePrograms = useProgramsStore((state) => state.deletePrograms)
+
+    const genders = useGendersStore((state) => state.genders).map((g) => g.name)
 
     const academySports = useSportsStore((state) => state.sports)
 
@@ -199,7 +201,7 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className='max-h-48 overflow-auto bg-[#F1F2E9]'>
                                 <DropdownMenuItem onClick={() => setSelectedGender(null)}>All</DropdownMenuItem>
-                                {['male', 'female', 'adults', 'adults men', 'ladies only'].filter(g => data.map(p => p.gender?.split(',')).flat().includes(g)).map(gender => (
+                                {genders.filter(g => data.map(p => p.gender?.split(',')).flat().includes(g)).map(gender => (
                                     <DropdownMenuItem
                                         key={gender}
                                         onClick={() => setSelectedGender(gender)}

@@ -12,10 +12,12 @@ import {
     type SportsStore,
     createSportsStore,
 } from '@/stores/sports-store'
+import { type GendersStore, createGendersStore } from '@/stores/genders-store'
 
 export type StoreApi = {
     programsStore: ReturnType<typeof createProgramsStore>
     sportsStore: ReturnType<typeof createSportsStore>
+    gendersStore: ReturnType<typeof createGendersStore>
 }
 
 export const StoreContext = createContext<StoreApi | undefined>(undefined)
@@ -31,6 +33,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
         storeRef.current = {
             programsStore: createProgramsStore(),
             sportsStore: createSportsStore(),
+            gendersStore: createGendersStore(),
         }
     }
 
@@ -63,4 +66,16 @@ export const useSportsStore = <T,>(
     }
 
     return useStore(storeContext.sportsStore, selector)
+}
+
+export const useGendersStore = <T,>(
+    selector: (store: GendersStore) => T
+): T => {
+    const storeContext = useContext(StoreContext)
+
+    if (!storeContext) {
+        throw new Error(`useGendersStore must be used within StoreProvider`)
+    }
+
+    return useStore(storeContext.gendersStore, selector)
 }

@@ -6,7 +6,7 @@ import { entryFeesHistory, academics, academicSport, academicTranslations, block
 // import { auth } from '../auth'
 import bcrypt from "bcryptjs";
 import { isAdmin } from '../admin'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { z } from 'zod';
 import { academySignUpSchema } from '../validations/auth';
 import { auth } from '@/auth';
@@ -1170,6 +1170,8 @@ export async function updateAcademyDetails(data: UpdateAcademyDetailsInput) {
 						eq(programs.academicId, academy.id),
 						inArray(programs.sportId, sportsToRemove),
 					))
+
+				revalidateTag(`locations-${academy?.id}`)
 			}
 
 			await Promise.all([

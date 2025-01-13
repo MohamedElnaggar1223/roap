@@ -14,6 +14,7 @@ import { useDebouncedCallback } from 'use-debounce'
 import EditAssessment from './edit-assessment'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
+import { useGendersStore } from '@/providers/store-provider'
 
 interface Branch {
     id: number
@@ -62,7 +63,7 @@ interface AssessmentsTableProps {
 export function AssessmentsTable({ data, branches, sports, academySports }: AssessmentsTableProps) {
     const router = useRouter()
 
-    console.log("Assessments Data", data)
+    const genders = useGendersStore((state) => state.genders).map((g) => g.name)
 
     const [selectedSport, setSelectedSport] = useState<string | null>(null)
     const [selectedGender, setSelectedGender] = useState<string | null>(null)
@@ -121,7 +122,7 @@ export function AssessmentsTable({ data, branches, sports, academySports }: Asse
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className='max-h-48 overflow-auto bg-[#F1F2E9]'>
                                 <DropdownMenuItem onClick={() => setSelectedGender(null)}>All</DropdownMenuItem>
-                                {['male', 'female', 'adults', 'adults men', 'ladies only'].filter(g => data.map(p => p.gender?.split(',')).flat().includes(g)).map(gender => (
+                                {genders.filter(g => data.map(p => p.gender?.split(',')).flat().includes(g)).map(gender => (
                                     <DropdownMenuItem
                                         key={gender}
                                         onClick={() => setSelectedGender(gender)}

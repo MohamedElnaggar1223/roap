@@ -42,7 +42,7 @@ import AutoGrowingTextarea from '@/components/ui/autogrowing-textarea';
 import { useOnboarding } from '@/providers/onboarding-provider';
 import AddDiscount from './add-discount';
 import EditDiscount from './edit-discount';
-import { useProgramsStore } from '@/providers/store-provider';
+import { useGendersStore, useProgramsStore } from '@/providers/store-provider';
 import { v4 as uuid } from 'uuid';
 import { Discount, Package } from '@/stores/programs-store';
 import { Switch } from '@/components/ui/switch';
@@ -219,6 +219,8 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
 
     const { mutate } = useOnboarding()
     const { toast } = useToast()
+
+    const genders = useGendersStore((state) => state.genders).map((g) => g.name)
 
     const [addNewProgramOpen, setAddNewProgramOpen] = useState(false)
     const { data: coachesData } = useSWR(addNewProgramOpen ? 'coaches' : null, getAllCoaches)
@@ -578,48 +580,16 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                                                             }}
                                                         >
                                                             <div className="p-2">
-                                                                <p
-                                                                    key={'male'}
-                                                                    onClick={() => handleSelectGender('male')}
-                                                                    className="p-2 flex items-center justify-start gap-2 text-left cursor-pointer hover:bg-[#fafafa] rounded-lg"
-                                                                >
-                                                                    {selectedGenders.includes('male') && <X className="size-3" fill='#1f441f' />}
-                                                                    {'male'}
-                                                                </p>
-                                                                <p
-                                                                    key={'female'}
-                                                                    onClick={() => handleSelectGender('female')}
-                                                                    className="p-2 flex items-center justify-start gap-2 text-left cursor-pointer hover:bg-[#fafafa] rounded-lg"
-                                                                >
-                                                                    {selectedGenders.includes('female') && <X className="size-3" fill='#1f441f' />}
-                                                                    {'female'}
-                                                                </p>
-                                                                <p
-                                                                    key={'adults'}
-                                                                    onClick={() => handleSelectGender('adults')}
-                                                                    className="p-2 flex items-center justify-start gap-2 text-left cursor-pointer hover:bg-[#fafafa] rounded-lg"
-                                                                >
-                                                                    {selectedGenders.includes('adults') && <X className="size-3" fill='#1f441f' />}
-                                                                    {'adults'}
-                                                                </p>
-
-                                                                <p
-                                                                    key={'adults men'}
-                                                                    onClick={() => handleSelectGender('adults men')}
-                                                                    className="p-2 flex items-center justify-start gap-2 text-left cursor-pointer hover:bg-[#fafafa] rounded-lg"
-                                                                >
-                                                                    {selectedGenders.includes('adults men') && <X className="size-3" fill='#1f441f' />}
-                                                                    {'adults men'}
-                                                                </p>
-
-                                                                <p
-                                                                    key={'ladies only'}
-                                                                    onClick={() => handleSelectGender('ladies only')}
-                                                                    className="p-2 flex items-center justify-start gap-2 text-left cursor-pointer hover:bg-[#fafafa] rounded-lg"
-                                                                >
-                                                                    {selectedGenders.includes('ladies only') && <X className="size-3" fill='#1f441f' />}
-                                                                    {'ladies only'}
-                                                                </p>
+                                                                {genders.map(gender => (
+                                                                    <p
+                                                                        key={gender}
+                                                                        onClick={() => handleSelectGender(gender)}
+                                                                        className="p-2 flex items-center justify-start gap-2 text-left cursor-pointer hover:bg-[#fafafa] rounded-lg"
+                                                                    >
+                                                                        {selectedGenders.includes(gender) && <X className="size-3" fill='#1f441f' />}
+                                                                        {gender}
+                                                                    </p>
+                                                                ))}
                                                             </div>
                                                         </div>
                                                     </PopoverContent>

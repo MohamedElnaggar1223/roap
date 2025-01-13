@@ -201,3 +201,38 @@ export async function deleteGenders(ids: number[]) {
 
     revalidatePath('/admin/amenities')
 }
+
+export async function getAllGenders() {
+    const data = await db
+        .select({
+            id: genders.id,
+            name: sql<string>`t.name`,
+            locale: sql<string>`t.locale`,
+        })
+        .from(genders)
+        .innerJoin(
+            sql`(
+                SELECT ct.gender_id, ct.name, ct.locale
+                FROM ${genderTranslations} ct
+                WHERE ct.locale = 'en'
+                UNION
+                SELECT ct2.gender_id, ct2.name, ct2.locale
+                FROM ${genderTranslations} ct2
+                INNER JOIN (
+                    SELECT gender_id, MIN(locale) as first_locale
+                    FROM ${genderTranslations}
+                    WHERE gender_id NOT IN (
+                        SELECT gender_id 
+                        FROM ${genderTranslations} 
+                        WHERE locale = 'en'
+                    )
+                    GROUP BY gender_id
+                ) first_trans ON ct2.gender_id = first_trans.gender_id 
+                AND ct2.locale = first_trans.first_locale
+            ) t`,
+            sql`t.gender_id = ${genders.id}`
+        )
+        .orderBy(asc(genders.id))
+
+    return data
+}
