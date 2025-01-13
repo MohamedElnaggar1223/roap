@@ -192,7 +192,16 @@ const calendarColors = [
     { name: 'Thistle', value: '#D8BFD8', textColor: '#000000' },
     { name: 'Powder Blue', value: '#B0E0E6', textColor: '#000000' },
     { name: 'Pale Green', value: '#98FB98', textColor: '#000000' },
-    { name: 'Light Pink', value: '#FFB6C1', textColor: '#000000' }
+    { name: 'Light Pink', value: '#FFB6C1', textColor: '#000000' },
+    { name: 'Apricot', value: '#FFE5B4', textColor: '#000000' },
+    { name: 'Sea Green', value: '#98D8C1', textColor: '#000000' },
+    { name: 'Periwinkle', value: '#CCCCFF', textColor: '#000000' },
+    { name: 'Wheat', value: '#F5DEB3', textColor: '#000000' },
+    { name: 'Light Cyan', value: '#E0FFFF', textColor: '#000000' },
+    { name: 'Rose Dust', value: '#FFC0CB', textColor: '#000000' },
+    { name: 'Pale Turquoise', value: '#AFEEEE', textColor: '#000000' },
+    { name: 'Champagne', value: '#F7E7CE', textColor: '#000000' },
+    { name: 'Sage', value: '#BCB88A', textColor: '#000000' }
 ];
 
 const calculateAgeFromDate = (birthDate: string) => {
