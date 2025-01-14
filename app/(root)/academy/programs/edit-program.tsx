@@ -204,11 +204,11 @@ const calendarColors = [
     { name: 'Sage', value: '#BCB88A', textColor: '#000000' }
 ];
 
-const calculateAgeFromDate = (birthDate: string) => {
+export const calculateAgeFromDate = (birthDate: string) => {
     const today = new Date();
     const birth = new Date(birthDate);
 
-    // Calculate the time difference in months
+    // Calculate total months
     let months = (today.getFullYear() - birth.getFullYear()) * 12;
     months += today.getMonth() - birth.getMonth();
 
@@ -217,23 +217,30 @@ const calculateAgeFromDate = (birthDate: string) => {
         months--;
     }
 
-    // Check if months can be converted to a clean 0.5-year interval
-    const years = months / 12;
-    const roundedToHalfYear = Math.round(years * 2) / 2; // Rounds to nearest 0.5
-
-    // If the difference between actual years and rounded half-year is very small
-    // (accounting for floating point precision), use years
-    if (Math.abs(years - roundedToHalfYear) < 0.01) {
+    // First check if it's cleanly divisible by 12
+    if (Math.abs(Math.round(months) - 12 * Math.round(months / 12)) < 0.1) {
         return {
-            age: roundedToHalfYear,
+            age: Math.round(months / 12),
             unit: 'years'
         };
-    } else {
+    }
+
+    // If less than or equal to 18 months and not cleanly divisible by 12
+    if (months <= 18) {
         return {
-            age: months,
+            age: Math.round(months),
             unit: 'months'
         };
     }
+
+    // Convert to years
+    const years = months / 12;
+    const roundedToHalfYear = Math.round(years * 2) / 2;
+
+    return {
+        age: roundedToHalfYear,
+        unit: 'years'
+    };
 };
 
 const calculateDateFromAge = (age: number, unit: string): Date => {

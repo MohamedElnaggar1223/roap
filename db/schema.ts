@@ -459,7 +459,7 @@ export const branches = pgTable("branches", {
     academicId: bigint("academic_id", { mode: "number" }),
     createdAt: timestamp("created_at", { mode: 'string' }),
     updatedAt: timestamp("updated_at", { mode: 'string' }),
-    url: varchar({ length: 255 }).default(sql`NULL`),
+    url: text().default(sql`NULL`),
     placeId: varchar("place_id", { length: 255 }).default(sql`NULL`),
     nameInGoogleMap: varchar("name_in_google_map", { length: 255 }).default(sql`NULL`),
 }, (table) => {

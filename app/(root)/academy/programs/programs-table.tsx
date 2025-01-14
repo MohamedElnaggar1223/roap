@@ -114,34 +114,37 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
         let months = today.getMonth() - birth.getMonth();
         let days = today.getDate() - birth.getDate();
 
-        // Adjust years and months if the current date is before the birth date in the current year
+        // Adjust for day of month
         if (days < 0) {
             months--;
             days += new Date(today.getFullYear(), today.getMonth(), 0).getDate();
         }
 
+        // Adjust years and months if needed
         if (months < 0) {
             years--;
             months += 12;
         }
 
-        // Calculate total months with fractional part
+        // Calculate total months
         const totalMonths = years * 12 + months + (days / 30.44); // Average days in a month
 
-        // Convert to years
-        const totalYears = totalMonths / 12;
+        // First check if it's cleanly divisible by 12
+        if (Math.abs(Math.round(totalMonths) - 12 * Math.round(totalMonths / 12)) < 0.1) {
+            return `${Math.round(totalMonths / 12)} Year(s)`;
+        }
 
+        // If less than or equal to 18 months and not cleanly divisible by 12, display in months
+        if (totalMonths <= 18) {
+            return `${Math.round(totalMonths)} Month(s)`;
+        }
+
+        // Convert to years for display
+        const totalYears = totalMonths / 12;
         // Round to nearest 0.5
         const roundedToHalfYear = Math.round(totalYears * 2) / 2;
 
-        // Check if it can be represented as a clean half-year interval
-        if (Math.abs(totalYears - roundedToHalfYear) < 0.01) {
-            // If it's a clean half-year interval, display in years
-            return `${roundedToHalfYear} Years`;
-        } else {
-            // If it can't be represented as a clean half-year, display in months
-            return `${Math.round(totalMonths)} Months`;
-        }
+        return `${roundedToHalfYear} Year(s)`;
     };
 
     const debouncedSearch = useDebouncedCallback((value: string) => {
