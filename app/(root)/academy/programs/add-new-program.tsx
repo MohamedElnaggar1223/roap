@@ -141,6 +141,7 @@ const ColorSelector = ({ form, takenColors, disabled = false }: { form: any; tak
 };
 
 const calendarColors = [
+    // Original colors
     { name: 'Olive Green', value: '#DCE5AE', textColor: '#000000' },
     { name: 'Lavender', value: '#E6E6FA', textColor: '#000000' },
     { name: 'Sky Blue', value: '#87CEEB', textColor: '#000000' },
@@ -160,7 +161,48 @@ const calendarColors = [
     { name: 'Rose Dust', value: '#FFC0CB', textColor: '#000000' },
     { name: 'Pale Turquoise', value: '#AFEEEE', textColor: '#000000' },
     { name: 'Champagne', value: '#F7E7CE', textColor: '#000000' },
-    { name: 'Sage', value: '#BCB88A', textColor: '#000000' }
+    { name: 'Sage', value: '#BCB88A', textColor: '#000000' },
+    // Additional colors
+    { name: 'Baby Blue', value: '#89CFF0', textColor: '#000000' },
+    { name: 'Pale Rose', value: '#FFE4E1', textColor: '#000000' },
+    { name: 'Honeydew', value: '#F0FFF0', textColor: '#000000' },
+    { name: 'Vanilla', value: '#F3E5AB', textColor: '#000000' },
+    { name: 'Soft Lilac', value: '#D8B2D1', textColor: '#000000' },
+    { name: 'Desert Sand', value: '#EDC9AF', textColor: '#000000' },
+    { name: 'Arctic Blue', value: '#B0E2FF', textColor: '#000000' },
+    { name: 'Pale Mauve', value: '#E0B0FF', textColor: '#000000' },
+    { name: 'Buttermilk', value: '#FFF1B5', textColor: '#000000' },
+    { name: 'Mint Cream', value: '#F5FFFA', textColor: '#000000' },
+    { name: 'Dust Storm', value: '#E5CCC9', textColor: '#000000' },
+    { name: 'Pearl Aqua', value: '#88D8C0', textColor: '#000000' },
+    { name: 'Pale Slate', value: '#C3CDE6', textColor: '#000000' },
+    { name: 'Light Khaki', value: '#F0E68C', textColor: '#000000' },
+    { name: 'Misty Rose', value: '#FFE4E1', textColor: '#000000' },
+    { name: 'Azure Mist', value: '#F0FFFF', textColor: '#000000' },
+    { name: 'Pale Dogwood', value: '#EDCDC2', textColor: '#000000' },
+    { name: 'Crystal', value: '#A7D8DE', textColor: '#000000' },
+    { name: 'Almond', value: '#EFDECD', textColor: '#000000' },
+    { name: 'Morning Mist', value: '#E4E4E4', textColor: '#000000' },
+    { name: 'Beach Glass', value: '#C6E6E8', textColor: '#000000' },
+    { name: 'Milk Glass', value: '#F8F8FF', textColor: '#000000' },
+    { name: 'Buff', value: '#F0DC82', textColor: '#000000' },
+    { name: 'Shell Pink', value: '#FFB7C5', textColor: '#000000' },
+    { name: 'Water Lily', value: '#DED4E8', textColor: '#000000' },
+    { name: 'Sand Dollar', value: '#E8E8D0', textColor: '#000000' },
+    { name: 'Rain Cloud', value: '#D4DFE2', textColor: '#000000' },
+    { name: 'Pale Iris', value: '#E6E6FA', textColor: '#000000' },
+    { name: 'Crepe', value: '#F2D8D8', textColor: '#000000' },
+    { name: 'Sea Salt', value: '#F7F7F7', textColor: '#000000' },
+    { name: 'Tea Green', value: '#D0F0C0', textColor: '#000000' },
+    { name: 'Rose Water', value: '#F6E6E8', textColor: '#000000' },
+    { name: 'Moon Glow', value: '#FCFEDA', textColor: '#000000' },
+    { name: 'Frost', value: '#E8F4F8', textColor: '#000000' },
+    { name: 'Pearl Pink', value: '#FADADD', textColor: '#000000' },
+    { name: 'Cloud White', value: '#F8F9FA', textColor: '#000000' },
+    { name: 'Sea Foam', value: '#98FF98', textColor: '#000000' },
+    { name: 'Snow Drop', value: '#F0FFF0', textColor: '#000000' },
+    { name: 'Dew', value: '#F0F8FF', textColor: '#000000' },
+    { name: 'Cotton Candy', value: '#FFBCD9', textColor: '#000000' }
 ];
 
 const calculateAgeFromDate = (birthDate: string) => {
