@@ -92,6 +92,16 @@ export default function EditLocation({ locationEdited, academySports }: Props) {
 
         const coordinates = extractCoordinates(values.url)
 
+        if (selectedSports.length === 0) {
+            toast({
+                title: "Missing Required Fields",
+                description: "Please select at least one sport",
+                variant: "destructive",
+            });
+            setLoading(false)
+            return
+        }
+
         await updateLocation(locationEdited.id, {
             facilities: selectedAmenities,
             name: values.name,

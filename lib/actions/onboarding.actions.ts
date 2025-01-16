@@ -817,3 +817,31 @@ export const academyOnBoarded = async () => {
     }
     revalidatePath('/on-boarding')
 }
+
+export const academyNotOnBoarded = async () => {
+    const session = await auth()
+
+    if (!session?.user || session.user.role !== 'academic') {
+        return { error: 'Unauthorized' }
+    }
+
+    try {
+        const academic = await db.query.academics.findFirst({
+            where: (academics, { eq }) => eq(academics.userId, parseInt(session.user.id)),
+            columns: {
+                id: true,
+                onboarded: true
+            }
+        })
+
+        if (academic?.onboarded) {
+            await db.update(academics).set({
+                onboarded: false
+            }).where(eq(academics.id, academic?.id!))
+        }
+    }
+    catch (error) {
+        console.error('Error updating program:', error)
+        return { error: 'Failed to update program' }
+    }
+}

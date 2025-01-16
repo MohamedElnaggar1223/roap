@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useLayoutEffect, useState 
 import { usePathname, useRouter } from 'next/navigation'
 import useSWR from 'swr'
 import { getAcademyDetailsClient } from '@/lib/actions/academics.actions'
-import { academyOnBoarded } from '@/lib/actions/onboarding.actions'
+import { academyNotOnBoarded, academyOnBoarded } from '@/lib/actions/onboarding.actions'
 
 export type StepId = 'academy-details' | 'location' | 'coach' | 'program' | 'assessment'
 
@@ -117,7 +117,7 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
     const router = useRouter()
     const pathname = usePathname()
     const [steps, setSteps] = useState<Step[]>(STEPS)
-    const { data: finalAcademyDetails, mutate } = useSWR(!onboarded ? `OnBoardingDetails ${academyName}` : null, getAcademyDetailsClient)
+    const { data: finalAcademyDetails, mutate } = useSWR(`OnBoardingDetails ${academyName}`, getAcademyDetailsClient)
     const [requirements, setRequirements] = useState<StepRequirements>({
         'academy-details': {
             name: false,
@@ -237,41 +237,272 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
         // updateRequirements('gallery', { hasGallery: (finalAcademyDetails?.gallery ?? [])?.length > 0 })
         // updateRequirements('policy', { hasPolicy: !!finalAcademyDetails?.policy })
         updateRequirements('coach', {
-            name: (finalAcademyDetails?.coaches ?? []).length > 0 && !!finalAcademyDetails?.coaches![0].name,
-            title: (finalAcademyDetails?.coaches ?? []).length > 0 && !!finalAcademyDetails?.coaches![0].title,
-            bio: (finalAcademyDetails?.coaches ?? []).length > 0 && !!finalAcademyDetails?.coaches![0].bio,
-            gender: (finalAcademyDetails?.coaches ?? []).length > 0 && !!finalAcademyDetails?.coaches![0].gender,
-            sports: (finalAcademyDetails?.coaches ?? []).length > 0 && finalAcademyDetails?.coaches![0].sports!?.length > 0,
-            languages: (finalAcademyDetails?.coaches ?? []).length > 0 && finalAcademyDetails?.coaches![0]?.languages!?.length > 0,
+            name: (finalAcademyDetails?.coaches ?? []).some(coach =>
+                !!coach.name &&
+                !!coach.title &&
+                !!coach.bio &&
+                !!coach.gender &&
+                (coach.sports?.length > 0) &&
+                (coach.languages?.length > 0)
+            ),
+            title: (finalAcademyDetails?.coaches ?? []).some(coach =>
+                !!coach.name &&
+                !!coach.title &&
+                !!coach.bio &&
+                !!coach.gender &&
+                (coach.sports?.length > 0) &&
+                (coach.languages?.length > 0)
+            ),
+            bio: (finalAcademyDetails?.coaches ?? []).some(coach =>
+                !!coach.name &&
+                !!coach.title &&
+                !!coach.bio &&
+                !!coach.gender &&
+                (coach.sports?.length > 0) &&
+                (coach.languages?.length > 0)
+            ),
+            gender: (finalAcademyDetails?.coaches ?? []).some(coach =>
+                !!coach.name &&
+                !!coach.title &&
+                !!coach.bio &&
+                !!coach.gender &&
+                (coach.sports?.length > 0) &&
+                (coach.languages?.length > 0)
+            ),
+            sports: (finalAcademyDetails?.coaches ?? []).some(coach =>
+                !!coach.name &&
+                !!coach.title &&
+                !!coach.bio &&
+                !!coach.gender &&
+                (coach.sports?.length > 0) &&
+                (coach.languages?.length > 0)
+            ),
+            languages: (finalAcademyDetails?.coaches ?? []).some(coach =>
+                !!coach.name &&
+                !!coach.title &&
+                !!coach.bio &&
+                !!coach.gender &&
+                (coach.sports?.length > 0) &&
+                (coach.languages?.length > 0)
+            ),
         })
         updateRequirements('location', {
-            name: (finalAcademyDetails?.locations ?? [])?.length > 0 && !!finalAcademyDetails?.locations![0].name,
-            branchId: (finalAcademyDetails?.locations ?? [])?.length > 0 && !!finalAcademyDetails?.locations![0].id,
-            url: (finalAcademyDetails?.locations ?? [])?.length > 0 && !!finalAcademyDetails?.locations![0].url,
-            sports: (finalAcademyDetails?.locations ?? [])?.length > 0 && (finalAcademyDetails?.locations![0].sports!?.length > 0),
-            facilities: (finalAcademyDetails?.locations ?? [])?.length > 0 && (finalAcademyDetails?.locations![0].facilities!?.length > 0),
+            name: (finalAcademyDetails?.locations ?? []).some(location =>
+                !!location.name &&
+                !!location.id &&
+                !!location.url &&
+                (location.sports?.length > 0) &&
+                (location.facilities?.length > 0)
+            ),
+            url: (finalAcademyDetails?.locations ?? []).some(location =>
+                !!location.name &&
+                !!location.id &&
+                !!location.url &&
+                (location.sports?.length > 0) &&
+                (location.facilities?.length > 0)
+            ),
+            sports: (finalAcademyDetails?.locations ?? []).some(location =>
+                !!location.name &&
+                !!location.id &&
+                !!location.url &&
+                (location.sports?.length > 0) &&
+                (location.facilities?.length > 0)
+            ),
+            facilities: (finalAcademyDetails?.locations ?? []).some(location =>
+                !!location.name &&
+                !!location.id &&
+                !!location.url &&
+                (location.sports?.length > 0) &&
+                (location.facilities?.length > 0)
+            ),
         })
         // updateRequirements('program', { packages: ((finalAcademyDetails?.programs ?? []).length > 0 && finalAcademyDetails?.programs![0]?.packages.length > 0) })
         updateRequirements('program', {
-            name: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].name,
-            description: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].description,
-            branchId: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].branchId,
-            sportId: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].sportId,
-            startDateOfBirth: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].startDateOfBirth,
-            endDateOfBirth: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].endDateOfBirth,
-            type: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].type,
-            packages: (finalAcademyDetails?.programs ?? []).length > 0 && (finalAcademyDetails?.programs![0].packages!?.length > 0),
-            gender: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].gender,
-            color: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].color,
+            name: (finalAcademyDetails?.programs ?? []).some(program =>
+                !!program.name &&
+                !!program.description &&
+                !!program.branchId &&
+                !!program.sportId &&
+                !!program.startDateOfBirth &&
+                !!program.endDateOfBirth &&
+                !!program.type &&
+                (program.packages?.length > 0) &&
+                !!program.gender &&
+                !!program.color
+            ),
+            description: (finalAcademyDetails?.programs ?? []).some(program =>
+                !!program.name &&
+                !!program.description &&
+                !!program.branchId &&
+                !!program.sportId &&
+                !!program.startDateOfBirth &&
+                !!program.endDateOfBirth &&
+                !!program.type &&
+                (program.packages?.length > 0) &&
+                !!program.gender &&
+                !!program.color
+            ),
+            branchId: (finalAcademyDetails?.programs ?? []).some(program =>
+                !!program.name &&
+                !!program.description &&
+                !!program.branchId &&
+                !!program.sportId &&
+                !!program.startDateOfBirth &&
+                !!program.endDateOfBirth &&
+                !!program.type &&
+                (program.packages?.length > 0) &&
+                !!program.gender &&
+                !!program.color
+            ),
+            sportId: (finalAcademyDetails?.programs ?? []).some(program =>
+                !!program.name &&
+                !!program.description &&
+                !!program.branchId &&
+                !!program.sportId &&
+                !!program.startDateOfBirth &&
+                !!program.endDateOfBirth &&
+                !!program.type &&
+                (program.packages?.length > 0) &&
+                !!program.gender &&
+                !!program.color
+            ),
+            startDateOfBirth: (finalAcademyDetails?.programs ?? []).some(program =>
+                !!program.name &&
+                !!program.description &&
+                !!program.branchId &&
+                !!program.sportId &&
+                !!program.startDateOfBirth &&
+                !!program.endDateOfBirth &&
+                !!program.type &&
+                (program.packages?.length > 0) &&
+                !!program.gender &&
+                !!program.color
+            ),
+            endDateOfBirth: (finalAcademyDetails?.programs ?? []).some(program =>
+                !!program.name &&
+                !!program.description &&
+                !!program.branchId &&
+                !!program.sportId &&
+                !!program.startDateOfBirth &&
+                !!program.endDateOfBirth &&
+                !!program.type &&
+                (program.packages?.length > 0) &&
+                !!program.gender &&
+                !!program.color
+            ),
+            type: (finalAcademyDetails?.programs ?? []).some(program =>
+                !!program.name &&
+                !!program.description &&
+                !!program.branchId &&
+                !!program.sportId &&
+                !!program.startDateOfBirth &&
+                !!program.endDateOfBirth &&
+                !!program.type &&
+                (program.packages?.length > 0) &&
+                !!program.gender &&
+                !!program.color
+            ),
+            packages: (finalAcademyDetails?.programs ?? []).some(program =>
+                !!program.name &&
+                !!program.description &&
+                !!program.branchId &&
+                !!program.sportId &&
+                !!program.startDateOfBirth &&
+                !!program.endDateOfBirth &&
+                !!program.type &&
+                (program.packages?.length > 0) &&
+                !!program.gender &&
+                !!program.color
+            ),
+            gender: (finalAcademyDetails?.programs ?? []).some(program =>
+                !!program.name &&
+                !!program.description &&
+                !!program.branchId &&
+                !!program.sportId &&
+                !!program.startDateOfBirth &&
+                !!program.endDateOfBirth &&
+                !!program.type &&
+                (program.packages?.length > 0) &&
+                !!program.gender &&
+                !!program.color
+            ),
+            color: (finalAcademyDetails?.programs ?? []).some(program =>
+                !!program.name &&
+                !!program.description &&
+                !!program.branchId &&
+                !!program.sportId &&
+                !!program.startDateOfBirth &&
+                !!program.endDateOfBirth &&
+                !!program.type &&
+                (program.packages?.length > 0) &&
+                !!program.gender &&
+                !!program.color
+            ),
         })
         updateRequirements('assessment', {
-            description: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].description,
-            packages: (finalAcademyDetails?.assessments ?? []).length > 0 && (finalAcademyDetails?.assessments![0].packages!?.length > 0),
-            branchId: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].branchId,
-            sportId: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].sportId,
-            startDateOfBirth: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].startDateOfBirth,
-            endDateOfBirth: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].endDateOfBirth,
-            gender: (finalAcademyDetails?.assessments ?? []).length > 0 && !!finalAcademyDetails?.assessments![0].gender,
+            description: (finalAcademyDetails?.assessments ?? []).some(assessment =>
+                !!assessment.description &&
+                (assessment.packages?.length > 0) &&
+                !!assessment.branchId &&
+                !!assessment.sportId &&
+                !!assessment.startDateOfBirth &&
+                !!assessment.endDateOfBirth &&
+                !!assessment.gender
+            ),
+            packages: (finalAcademyDetails?.assessments ?? []).some(assessment =>
+                !!assessment.description &&
+                (assessment.packages?.length > 0) &&
+                !!assessment.branchId &&
+                !!assessment.sportId &&
+                !!assessment.startDateOfBirth &&
+                !!assessment.endDateOfBirth &&
+                !!assessment.gender
+            ),
+            branchId: (finalAcademyDetails?.assessments ?? []).some(assessment =>
+                !!assessment.description &&
+                (assessment.packages?.length > 0) &&
+                !!assessment.branchId &&
+                !!assessment.sportId &&
+                !!assessment.startDateOfBirth &&
+                !!assessment.endDateOfBirth &&
+                !!assessment.gender
+            ),
+            sportId: (finalAcademyDetails?.assessments ?? []).some(assessment =>
+                !!assessment.description &&
+                (assessment.packages?.length > 0) &&
+                !!assessment.branchId &&
+                !!assessment.sportId &&
+                !!assessment.startDateOfBirth &&
+                !!assessment.endDateOfBirth &&
+                !!assessment.gender
+            ),
+            startDateOfBirth: (finalAcademyDetails?.assessments ?? []).some(assessment =>
+                !!assessment.description &&
+                (assessment.packages?.length > 0) &&
+                !!assessment.branchId &&
+                !!assessment.sportId &&
+                !!assessment.startDateOfBirth &&
+                !!assessment.endDateOfBirth &&
+                !!assessment.gender
+            ),
+            endDateOfBirth: (finalAcademyDetails?.assessments ?? []).some(assessment =>
+                !!assessment.description &&
+                (assessment.packages?.length > 0) &&
+                !!assessment.branchId &&
+                !!assessment.sportId &&
+                !!assessment.startDateOfBirth &&
+                !!assessment.endDateOfBirth &&
+                !!assessment.gender
+            ),
+            gender: (finalAcademyDetails?.assessments ?? []).some(assessment =>
+                !!assessment.description &&
+                (assessment.packages?.length > 0) &&
+                !!assessment.branchId &&
+                !!assessment.sportId &&
+                !!assessment.startDateOfBirth &&
+                !!assessment.endDateOfBirth &&
+                !!assessment.gender
+            ),
         })
 
         if (completedSteps === STEPS.length) {
@@ -284,8 +515,19 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
         }
     }, [finalAcademyDetails])
 
+    console.log("FINAL ACADEMY DETAILS CHANGEDD-----------------------")
     console.log(completedSteps)
     console.log(STEPS.length)
+    useEffect(() => {
+        if (onboarded && completedSteps !== STEPS.length) {
+            console.log(completedSteps)
+            const revertOnboarding = async () => {
+                await academyNotOnBoarded()
+                router.refresh()
+            }
+            revertOnboarding()
+        }
+    }, [onboarded, finalAcademyDetails, completedSteps])
 
     useEffect(() => {
         if (completedSteps === STEPS.length) {
@@ -293,8 +535,6 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
                 await academyOnBoarded()
                 router.refresh()
             }
-
-            console.log("A7a")
 
             finishOnboarding()
         }

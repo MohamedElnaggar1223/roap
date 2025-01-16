@@ -1,7 +1,7 @@
 'use server'
 import { formatDateForDB } from './../utils';
 import { db } from '@/db'
-import { coaches, coachSport, coachSpokenLanguage, coachPackage } from '@/db/schema'
+import { coaches, coachSport, coachSpokenLanguage, coachPackage, coachProgram } from '@/db/schema'
 import { auth } from '@/auth'
 import { and, eq, inArray, sql } from 'drizzle-orm'
 import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
@@ -371,12 +371,10 @@ export async function deleteCoaches(ids: number[]) {
         ? cookieStore.get('impersonatedAcademyId')?.value
         : null
 
-    // Build the where condition based on user role and impersonation
     const academicId = session.user.role === 'admin' && impersonatedId
         ? parseInt(impersonatedId)
         : parseInt(session.user.id)
 
-    // If not admin and not academic, return error
     if (session.user.role !== 'admin' && session.user.role !== 'academic') {
         return { error: 'You are not authorized to perform this action', field: null, data: [] }
     }
@@ -390,9 +388,36 @@ export async function deleteCoaches(ids: number[]) {
 
     if (!academy) return { error: 'Academy not found' }
 
-    await Promise.all(ids.map(async id => await db.delete(coaches).where(eq(coaches.id, id))))
+    try {
+        // Begin a transaction to ensure all operations succeed or none do
+        await db.transaction(async (tx) => {
+            for (const id of ids) {
+                // Delete related records in coach_program
+                await tx.delete(coachProgram)
+                    .where(eq(coachProgram.coachId, id))
 
-    // revalidatePath('/academy/coaches')
-    revalidateTag(`coaches-${academy?.id}`)
-    return { success: true }
+                // Delete related records in coach_package
+                await tx.delete(coachPackage)
+                    .where(eq(coachPackage.coachId, id))
+
+                // Delete related records in coach_spoken_language
+                await tx.delete(coachSpokenLanguage)
+                    .where(eq(coachSpokenLanguage.coachId, id))
+
+                // Delete related records in coach_sport
+                await tx.delete(coachSport)
+                    .where(eq(coachSport.coachId, id))
+
+                // Finally delete the coach
+                await tx.delete(coaches)
+                    .where(eq(coaches.id, id))
+            }
+        })
+
+        revalidateTag(`coaches-${academy?.id}`)
+        return { success: true }
+    } catch (error) {
+        console.error('Error deleting coaches:', error)
+        return { error: 'Failed to delete coaches', field: null, data: [] }
+    }
 }
