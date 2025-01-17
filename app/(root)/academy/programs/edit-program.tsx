@@ -2,7 +2,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { updateProgram } from '@/lib/actions/programs.actions';
-import { Loader2, Plus, X } from 'lucide-react';
+import { Copy, Loader2, Plus, X } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -24,9 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { getAllCoaches } from '@/lib/actions/coaches.actions';
-import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon } from 'lucide-react'
-import { format } from "date-fns"
+import { v4 as uuid } from 'uuid';
 import {
     Select,
     SelectContent,
@@ -397,6 +395,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
     const deleteDiscount = useProgramsStore((state) => state.deleteDiscount)
     const deletePackage = useProgramsStore((state) => state.deletePackage)
     const triggerFlexibleChange = useProgramsStore((state) => state.triggerFlexibleChange)
+    const addPackage = useProgramsStore((state) => state.addPackage)
 
     // useEffect(() => {
     //     if (isLoading || isValidating) return
@@ -1315,6 +1314,26 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                                 width={20}
                                                                 height={20}
                                                             />
+                                                        </Button>
+                                                        <Button
+                                                            type='button'
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => {
+                                                                addPackage({
+                                                                    ...packageData,
+                                                                    id: undefined,
+                                                                    tempId: parseInt(uuid().split('-')[0], 16),
+                                                                    name: `${packageData.name}`,
+                                                                    schedules: packageData.schedules.map(schedule => ({
+                                                                        ...schedule,
+                                                                        id: undefined,
+                                                                        packageId: undefined
+                                                                    }))
+                                                                })
+                                                            }}
+                                                        >
+                                                            <Copy className="h-4 w-4" />
                                                         </Button>
                                                         <TrashIcon
                                                             className="h-4 w-4 cursor-pointer"

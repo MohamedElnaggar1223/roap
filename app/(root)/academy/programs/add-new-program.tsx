@@ -2,7 +2,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { createProgram } from '@/lib/actions/programs.actions';
-import { Loader2, Plus, X } from 'lucide-react';
+import { Copy, Loader2, Plus, X } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -177,7 +177,7 @@ const calendarColors = [
     { name: 'Pearl Aqua', value: '#88D8C0', textColor: '#000000' },
     { name: 'Pale Slate', value: '#C3CDE6', textColor: '#000000' },
     { name: 'Light Khaki', value: '#F0E68C', textColor: '#000000' },
-    { name: 'Misty Rose', value: '#FFE4E1', textColor: '#000000' },
+    { name: 'Misty Rose', value: '#FFE4E4', textColor: '#000000' },
     { name: 'Azure Mist', value: '#F0FFFF', textColor: '#000000' },
     { name: 'Pale Dogwood', value: '#EDCDC2', textColor: '#000000' },
     { name: 'Crystal', value: '#A7D8DE', textColor: '#000000' },
@@ -190,7 +190,7 @@ const calendarColors = [
     { name: 'Water Lily', value: '#DED4E8', textColor: '#000000' },
     { name: 'Sand Dollar', value: '#E8E8D0', textColor: '#000000' },
     { name: 'Rain Cloud', value: '#D4DFE2', textColor: '#000000' },
-    { name: 'Pale Iris', value: '#E6E6FA', textColor: '#000000' },
+    { name: 'Pale Iris', value: '#E8E8FA', textColor: '#000000' },
     { name: 'Crepe', value: '#F2D8D8', textColor: '#000000' },
     { name: 'Sea Salt', value: '#F7F7F7', textColor: '#000000' },
     { name: 'Tea Green', value: '#D0F0C0', textColor: '#000000' },
@@ -199,8 +199,8 @@ const calendarColors = [
     { name: 'Frost', value: '#E8F4F8', textColor: '#000000' },
     { name: 'Pearl Pink', value: '#FADADD', textColor: '#000000' },
     { name: 'Cloud White', value: '#F8F9FA', textColor: '#000000' },
-    { name: 'Sea Foam', value: '#98FF98', textColor: '#000000' },
-    { name: 'Snow Drop', value: '#F0FFF0', textColor: '#000000' },
+    { name: 'Sea Foam', value: '#98FFB8', textColor: '#000000' },
+    { name: 'Snow Drop', value: '#F5FFF5', textColor: '#000000' },
     { name: 'Dew', value: '#F0F8FF', textColor: '#000000' },
     { name: 'Cotton Candy', value: '#FFBCD9', textColor: '#000000' }
 ];
@@ -297,6 +297,7 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
     const addTempProgram = useProgramsStore((state) => state.addTempProgram)
     const removeTempPrograms = useProgramsStore((state) => state.removeTempPrograms)
     const triggerFlexibleChange = useProgramsStore((state) => state.triggerFlexibleChange)
+    const addPackage = useProgramsStore((state) => state.addPackage)
 
     const dateToAge = (date: Date) => {
         const today = new Date()
@@ -942,6 +943,26 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                                                                 width={20}
                                                                 height={20}
                                                             />
+                                                        </Button>
+                                                        <Button
+                                                            type='button'
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => {
+                                                                addPackage({
+                                                                    ...packageData,
+                                                                    id: undefined,
+                                                                    tempId: parseInt(uuid().split('-')[0], 16),
+                                                                    name: `${packageData.name}`,
+                                                                    schedules: packageData.schedules.map(schedule => ({
+                                                                        ...schedule,
+                                                                        id: undefined,
+                                                                        packageId: undefined
+                                                                    }))
+                                                                })
+                                                            }}
+                                                        >
+                                                            <Copy className="h-4 w-4" />
                                                         </Button>
                                                         <TrashIcon
                                                             className="h-4 w-4 cursor-pointer"

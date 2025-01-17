@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, Fragment, useEffect } from 'react'
-import { ChevronDown, Loader2, SearchIcon, Trash2Icon } from 'lucide-react'
+import { ChevronDown, Copy, Loader2, SearchIcon, Trash2Icon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import DuplicateProgramDialog from './duplicate-program'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -49,6 +50,7 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
     const fetched = useProgramsStore((state) => state.fetched)
     const fetchPrograms = useProgramsStore((state) => state.fetchPrograms)
     const deletePrograms = useProgramsStore((state) => state.deletePrograms)
+    const [selectedProgramForDuplication, setSelectedProgramForDuplication] = useState<Program | null>(null);
 
     const genders = useGendersStore((state) => state.genders).map((g) => g.name)
 
@@ -170,8 +172,8 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
         // setBulkDeleteLoading(true)
         deletePrograms(selectedRows)
         setSelectedRows([])
-        // mutate()
-        // router.refresh()
+        mutate()
+        router.refresh()
         // setBulkDeleteLoading(false)
         setBulkDeleteOpen(false)
     }
@@ -383,13 +385,22 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
                                             />
                                         </Button>
                                     ) : (
-                                        <EditProgram
-                                            programEdited={program}
-                                            branches={branches}
-                                            sports={academySports}
-                                            academySports={academySports}
-                                            takenColors={data.filter(p => program.id !== p.id).map(program => program.color).filter(color => color !== null)}
-                                        />
+                                        <>
+                                            <EditProgram
+                                                programEdited={program}
+                                                branches={branches}
+                                                sports={academySports}
+                                                academySports={academySports}
+                                                takenColors={data.filter(p => program.id !== p.id).map(program => program.color).filter(color => color !== null)}
+                                            />
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => setSelectedProgramForDuplication(program)}
+                                            >
+                                                <Copy className="h-4 w-4" />
+                                            </Button>
+                                        </>
                                     )}
                                 </div>
                             </Fragment>
@@ -417,6 +428,14 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+            {selectedProgramForDuplication && (
+                <DuplicateProgramDialog
+                    open={!!selectedProgramForDuplication}
+                    onOpenChange={(open) => !open && setSelectedProgramForDuplication(null)}
+                    program={selectedProgramForDuplication}
+                    branches={branches}
+                />
+            )}
         </>
     )
 }
