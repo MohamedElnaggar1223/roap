@@ -607,15 +607,6 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center">
                                         <FormLabel>Sessions</FormLabel>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            className="text-main-green"
-                                            onClick={() => append({ day: '', from: '', to: '', memo: '' })}
-                                        >
-                                            Add Session
-                                        </Button>
                                     </div>
 
                                     {fields.map((field, index) => (
@@ -714,6 +705,15 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                             />
                                         </div>
                                     ))}
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="rounded-3xl text-main-yellow bg-main-green px-4 py-5 hover:bg-main-green hover:text-main-yellow w-full text-sm"
+                                        onClick={() => append({ day: '', from: '', to: '', memo: '' })}
+                                    >
+                                        Add Session
+                                    </Button>
                                 </div>
                             </div>
                         </div>
