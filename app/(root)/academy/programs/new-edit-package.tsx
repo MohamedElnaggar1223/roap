@@ -956,22 +956,22 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                             <FormItem>
                                                 <FormLabel>Entry Fees Applied For <span className='text-xs text-red-500'>*</span></FormLabel>
                                                 <div className="grid grid-cols-3 gap-4 border rounded-[10px] p-4">
-                                                    {availableMonths.map((month) => (
+                                                    {form.getValues('months')?.map((month) => (
                                                         <label
-                                                            key={month.value}
+                                                            key={month}
                                                             className="flex items-center space-x-2 cursor-pointer"
                                                         >
                                                             <Checkbox
-                                                                checked={field.value?.includes(month.value)}
+                                                                checked={field.value?.includes(month)}
                                                                 onCheckedChange={(checked) => {
                                                                     const updatedMonths = checked
-                                                                        ? [...(field.value ?? []), month.value]
-                                                                        : field.value?.filter((m: string) => m !== month.value) ?? [];
+                                                                        ? [...(field.value ?? []), month]
+                                                                        : field.value?.filter((m: string) => m !== month) ?? [];
                                                                     field.onChange(updatedMonths);
                                                                 }}
                                                                 className='data-[state=checked]:!bg-main-green'
                                                             />
-                                                            <span>{month.label}</span>
+                                                            <span>{month}</span>
                                                         </label>
                                                     ))}
                                                 </div>
