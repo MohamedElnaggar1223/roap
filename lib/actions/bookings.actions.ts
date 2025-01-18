@@ -2,7 +2,7 @@
 import { auth } from "@/auth"
 import { db } from "@/db"
 import { academicAthletic, blockPrograms, blocks, bookings, bookingSessions, branchTranslations, coaches, entryFeesHistory, packageDiscount, packages, profiles, programs, schedules, sports, sportTranslations, users } from "@/db/schema"
-import { and, desc, eq, inArray, or, sql } from "drizzle-orm"
+import { and, desc, eq, inArray, not, or, sql } from "drizzle-orm"
 import { revalidateTag } from "next/cache"
 import { revalidatePath } from 'next/cache'
 import { createBookingSchema } from '../validations/bookings'
@@ -19,6 +19,17 @@ import { formatDateForDB } from "../utils"
 import { getImageUrl } from "../supabase-images"
 import { cookies } from "next/headers"
 import { format } from "date-fns"
+
+const validateScheduleAgeRange = (schedule: any, birthDate: Date) => {
+    console.log("SCHEDULE AGE VALIDATION", schedule, birthDate)
+    if (!schedule.startDateOfBirth || !schedule.endDateOfBirth) return true;
+
+    const athleteDate = new Date(birthDate);
+    const startAge = new Date(schedule.startDateOfBirth);
+    const endAge = new Date(schedule.endDateOfBirth);
+
+    return athleteDate <= startAge && birthDate >= endAge;
+}
 
 export async function deleteBookings(ids: number[]) {
     const session = await auth()
@@ -505,6 +516,171 @@ export const getPriceAfterActiveDiscounts = async (validatedInput: CreateBooking
     return discountedPrice;
 }
 
+const validateScheduleGender = (schedule: any, athleteGender: string) => {
+    if (!schedule.gender) return true;
+    return schedule.gender.split(',').includes(athleteGender) as boolean;
+}
+
+async function checkPackageCapacity(
+    packageId: number,
+    db: any
+): Promise<boolean> {
+    // Get the package details
+    const packageDetails = await db.query.packages.findFirst({
+        where: eq(packages.id, packageId),
+    });
+
+    if (!packageDetails || packageDetails.capacity <= 0) {
+        return false;
+    }
+
+    // Count total successful bookings for this package
+    const existingBookings = await db
+        .select({
+            count: sql<number>`count(*)::int`
+        })
+        .from(bookings)
+        .where(
+            and(
+                eq(bookings.packageId, packageId),
+                eq(bookings.status, 'success')
+            )
+        );
+
+    const bookedCount = existingBookings[0]?.count || 0;
+    return bookedCount < packageDetails.capacity;
+}
+
+async function checkScheduleCapacity(
+    scheduleId: number,
+    packageId: number,
+    date: Date,
+    db: any
+): Promise<boolean> {
+    // Get the schedule details with its package
+    const schedule = await db.query.schedules.findFirst({
+        where: eq(schedules.id, scheduleId),
+        with: {
+            package: {
+                with: {
+                    program: true
+                }
+            }
+        }
+    });
+
+    if (!schedule || schedule.capacity <= 0) {
+        return false;
+    }
+
+    // Get the day of the week for the given date
+    const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
+
+    // Verify this schedule matches the day
+    if (schedule.day.toLowerCase() !== dayOfWeek) {
+        return false;
+    }
+
+    // Count existing bookings for this schedule on this date
+    const existingBookings = await db
+        .select({
+            count: sql<number>`count(*)::int`
+        })
+        .from(bookingSessions)
+        .innerJoin(
+            bookings,
+            and(
+                eq(bookingSessions.bookingId, bookings.id),
+                eq(bookings.status, 'success') // Only count successful bookings
+            )
+        )
+        .where(
+            and(
+                eq(bookingSessions.date, formatDateForDB(date)),
+                eq(bookingSessions.from, schedule.from),
+                eq(bookingSessions.to, schedule.to),
+                // Only count active sessions
+                not(inArray(
+                    bookingSessions.status,
+                    ['cancelled', 'rejected']
+                ))
+            )
+        );
+
+    const bookedCount = existingBookings[0]?.count || 0;
+
+    // Check if adding one more booking would exceed capacity
+    return bookedCount < schedule.capacity;
+}
+
+async function validateCapacity(
+    packageDetails: any,
+    selectedDate: Date,
+    timeInput: string,
+    db: any
+): Promise<{ isValid: boolean; error?: string }> {
+    if (packageDetails.flexible) {
+        // For flexible packages, check each selected schedule
+        const selectedSchedules = JSON.parse(timeInput);
+
+        for (const selectedSchedule of selectedSchedules) {
+            const matchingSchedule = packageDetails.schedules.find(
+                (s: any) => s.day === selectedSchedule.day && s.from === selectedSchedule.from
+            );
+
+            if (!matchingSchedule) {
+                return {
+                    isValid: false,
+                    error: 'Invalid schedule selected'
+                };
+            }
+
+            const hasCapacity = await checkScheduleCapacity(
+                matchingSchedule.id,
+                packageDetails.id,
+                selectedDate,
+                db
+            );
+
+            if (!hasCapacity) {
+                return {
+                    isValid: false,
+                    error: `Schedule on ${selectedSchedule.day} at ${selectedSchedule.from} is full`
+                };
+            }
+        }
+
+        return { isValid: true };
+    } else {
+        // For normal packages, check the specific time slot
+        const [startTime] = timeInput.split(' ');
+        const matchingSchedule = packageDetails.schedules.find(
+            (s: any) => s.from === startTime
+        );
+
+        if (!matchingSchedule) {
+            return {
+                isValid: false,
+                error: 'Invalid schedule selected'
+            };
+        }
+
+        const hasCapacity = await checkPackageCapacity(
+            packageDetails.id,
+            db
+        );
+
+        if (!hasCapacity) {
+            return {
+                isValid: false,
+                error: 'Selected schedule is full'
+            };
+        }
+
+        return { isValid: true };
+    }
+}
+
 export async function createBooking(input: CreateBookingInput): Promise<CreateBookingResponse> {
     try {
         // Validate input
@@ -558,6 +734,71 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
             }
         }
 
+        const athlete = await db.query.profiles.findFirst({
+            where: eq(users.id, validatedInput.profileId),
+            columns: {
+                id: true,
+                birthday: true,
+                gender: true
+            }
+        })
+
+        if (packageDetails.name.toLowerCase().startsWith('assessment')) {
+            if (!athlete?.birthday) {
+                return { error: { message: 'Athlete birthday is required for assessment booking' } };
+            }
+
+            // For flexible packages
+            if (packageDetails.flexible) {
+                const selectedSchedules = JSON.parse(validatedInput.time);
+                const isValidAge = selectedSchedules.every((schedule: any) =>
+                    validateScheduleAgeRange(schedule, new Date(athlete?.birthday ?? ''))
+                );
+                if (!isValidAge) {
+                    return { error: { message: 'Athlete age does not meet schedule requirements' } };
+                }
+            }
+            // For non-flexible packages
+            else {
+                const scheduleTime = validatedInput.time.split(' ')[0];
+                const schedule = packageDetails.schedules.find(s => s.from === scheduleTime);
+                if (!validateScheduleAgeRange(schedule, new Date(athlete.birthday))) {
+                    return { error: { message: 'Athlete age does not meet schedule requirements' } };
+                }
+                if (schedule?.gender) {
+                    const isValidGender = validateScheduleGender(
+                        schedule.gender,
+                        athlete?.gender ?? ''
+                    );
+
+                    if (!isValidGender) {
+                        return {
+                            error: {
+                                message: 'Selected schedule is not available for athlete\'s gender',
+                                field: 'gender'
+                            }
+                        };
+                    }
+                }
+            }
+        }
+
+        const isAssessment = packageDetails.name.toLowerCase().startsWith('assessment');
+
+        console.log("PROGRAM GENDERS", packageDetails?.program?.gender?.split(','))
+        console.log("ATHLETE GENDERS", athlete?.gender?.toLowerCase())
+
+        const isValidGender = isAssessment ? true : packageDetails?.program?.gender?.split(',').includes(athlete?.gender?.toLowerCase() ?? '') ?? false;
+
+        if (!isValidGender) {
+            return {
+                error: {
+                    message: 'Selected package is not available for athlete\'s gender',
+                    field: 'gender'
+                }
+            };
+        }
+
         // Calculate sessions and prices
         const selectedDate = new Date(validatedInput.date);
         const { sessions, totalPrice, deductions } = await calculateSessionsAndPrice(
@@ -566,6 +807,25 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
             packageDetails.schedules,
             validatedInput.time
         );
+
+        if (!isAssessment) {
+            const capacityValidation = await validateCapacity(
+                packageDetails,
+                selectedDate,
+                validatedInput.time,
+                db
+            );
+
+            if (!capacityValidation.isValid) {
+                return {
+                    error: {
+                        message: capacityValidation.error || 'Capacity validation failed',
+                        field: 'time'
+                    }
+                };
+            }
+        }
+
 
         // Check entry fees
         const { shouldPay: shouldPayEntryFees, amount: entryFeesAmount } =
@@ -634,21 +894,21 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
                 });
             }
 
-            if (packageDetails.flexible) {
-                const selectedSchedules = JSON.parse(validatedInput.time);
-                // Update capacity for each selected schedule
-                for (const schedule of selectedSchedules) {
-                    await tx.update(schedules)
-                        .set({
-                            capacity: sql`${schedules.capacity} - 1`
-                        })
-                        .where(and(
-                            eq(schedules.packageId, packageDetails.id),
-                            eq(schedules.day, schedule.day),
-                            eq(schedules.from, schedule.from)
-                        ));
-                }
-            }
+            // if (packageDetails.flexible) {
+            //     const selectedSchedules = JSON.parse(validatedInput.time);
+            //     // Update capacity for each selected schedule
+            //     for (const schedule of selectedSchedules) {
+            //         await tx.update(schedules)
+            //             .set({
+            //                 capacity: sql`${schedules.capacity} - 1`
+            //             })
+            //             .where(and(
+            //                 eq(schedules.packageId, packageDetails.id),
+            //                 eq(schedules.day, schedule.day),
+            //                 eq(schedules.from, schedule.from)
+            //             ));
+            //     }
+            // }
 
             return [booking];
         });
