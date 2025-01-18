@@ -13,6 +13,9 @@ interface Schedule {
     from: string
     to: string
     memo: string | undefined
+    startDateOfBirth: string | null | undefined
+    endDateOfBirth: string | null | undefined
+    gender: string | null | undefined
 }
 
 interface Package {
@@ -125,9 +128,9 @@ export async function updateAssessment(id: number, data: {
     description: string
     branchId: number
     sportId: number
-    gender: string
-    startDateOfBirth: Date
-    endDateOfBirth: Date
+    // gender: string
+    // startDateOfBirth: Date
+    // endDateOfBirth: Date
     numberOfSeats: number
     coaches: number[]
     packagesData: Package[]
@@ -163,9 +166,9 @@ export async function updateAssessment(id: number, data: {
                     description: data.description,
                     branchId: data.branchId,
                     sportId: data.sportId,
-                    gender: data.gender,
-                    startDateOfBirth: formatDateForDB(data.startDateOfBirth),
-                    endDateOfBirth: formatDateForDB(data.endDateOfBirth),
+                    // gender: data.gender,
+                    // startDateOfBirth: formatDateForDB(data.startDateOfBirth),
+                    // endDateOfBirth: formatDateForDB(data.endDateOfBirth),
                     numberOfSeats: data.numberOfSeats,
                     type: 'TEAM',
                     assessmentDeductedFromProgram: data.assessmentDeductedFromProgram,
@@ -238,6 +241,9 @@ export async function updateAssessment(id: number, data: {
                                         from: schedule.from,
                                         to: schedule.to,
                                         memo: schedule.memo,
+                                        startDateOfBirth: schedule.startDateOfBirth,
+                                        endDateOfBirth: schedule.endDateOfBirth,
+                                        gender: schedule.gender,
                                         createdAt: sql`now()`,
                                         updatedAt: sql`now()`,
                                     }))
@@ -282,6 +288,9 @@ export async function updateAssessment(id: number, data: {
                                             from: schedule.from,
                                             to: schedule.to,
                                             memo: schedule.memo,
+                                            startDateOfBirth: schedule.startDateOfBirth,
+                                            endDateOfBirth: schedule.endDateOfBirth,
+                                            gender: schedule.gender,
                                             createdAt: sql`now()`,
                                             updatedAt: sql`now()`,
                                         }))

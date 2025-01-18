@@ -14,6 +14,9 @@ interface Schedule {
     from: string
     to: string
     memo: string | undefined
+    startDateOfBirth: string | null | undefined
+    endDateOfBirth: string | null | undefined
+    gender: string | null | undefined
 }
 
 function getFirstAndLastDayOfMonths(months: string[]) {
@@ -109,6 +112,9 @@ export async function createPackage(data: {
                             memo: schedule.memo,
                             createdAt: sql`now()`,
                             updatedAt: sql`now()`,
+                            startDateOfBirth: schedule.startDateOfBirth,
+                            endDateOfBirth: schedule.endDateOfBirth,
+                            gender: schedule.gender
                         }))
                     )
             }
@@ -194,6 +200,10 @@ export async function updatePackage(id: number, data: {
                 !data.schedules.find(s => s.id === id)
             )
 
+            console.log("SCHEDULES TO DELETE", schedulesToDelete)
+            console.log("SCHEDULES TO UPDATE", schedulesToUpdate)
+            console.log("NEW SCHEDULES", newSchedules)
+
             if (schedulesToDelete.length > 0) {
                 await tx
                     .delete(schedules)
@@ -215,6 +225,9 @@ export async function updatePackage(id: number, data: {
                             memo: schedule.memo,
                             createdAt: sql`now()`,
                             updatedAt: sql`now()`,
+                            startDateOfBirth: schedule.startDateOfBirth,
+                            endDateOfBirth: schedule.endDateOfBirth,
+                            gender: schedule.gender
                         }))
                     )
             }
@@ -227,7 +240,10 @@ export async function updatePackage(id: number, data: {
                         from: schedule.from,
                         to: schedule.to,
                         memo: schedule.memo,
-                        updatedAt: sql`now()`
+                        updatedAt: sql`now()`,
+                        startDateOfBirth: schedule.startDateOfBirth,
+                        endDateOfBirth: schedule.endDateOfBirth,
+                        gender: schedule.gender
                     })
                     .where(eq(schedules.id, schedule.id!))
             }
@@ -284,7 +300,10 @@ export async function getProgramPackages(url: string | null, programId: number) 
                     'day', ${schedules.day},
                     'from', ${schedules.from},
                     'to', ${schedules.to},
-                    'memo', ${schedules.memo}
+                    'memo', ${schedules.memo},
+                    'startDateOfBirth', ${schedules.startDateOfBirth},
+                    'endDateOfBirth', ${schedules.endDateOfBirth},
+                    'gender', ${schedules.gender}
                 )
                 ORDER BY ${schedules.createdAt} ASC
             )`

@@ -103,10 +103,10 @@ const calculateDateFromAge = (age: number, unit: string): Date => {
 
 const editAssessmentSchema = z.object({
     description: z.string().min(1, "Description is required"),
-    startAge: z.number().min(0, "Start age must be 0 or greater").max(100, "Start age must be 100 or less").multipleOf(0.5, "Start age must be in increments of 0.5"),
-    startAgeUnit: z.enum(["months", "years"]),
-    endAge: z.number().min(0, "End age must be 0.5 or greater").max(100, "End age must be 100 or less").multipleOf(0.5, "End age must be in increments of 0.5").optional(),
-    endAgeUnit: z.enum(["months", "years", "unlimited"]),
+    // startAge: z.number().min(0, "Start age must be 0 or greater").max(100, "Start age must be 100 or less").multipleOf(0.5, "Start age must be in increments of 0.5"),
+    // startAgeUnit: z.enum(["months", "years"]),
+    // endAge: z.number().min(0, "End age must be 0.5 or greater").max(100, "End age must be 100 or less").multipleOf(0.5, "End age must be in increments of 0.5").optional(),
+    // endAgeUnit: z.enum(["months", "years", "unlimited"]),
     numberOfSeats: z.string().optional(),
     assessmentDeductedFromProgram: z.boolean().default(false).optional(),
 })
@@ -134,6 +134,9 @@ interface Schedule {
     to: string
     memo: string | undefined
     id?: number
+    startDateOfBirth: Date | null
+    endDateOfBirth: Date | null
+    gender: string | null
 }
 
 interface Props {
@@ -186,6 +189,8 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
         }
     )
 
+    console.log(packagesData)
+
     const genders = useGendersStore((state) => state.genders).map((g) => g.name)
 
     const [dialogOpen, setDialogOpen] = useState(false)
@@ -212,7 +217,13 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
             entryFeesExplanation: packageData.entryFeesExplanation ?? undefined,
             entryFeesAppliedUntil: packageData.entryFeesAppliedUntil || undefined,
             entryFeesStartDate: packageData.entryFeesStartDate ? new Date(packageData.entryFeesStartDate) : undefined,
-            entryFeesEndDate: packageData.entryFeesEndDate ? new Date(packageData.entryFeesEndDate) : undefined
+            entryFeesEndDate: packageData.entryFeesEndDate ? new Date(packageData.entryFeesEndDate) : undefined,
+            schedules: packageData.schedules?.map(schedule => ({
+                ...schedule,
+                startDateOfBirth: schedule.startDateOfBirth ? new Date(schedule.startDateOfBirth) : null,
+                endDateOfBirth: schedule.endDateOfBirth ? new Date(schedule.endDateOfBirth) : null,
+                gender: schedule.gender ?? null
+            })) ?? []
         })) ?? [])
     }, [isLoading, isValidating, packagesData])
 
@@ -221,27 +232,27 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
         defaultValues: {
             description: assessment.description ?? '',
             numberOfSeats: assessment.numberOfSeats?.toString() ?? '',
-            startAge: (() => {
-                if (!assessment.startDateOfBirth) return 0;
-                const { age, unit } = calculateAgeFromDate(assessment.startDateOfBirth);
-                return age;
-            })(),
-            startAgeUnit: (() => {
-                if (!assessment.startDateOfBirth) return 'years';
-                return calculateAgeFromDate(assessment.startDateOfBirth).unit as 'months' | 'years' | undefined;
-            })(),
-            endAge: (() => {
-                if (!assessment.endDateOfBirth) return undefined;
-                const { age, unit } = calculateAgeFromDate(assessment.endDateOfBirth);
-                if (age >= 100) return undefined; // For unlimited
-                return age;
-            })(),
-            endAgeUnit: (() => {
-                if (!assessment.endDateOfBirth) return 'unlimited';
-                const { age } = calculateAgeFromDate(assessment.endDateOfBirth);
-                if (age >= 100) return 'unlimited';
-                return calculateAgeFromDate(assessment.endDateOfBirth).unit as "months" | "years" | undefined;
-            })(),
+            // startAge: (() => {
+            //     if (!assessment.startDateOfBirth) return 0;
+            //     const { age, unit } = calculateAgeFromDate(assessment.startDateOfBirth);
+            //     return age;
+            // })(),
+            // startAgeUnit: (() => {
+            //     if (!assessment.startDateOfBirth) return 'years';
+            //     return calculateAgeFromDate(assessment.startDateOfBirth).unit as 'months' | 'years' | undefined;
+            // })(),
+            // endAge: (() => {
+            //     if (!assessment.endDateOfBirth) return undefined;
+            //     const { age, unit } = calculateAgeFromDate(assessment.endDateOfBirth);
+            //     if (age >= 100) return undefined; // For unlimited
+            //     return age;
+            // })(),
+            // endAgeUnit: (() => {
+            //     if (!assessment.endDateOfBirth) return 'unlimited';
+            //     const { age } = calculateAgeFromDate(assessment.endDateOfBirth);
+            //     if (age >= 100) return 'unlimited';
+            //     return calculateAgeFromDate(assessment.endDateOfBirth).unit as "months" | "years" | undefined;
+            // })(),
             assessmentDeductedFromProgram: assessment.assessmentDeductedFromProgram
         }
     })
@@ -264,37 +275,37 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
         try {
             setLoading(true)
 
-            if (!selectedGenders.length) {
-                form.setError('root', {
-                    type: 'custom',
-                    message: 'Please select at least one gender'
-                })
-                return
-            }
+            // if (!selectedGenders.length) {
+            //     form.setError('root', {
+            //         type: 'custom',
+            //         message: 'Please select at least one gender'
+            //     })
+            //     return
+            // }
 
-            const startDate = calculateDateFromAge(values.startAge, values.startAgeUnit);
+            // const startDate = calculateDateFromAge(values.startAge, values.startAgeUnit);
 
-            let endDate;
-            if (values.endAgeUnit === 'unlimited') {
-                endDate = new Date();
-                endDate.setFullYear(endDate.getFullYear() - 100); // Set to 100 years ago for unlimited
-            } else {
-                if (!values.endAge) {
-                    return form.setError('endAge', {
-                        type: 'custom',
-                        message: 'End age is required for limited duration'
-                    });
-                }
-                endDate = calculateDateFromAge(values.endAge, values.endAgeUnit);
-            }
+            // let endDate;
+            // if (values.endAgeUnit === 'unlimited') {
+            //     endDate = new Date();
+            //     endDate.setFullYear(endDate.getFullYear() - 100); // Set to 100 years ago for unlimited
+            // } else {
+            //     if (!values.endAge) {
+            //         return form.setError('endAge', {
+            //             type: 'custom',
+            //             message: 'End age is required for limited duration'
+            //         });
+            //     }
+            //     endDate = calculateDateFromAge(values.endAge, values.endAgeUnit);
+            // }
 
             const result = await updateAssessment(assessment.id, {
                 description: values.description,
                 branchId: assessment.branchId!,
                 sportId: assessment.sportId!,
-                gender: selectedGenders.join(','),
-                startDateOfBirth: startDate,
-                endDateOfBirth: endDate,
+                // gender: selectedGenders.join(','),
+                // startDateOfBirth: startDate,
+                // endDateOfBirth: endDate,
                 numberOfSeats: 0,
                 coaches: selectedCoaches,
                 packagesData: createdPackages.map((p) => ({
@@ -303,6 +314,12 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                     endDate: format(p.endDate, 'yyyy-MM-dd 00:00:00'),
                     entryFeesStartDate: p.entryFeesStartDate ? format(p.entryFeesStartDate, 'yyyy-MM-dd 00:00:00') : undefined,
                     entryFeesEndDate: p.entryFeesEndDate ? format(p.entryFeesEndDate, 'yyyy-MM-dd 00:00:00') : undefined,
+                    schedules: p.schedules.map(schedule => ({
+                        ...schedule,
+                        startDateOfBirth: schedule.startDateOfBirth ? format(schedule.startDateOfBirth, 'yyyy-MM-dd 00:00:00') : undefined,
+                        endDateOfBirth: schedule.endDateOfBirth ? format(schedule.endDateOfBirth, 'yyyy-MM-dd 00:00:00') : undefined,
+                        gender: schedule.gender
+                    }))
                 })),
                 assessmentDeductedFromProgram: values.assessmentDeductedFromProgram ? values.assessmentDeductedFromProgram : false
             })
@@ -336,8 +353,8 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
         }
     }
 
-    const startAgeUnitChange = form.watch('startAgeUnit')
-    const endAgeUnitChange = form.watch('endAgeUnit')
+    // const startAgeUnitChange = form.watch('startAgeUnit')
+    // const endAgeUnitChange = form.watch('endAgeUnit')
 
     useEffect(() => {
         if (!editPackageOpen) {
@@ -351,10 +368,10 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
 
         if (!values.description) missingFields.push('Description');
         if (!selectedGenders.length) missingFields.push('Gender');
-        if (values.startAge === undefined || values.startAge === null) missingFields.push('Start Age');
-        if (values.endAgeUnit !== 'unlimited' && (!values.endAge || values.endAge === undefined)) {
-            missingFields.push('End Age');
-        }
+        // if (values.startAge === undefined || values.startAge === null) missingFields.push('Start Age');
+        // if (values.endAgeUnit !== 'unlimited' && (!values.endAge || values.endAge === undefined)) {
+        //     missingFields.push('End Age');
+        // }
 
         if (missingFields.length > 0) {
             toast({
@@ -426,7 +443,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                                         )}
                                     />
 
-                                    <div className="flex flex-col gap-4 flex-1">
+                                    {/* <div className="flex flex-col gap-4 flex-1">
                                         <p className='text-xs'>For</p>
                                         <div className="flex w-full flex-col gap-4 border border-gray-500 p-3 rounded-lg">
                                             <div className="flex flex-wrap gap-2">
@@ -474,7 +491,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                                                 </PopoverContent>
                                             </Popover>
                                         </div>
-                                    </div>
+                                    </div> */}
 
                                     <div className="absolute hidden flex-col gap-4 w-full">
                                         <p className='text-xs'>Coaches</p>
@@ -538,7 +555,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
 
                                     <div className="flex w-full gap-4 items-start justify-between">
                                         <div className="flex flex-1 gap-2">
-                                            <FormField
+                                            {/* <FormField
                                                 control={form.control}
                                                 name='startAge'
                                                 render={({ field }) => (
@@ -559,8 +576,8 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                                                         <FormMessage />
                                                     </FormItem>
                                                 )}
-                                            />
-                                            <FormField
+                                            /> */}
+                                            {/* <FormField
                                                 control={form.control}
                                                 name="startAgeUnit"
                                                 render={({ field }) => (
@@ -580,11 +597,11 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                                                         <FormMessage />
                                                     </FormItem>
                                                 )}
-                                            />
+                                            /> */}
                                         </div>
 
                                         <div className="flex flex-1 gap-2">
-                                            <FormField
+                                            {/* <FormField
                                                 control={form.control}
                                                 name='endAge'
                                                 render={({ field }) => (
@@ -605,8 +622,8 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                                                         <FormMessage />
                                                     </FormItem>
                                                 )}
-                                            />
-                                            <FormField
+                                            /> */}
+                                            {/* <FormField
                                                 control={form.control}
                                                 name="endAgeUnit"
                                                 render={({ field }) => (
@@ -627,7 +644,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                                                         <FormMessage />
                                                     </FormItem>
                                                 )}
-                                            />
+                                            /> */}
                                         </div>
                                     </div>
 

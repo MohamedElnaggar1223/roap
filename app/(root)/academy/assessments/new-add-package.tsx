@@ -3,7 +3,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { createPackage } from '@/lib/actions/packages.actions';
-import { Loader2, TrashIcon } from 'lucide-react';
+import { Loader2, TrashIcon, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { z } from 'zod';
@@ -29,6 +29,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useOnboarding } from '@/providers/onboarding-provider';
 import { DateSelector } from '@/components/shared/date-selector';
 import { useToast } from '@/hooks/use-toast';
+import { useGendersStore } from '@/providers/store-provider';
+import { Badge } from '@/components/ui/badge';
 
 const packageSchema = z.object({
     type: z.enum(["Term", "Monthly", "Full Season", "Assessment"]),
@@ -52,7 +54,14 @@ const packageSchema = z.object({
         from: z.string().min(1, "Start time is required"),
         to: z.string().min(1, "End time is required"),
         memo: z.string().optional().nullable(),
-        id: z.number().optional()
+        id: z.number().optional(),
+        startDateOfBirth: z.date({
+            required_error: "Start age is required",
+        }).nullable(),
+        endDateOfBirth: z.date({
+            required_error: "End age is required",
+        }).nullable(),
+        gender: z.string().min(1, "Gender is required").nullable(),
     }))
 }).refine((data) => {
     if (parseFloat(data.entryFees) > 0 && !data.entryFeesExplanation) {
@@ -93,6 +102,9 @@ interface Schedule {
     to: string
     memo: string | undefined
     id?: number
+    startDateOfBirth: Date | null
+    endDateOfBirth: Date | null
+    gender: string | null
 }
 
 interface Props {
@@ -135,7 +147,10 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
 
     const { mutate } = useOnboarding()
 
+    const genders = useGendersStore((state) => state.genders).map((g) => g.name)
+
     const [loading, setLoading] = useState(false)
+    const [scheduleGenders, setScheduleGenders] = useState<Record<number, string[]>>({})
     const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
 
     const form = useForm<z.infer<typeof packageSchema>>({
@@ -146,7 +161,9 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
             termNumber: packagesLength ? (packagesLength + 1).toString() : '1',
             memo: '',
             entryFees: '0',
-            schedules: [{ day: '', from: '', to: '', memo: '' }],
+            schedules: [{
+                day: '', from: '', to: '', memo: '', startDateOfBirth: null, endDateOfBirth: null, gender: null
+            }] as Schedule[],
             entryFeesStartDate: undefined,
             entryFeesEndDate: undefined
         }
@@ -200,7 +217,10 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                         day: schedule.day,
                         from: schedule.from,
                         to: schedule.to,
-                        memo: schedule.memo ?? ''
+                        memo: schedule.memo ?? '',
+                        startDateOfBirth: schedule.startDateOfBirth ? format(schedule.startDateOfBirth, 'yyyy-MM-dd 00:00:00') : undefined,
+                        endDateOfBirth: schedule.endDateOfBirth ? format(schedule.endDateOfBirth, 'yyyy-MM-dd 00:00:00') : undefined,
+                        gender: schedule.gender
                     })),
                     capacity: 99999,
                     type: values.type
@@ -232,7 +252,10 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                     endDate: values.endDate,
                     schedules: values.schedules.map(schedule => ({
                         ...schedule,
-                        memo: schedule.memo ?? ''
+                        memo: schedule.memo ?? '',
+                        startDateOfBirth: schedule.startDateOfBirth ? new Date(schedule.startDateOfBirth) : null,
+                        endDateOfBirth: schedule.endDateOfBirth ? new Date(schedule.endDateOfBirth) : null,
+                        gender: schedule.gender
                     })),
                     memo: values.memo ?? '',
                     entryFees: parseFloat(values.entryFees),
@@ -321,6 +344,9 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                 if (!schedule.day) missingFields.push(`Session ${index + 1} Day`);
                 if (!schedule.from) missingFields.push(`Session ${index + 1} Start Time`);
                 if (!schedule.to) missingFields.push(`Session ${index + 1} End Time`);
+                if (!schedule.startDateOfBirth) missingFields.push(`Session ${index + 1} Start Age Date`);
+                if (!schedule.endDateOfBirth) missingFields.push(`Session ${index + 1} End Age Date`);
+                if (!schedule.gender) missingFields.push(`Session ${index + 1} Gender`);
             });
         }
 
@@ -347,6 +373,36 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
             });
         }
     };
+
+    const generateAgeOptions = () => {
+        const options = [];
+        for (let i = 1; i <= 99; i++) {
+            options.push({
+                label: `${i} year${i > 1 ? 's' : ''}`,
+                value: i.toString()
+            });
+        }
+        return options;
+    }
+
+    const getDateFromAge = (ageInYears: number) => {
+        const date = new Date();
+        date.setFullYear(date.getFullYear() - ageInYears);
+        return date;
+    }
+
+    const getAgeFromDate = (date: Date) => {
+        const today = new Date();
+        const birthDate = new Date(date);
+        let age = today.getFullYear() - birthDate.getFullYear();
+
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+
+        return age;
+    }
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -686,6 +742,148 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                                 />
                                             </div>
 
+                                            <div className="flex gap-4">
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`schedules.${index}.startDateOfBirth`}
+                                                    render={({ field }) => (
+                                                        <FormItem className="flex-1">
+                                                            <FormLabel>Start Age</FormLabel>
+                                                            <Select
+                                                                onValueChange={(value) => {
+                                                                    field.onChange(getDateFromAge(parseInt(value)));
+                                                                }}
+                                                                value={field.value ?
+                                                                    getAgeFromDate(new Date(field.value)).toString()
+                                                                    : ''}
+                                                            >
+                                                                <FormControl>
+                                                                    <SelectTrigger className='border border-gray-500 bg-transparent'>
+                                                                        <SelectValue placeholder="Select age" />
+                                                                    </SelectTrigger>
+                                                                </FormControl>
+                                                                <SelectContent className='!bg-[#F1F2E9]'>
+                                                                    {generateAgeOptions().map(option => (
+                                                                        <SelectItem key={option.value} value={option.value}>
+                                                                            {option.label}
+                                                                        </SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`schedules.${index}.endDateOfBirth`}
+                                                    render={({ field }) => (
+                                                        <FormItem className="flex-1">
+                                                            <FormLabel>End Age</FormLabel>
+                                                            <Select
+                                                                onValueChange={(value) => {
+                                                                    field.onChange(getDateFromAge(parseInt(value)));
+                                                                }}
+                                                                value={field.value ?
+                                                                    getAgeFromDate(new Date(field.value)).toString()
+                                                                    : ''}
+                                                            >
+                                                                <FormControl>
+                                                                    <SelectTrigger className='border border-gray-500 bg-transparent'>
+                                                                        <SelectValue placeholder="Select age" />
+                                                                    </SelectTrigger>
+                                                                </FormControl>
+                                                                <SelectContent className='!bg-[#F1F2E9]'>
+                                                                    {generateAgeOptions().map(option => (
+                                                                        <SelectItem key={option.value} value={option.value}>
+                                                                            {option.label}
+                                                                        </SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </div>
+
+                                            {/* Add gender selection */}
+                                            <FormField
+                                                control={form.control}
+                                                name={`schedules.${index}.gender`}
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Gender</FormLabel>
+                                                        <div className="flex w-full flex-col gap-4 border border-gray-500 p-3 rounded-lg">
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {scheduleGenders[index]?.map((gender) => (
+                                                                    <Badge
+                                                                        key={gender}
+                                                                        variant="default"
+                                                                        className="flex items-center gap-1 hover:bg-[#E0E4D9] pr-0.5 bg-[#E0E4D9] rounded-3xl text-main-green font-semibold font-inter text-sm"
+                                                                    >
+                                                                        <span className="text-xs">{gender}</span>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                const newGenders = scheduleGenders[index].filter(g => g !== gender)
+                                                                                setScheduleGenders(prev => ({
+                                                                                    ...prev,
+                                                                                    [index]: newGenders
+                                                                                }))
+                                                                                field.onChange(newGenders.join(','))
+                                                                            }}
+                                                                            className="ml-1 rounded-full p-0.5 hover:bg-secondary-foreground/20"
+                                                                        >
+                                                                            <X className="size-3" fill='#1f441f' />
+                                                                            <span className="sr-only">Remove {gender}</span>
+                                                                        </button>
+                                                                    </Badge>
+                                                                ))}
+                                                            </div>
+                                                            <Popover>
+                                                                <PopoverTrigger asChild>
+                                                                    <Button
+                                                                        variant="default"
+                                                                        className="gap-2 hover:bg-transparent text-left flex items-center bg-transparent text-black border border-gray-500 justify-start"
+                                                                    >
+                                                                        Select genders
+                                                                    </Button>
+                                                                </PopoverTrigger>
+                                                                <PopoverContent className="w-56 p-0" align="start">
+                                                                    <div className="p-2">
+                                                                        {genders.map(gender => (
+                                                                            <p
+                                                                                key={gender}
+                                                                                onClick={() => {
+                                                                                    const currentGenders = scheduleGenders[index] || []
+                                                                                    const newGenders = currentGenders.includes(gender)
+                                                                                        ? currentGenders.filter(g => g !== gender)
+                                                                                        : [...currentGenders, gender]
+                                                                                    setScheduleGenders(prev => ({
+                                                                                        ...prev,
+                                                                                        [index]: newGenders
+                                                                                    }))
+                                                                                    field.onChange(newGenders.join(','))
+                                                                                }}
+                                                                                className="p-2 flex items-center justify-start gap-2 text-left cursor-pointer hover:bg-[#fafafa] rounded-lg"
+                                                                            >
+                                                                                {(scheduleGenders[index] || []).includes(gender) &&
+                                                                                    <X className="size-3" fill='#1f441f' />
+                                                                                }
+                                                                                {gender}
+                                                                            </p>
+                                                                        ))}
+                                                                    </div>
+                                                                </PopoverContent>
+                                                            </Popover>
+                                                        </div>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+
                                             <FormField
                                                 control={form.control}
                                                 name={`schedules.${index}.memo`}
@@ -710,7 +908,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                         variant="outline"
                                         size="sm"
                                         className="rounded-3xl text-main-yellow bg-main-green px-4 py-5 hover:bg-main-green hover:text-main-yellow w-full text-sm"
-                                        onClick={() => append({ day: '', from: '', to: '', memo: '' })}
+                                        onClick={() => append({ day: '', from: '', to: '', memo: '', startDateOfBirth: null, endDateOfBirth: null, gender: null })}
                                     >
                                         Add Session
                                     </Button>

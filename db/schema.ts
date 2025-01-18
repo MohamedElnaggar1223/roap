@@ -933,6 +933,9 @@ export const schedules = pgTable("schedules", {
     updatedAt: timestamp("updated_at", { mode: 'string' }),
     capacity: integer("capacity").notNull().default(0),
     memo: text(),
+    startDateOfBirth: date("start_date_of_birth").default(sql`NULL`),
+    endDateOfBirth: date("end_date_of_birth").default(sql`NULL`),
+    gender: varchar({ length: 255 }).default(sql`NULL`),
 }, (table) => {
     return {
         schedulesPackageIdForeign: foreignKey({
