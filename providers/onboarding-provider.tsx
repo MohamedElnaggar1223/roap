@@ -55,8 +55,8 @@ interface StepRequirements {
         packages: boolean
         branchId: boolean
         sportId: boolean
-        startDateOfBirth: boolean
-        endDateOfBirth: boolean
+        // startDateOfBirth: boolean
+        // endDateOfBirth: boolean
         // gender: boolean
     }
 }
@@ -158,8 +158,8 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
             packages: false,
             branchId: false,
             sportId: false,
-            startDateOfBirth: false,
-            endDateOfBirth: false,
+            // startDateOfBirth: false,
+            // endDateOfBirth: false,
             // gender: false,
         },
     })
@@ -445,49 +445,25 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
                 !!assessment.description &&
                 (assessment.packages?.length > 0) &&
                 !!assessment.branchId &&
-                !!assessment.sportId &&
-                !!assessment.startDateOfBirth &&
-                !!assessment.endDateOfBirth
+                !!assessment.sportId
             ),
             packages: (finalAcademyDetails?.assessments ?? []).some(assessment =>
                 !!assessment.description &&
                 (assessment.packages?.length > 0) &&
                 !!assessment.branchId &&
-                !!assessment.sportId &&
-                !!assessment.startDateOfBirth &&
-                !!assessment.endDateOfBirth
+                !!assessment.sportId
             ),
             branchId: (finalAcademyDetails?.assessments ?? []).some(assessment =>
                 !!assessment.description &&
                 (assessment.packages?.length > 0) &&
                 !!assessment.branchId &&
-                !!assessment.sportId &&
-                !!assessment.startDateOfBirth &&
-                !!assessment.endDateOfBirth
+                !!assessment.sportId
             ),
             sportId: (finalAcademyDetails?.assessments ?? []).some(assessment =>
                 !!assessment.description &&
                 (assessment.packages?.length > 0) &&
                 !!assessment.branchId &&
-                !!assessment.sportId &&
-                !!assessment.startDateOfBirth &&
-                !!assessment.endDateOfBirth
-            ),
-            startDateOfBirth: (finalAcademyDetails?.assessments ?? []).some(assessment =>
-                !!assessment.description &&
-                (assessment.packages?.length > 0) &&
-                !!assessment.branchId &&
-                !!assessment.sportId &&
-                !!assessment.startDateOfBirth &&
-                !!assessment.endDateOfBirth
-            ),
-            endDateOfBirth: (finalAcademyDetails?.assessments ?? []).some(assessment =>
-                !!assessment.description &&
-                (assessment.packages?.length > 0) &&
-                !!assessment.branchId &&
-                !!assessment.sportId &&
-                !!assessment.startDateOfBirth &&
-                !!assessment.endDateOfBirth
+                !!assessment.sportId
             ),
         })
 
