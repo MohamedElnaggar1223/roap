@@ -252,11 +252,12 @@ export default function AddNewCoach({ sports, languages, academySports }: Props)
                                                         {/* Show either the existing image or the new preview */}
                                                         {(field.value || selectedImage.preview) ? (
                                                             <div className="relative w-44 h-44">
-                                                                <Image
+                                                                <img
                                                                     src={selectedImage.preview || '/images/placeholder.svg'}
                                                                     alt="Preview"
-                                                                    fill
-                                                                    className="rounded-[31px] object-cover"
+                                                                    width={176}
+                                                                    height={176}
+                                                                    className="rounded-[31px] object-cover aspect-square"
                                                                 />
                                                                 {/* Add remove button */}
                                                                 <button
