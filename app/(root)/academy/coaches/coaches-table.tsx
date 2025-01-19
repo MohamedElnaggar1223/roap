@@ -219,7 +219,7 @@ export function CoachesDataTable({ data, sports, languages, academySports }: Coa
                                 </div>
                                 <div className="py-4 px-4 bg-main-white flex items-center justify-start">
                                     <div className="flex items-center justify-center w-[3.75rem] h-[3.75rem] overflow-hidden rounded-full">
-                                        <Image
+                                        <img
                                             src={coach.image ?? '/images/placeholder.svg'}
                                             alt={coach.name}
                                             width={60}

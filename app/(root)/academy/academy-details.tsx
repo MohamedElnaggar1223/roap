@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { getImageUrl, uploadImageToSupabase, uploadVideoToSupabase } from '@/lib/supabase-images';
-import Image from 'next/image';
+import Image, { ImageLoaderProps } from 'next/image';
 import TipTapEditor from '@/components/academy/academy-details/Editor';
 import { academyDetailsSchema } from '@/lib/validations/academies';
 import { useEffect, useRef, useState } from 'react';
@@ -565,11 +565,12 @@ export default function AcademyDetails() {
                                             {selectedGalleryImages.map((image, index) => (
                                                 <div key={index} className="relative aspect-square">
                                                     {image.type === 'image' ? (
-                                                        <Image
+                                                        <img
                                                             src={image.preview}
-                                                            alt={`Gallery item ${index + 1}`}
-                                                            fill
-                                                            className="object-cover rounded-lg"
+                                                            alt={image.preview}
+                                                            width={300}
+                                                            height={300}
+                                                            className="object-cover rounded-lg aspect-square"
                                                         />
                                                     ) : (
                                                         <div className="relative w-full h-full">

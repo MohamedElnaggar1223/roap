@@ -11,7 +11,7 @@ import { z } from 'zod';
 import { academySignUpSchema } from '../validations/auth';
 import { auth } from '@/auth';
 import { academyDetailsSchema } from '../validations/academies';
-import { deleteFromStorage, getImageUrl } from '../supabase-images';
+import { deleteFromStorage, getImageUrl } from '../supabase-images-server';
 import { getCoaches } from './coaches.actions';
 import { getLocations } from './locations.actions';
 import { getPrograms } from './programs.actions';
