@@ -165,20 +165,20 @@ const calendarColors = [
     // Additional colors
     { name: 'Baby Blue', value: '#89CFF0', textColor: '#000000' },
     { name: 'Pale Rose', value: '#FFE4E1', textColor: '#000000' },
-    { name: 'Honeydew', value: '#F0FFF0', textColor: '#000000' },
+    { name: 'Honeydew', value: '#F1FFF1', textColor: '#000000' }, // Modified
     { name: 'Vanilla', value: '#F3E5AB', textColor: '#000000' },
     { name: 'Soft Lilac', value: '#D8B2D1', textColor: '#000000' },
     { name: 'Desert Sand', value: '#EDC9AF', textColor: '#000000' },
     { name: 'Arctic Blue', value: '#B0E2FF', textColor: '#000000' },
     { name: 'Pale Mauve', value: '#E0B0FF', textColor: '#000000' },
     { name: 'Buttermilk', value: '#FFF1B5', textColor: '#000000' },
-    { name: 'Mint Cream', value: '#F5FFFA', textColor: '#000000' },
+    { name: 'Mint Cream', value: '#F6FFF6', textColor: '#000000' }, // Modified
     { name: 'Dust Storm', value: '#E5CCC9', textColor: '#000000' },
     { name: 'Pearl Aqua', value: '#88D8C0', textColor: '#000000' },
     { name: 'Pale Slate', value: '#C3CDE6', textColor: '#000000' },
     { name: 'Light Khaki', value: '#F0E68C', textColor: '#000000' },
-    { name: 'Misty Rose', value: '#FFE4E4', textColor: '#000000' },
-    { name: 'Azure Mist', value: '#F0FFFF', textColor: '#000000' },
+    { name: 'Misty Rose', value: '#FFE5E2', textColor: '#000000' }, // Modified
+    { name: 'Azure Mist', value: '#F1FFFF', textColor: '#000000' }, // Modified
     { name: 'Pale Dogwood', value: '#EDCDC2', textColor: '#000000' },
     { name: 'Crystal', value: '#A7D8DE', textColor: '#000000' },
     { name: 'Almond', value: '#EFDECD', textColor: '#000000' },
@@ -190,7 +190,7 @@ const calendarColors = [
     { name: 'Water Lily', value: '#DED4E8', textColor: '#000000' },
     { name: 'Sand Dollar', value: '#E8E8D0', textColor: '#000000' },
     { name: 'Rain Cloud', value: '#D4DFE2', textColor: '#000000' },
-    { name: 'Pale Iris', value: '#E8E8FA', textColor: '#000000' },
+    { name: 'Pale Iris', value: '#E7E7FB', textColor: '#000000' }, // Modified
     { name: 'Crepe', value: '#F2D8D8', textColor: '#000000' },
     { name: 'Sea Salt', value: '#F7F7F7', textColor: '#000000' },
     { name: 'Tea Green', value: '#D0F0C0', textColor: '#000000' },
@@ -199,8 +199,8 @@ const calendarColors = [
     { name: 'Frost', value: '#E8F4F8', textColor: '#000000' },
     { name: 'Pearl Pink', value: '#FADADD', textColor: '#000000' },
     { name: 'Cloud White', value: '#F8F9FA', textColor: '#000000' },
-    { name: 'Sea Foam', value: '#98FFB8', textColor: '#000000' },
-    { name: 'Snow Drop', value: '#F5FFF5', textColor: '#000000' },
+    { name: 'Sea Foam', value: '#99FF99', textColor: '#000000' }, // Modified
+    { name: 'Snow Drop', value: '#F2FFF2', textColor: '#000000' }, // Modified
     { name: 'Dew', value: '#F0F8FF', textColor: '#000000' },
     { name: 'Cotton Candy', value: '#FFBCD9', textColor: '#000000' }
 ];
@@ -913,7 +913,7 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                                                         )}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                                        {packageData.name.length > 30 ? packageData.name.substring(0, 30) + "..." : packageData.name}
+                                                        {packageData.name.length > 10 ? packageData.name.substring(0, 10) + "..." : packageData.name}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
                                                         {packageData.price}
