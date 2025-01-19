@@ -117,7 +117,7 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
     const router = useRouter()
     const pathname = usePathname()
     const [steps, setSteps] = useState<Step[]>(STEPS)
-    const { data: finalAcademyDetails, mutate } = useSWR(`OnBoardingDetails ${academyName}`, getAcademyDetailsClient)
+    const { data: finalAcademyDetails, mutate, isLoading } = useSWR(`OnBoardingDetails ${academyName}`, getAcademyDetailsClient)
     const [requirements, setRequirements] = useState<StepRequirements>({
         'academy-details': {
             name: false,
@@ -214,6 +214,7 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
     )
 
     useEffect(() => {
+        if (isLoading) return
         console.log({
             name: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].name,
             description: (finalAcademyDetails?.programs ?? []).length > 0 && !!finalAcademyDetails?.programs![0].description,
@@ -519,6 +520,7 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
     console.log(completedSteps)
     console.log(STEPS.length)
     useEffect(() => {
+        if (isLoading) return
         if (onboarded && completedSteps !== STEPS.length) {
             console.log(completedSteps)
             const revertOnboarding = async () => {
@@ -530,6 +532,7 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
     }, [onboarded, finalAcademyDetails, completedSteps])
 
     useEffect(() => {
+        if (isLoading) return
         if (completedSteps === STEPS.length) {
             const finishOnboarding = async () => {
                 await academyOnBoarded()
