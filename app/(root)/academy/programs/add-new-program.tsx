@@ -272,6 +272,14 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
     const { toast } = useToast()
 
     const genders = useGendersStore((state) => state.genders).map((g) => g.name)
+    const fetched = useGendersStore((state) => state.fetched)
+    const fetchGenders = useGendersStore((state) => state.fetchGenders)
+
+    useEffect(() => {
+        if (!fetched) {
+            fetchGenders()
+        }
+    }, [fetched])
 
     const [addNewProgramOpen, setAddNewProgramOpen] = useState(false)
     const { data: coachesData } = useSWR(addNewProgramOpen ? 'coaches' : null, getAllCoaches)

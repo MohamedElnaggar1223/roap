@@ -5,7 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { createPackage } from '@/lib/actions/packages.actions';
 import { Loader2, TrashIcon, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { z } from 'zod';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -148,6 +148,14 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
     const { mutate } = useOnboarding()
 
     const genders = useGendersStore((state) => state.genders).map((g) => g.name)
+    const fetched = useGendersStore((state) => state.fetched)
+    const fetchGenders = useGendersStore((state) => state.fetchGenders)
+
+    useEffect(() => {
+        if (!fetched) {
+            fetchGenders()
+        }
+    }, [fetched])
 
     const [loading, setLoading] = useState(false)
     const [scheduleGenders, setScheduleGenders] = useState<Record<number, string[]>>({})

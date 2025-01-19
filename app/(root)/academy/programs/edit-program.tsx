@@ -344,6 +344,14 @@ export default function EditProgram({ branches, sports, programEdited, academySp
     const { data: coachesData } = useSWR(editProgramOpen ? 'coaches' : null, getAllCoaches)
 
     const genders = useGendersStore((state) => state.genders).map((g) => g.name)
+    const fetched = useGendersStore((state) => state.fetched)
+    const fetchGenders = useGendersStore((state) => state.fetchGenders)
+
+    useEffect(() => {
+        if (!fetched) {
+            fetchGenders()
+        }
+    }, [fetched])
     // const { data: packagesData, isLoading, isValidating, mutate } = useSWR(editProgramOpen ? 'packages' : null, (url: string | null) => getProgramPackages(url, programEdited.id), {
     //     refreshWhenHidden: true
     // })

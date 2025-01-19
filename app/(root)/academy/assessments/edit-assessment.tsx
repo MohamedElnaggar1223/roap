@@ -192,6 +192,14 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
     console.log(packagesData)
 
     const genders = useGendersStore((state) => state.genders).map((g) => g.name)
+    const fetched = useGendersStore((state) => state.fetched)
+    const fetchGenders = useGendersStore((state) => state.fetchGenders)
+
+    useEffect(() => {
+        if (!fetched) {
+            fetchGenders()
+        }
+    }, [fetched])
 
     const [dialogOpen, setDialogOpen] = useState(false)
     const { data: coachesData } = useSWR(dialogOpen ? 'coaches' : null, getAllCoaches)
@@ -367,7 +375,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
         const missingFields: string[] = [];
 
         if (!values.description) missingFields.push('Description');
-        if (!selectedGenders.length) missingFields.push('Gender');
+        // if (!selectedGenders.length) missingFields.push('Gender');
         // if (values.startAge === undefined || values.startAge === null) missingFields.push('Start Age');
         // if (values.endAgeUnit !== 'unlimited' && (!values.endAge || values.endAge === undefined)) {
         //     missingFields.push('End Age');

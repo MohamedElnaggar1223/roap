@@ -57,7 +57,7 @@ interface StepRequirements {
         sportId: boolean
         startDateOfBirth: boolean
         endDateOfBirth: boolean
-        gender: boolean
+        // gender: boolean
     }
 }
 
@@ -160,7 +160,7 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
             sportId: false,
             startDateOfBirth: false,
             endDateOfBirth: false,
-            gender: false,
+            // gender: false,
         },
     })
 
@@ -447,8 +447,7 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
                 !!assessment.branchId &&
                 !!assessment.sportId &&
                 !!assessment.startDateOfBirth &&
-                !!assessment.endDateOfBirth &&
-                !!assessment.gender
+                !!assessment.endDateOfBirth
             ),
             packages: (finalAcademyDetails?.assessments ?? []).some(assessment =>
                 !!assessment.description &&
@@ -456,8 +455,7 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
                 !!assessment.branchId &&
                 !!assessment.sportId &&
                 !!assessment.startDateOfBirth &&
-                !!assessment.endDateOfBirth &&
-                !!assessment.gender
+                !!assessment.endDateOfBirth
             ),
             branchId: (finalAcademyDetails?.assessments ?? []).some(assessment =>
                 !!assessment.description &&
@@ -465,8 +463,7 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
                 !!assessment.branchId &&
                 !!assessment.sportId &&
                 !!assessment.startDateOfBirth &&
-                !!assessment.endDateOfBirth &&
-                !!assessment.gender
+                !!assessment.endDateOfBirth
             ),
             sportId: (finalAcademyDetails?.assessments ?? []).some(assessment =>
                 !!assessment.description &&
@@ -474,8 +471,7 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
                 !!assessment.branchId &&
                 !!assessment.sportId &&
                 !!assessment.startDateOfBirth &&
-                !!assessment.endDateOfBirth &&
-                !!assessment.gender
+                !!assessment.endDateOfBirth
             ),
             startDateOfBirth: (finalAcademyDetails?.assessments ?? []).some(assessment =>
                 !!assessment.description &&
@@ -483,8 +479,7 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
                 !!assessment.branchId &&
                 !!assessment.sportId &&
                 !!assessment.startDateOfBirth &&
-                !!assessment.endDateOfBirth &&
-                !!assessment.gender
+                !!assessment.endDateOfBirth
             ),
             endDateOfBirth: (finalAcademyDetails?.assessments ?? []).some(assessment =>
                 !!assessment.description &&
@@ -492,17 +487,7 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
                 !!assessment.branchId &&
                 !!assessment.sportId &&
                 !!assessment.startDateOfBirth &&
-                !!assessment.endDateOfBirth &&
-                !!assessment.gender
-            ),
-            gender: (finalAcademyDetails?.assessments ?? []).some(assessment =>
-                !!assessment.description &&
-                (assessment.packages?.length > 0) &&
-                !!assessment.branchId &&
-                !!assessment.sportId &&
-                !!assessment.startDateOfBirth &&
-                !!assessment.endDateOfBirth &&
-                !!assessment.gender
+                !!assessment.endDateOfBirth
             ),
         })
 

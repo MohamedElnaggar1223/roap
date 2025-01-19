@@ -157,6 +157,14 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
     const { mutate: mutatePackage } = useOnboarding()
 
     const genders = useGendersStore((state) => state.genders).map((g) => g.name)
+    const fetched = useGendersStore((state) => state.fetched)
+    const fetchGenders = useGendersStore((state) => state.fetchGenders)
+
+    useEffect(() => {
+        if (!fetched) {
+            fetchGenders()
+        }
+    }, [fetched])
 
     const [loading, setLoading] = useState(false)
     const [scheduleGenders, setScheduleGenders] = useState<Record<number, string[]>>({})

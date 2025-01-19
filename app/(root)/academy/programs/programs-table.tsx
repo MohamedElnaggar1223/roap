@@ -53,6 +53,14 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
     const [selectedProgramForDuplication, setSelectedProgramForDuplication] = useState<Program | null>(null);
 
     const genders = useGendersStore((state) => state.genders).map((g) => g.name)
+    const fetchedGenders = useGendersStore((state) => state.fetched)
+    const fetchGenders = useGendersStore((state) => state.fetchGenders)
+
+    useEffect(() => {
+        if (!fetchedGenders) {
+            fetchGenders()
+        }
+    }, [fetchedGenders])
 
     const academySports = useSportsStore((state) => state.sports)
 
