@@ -515,12 +515,16 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
 
     const generateAgeOptions = () => {
         const options = [];
-        for (let i = 1; i <= 99; i++) {
+        for (let i = 1; i <= 64; i++) {
             options.push({
                 label: `${i} year${i > 1 ? 's' : ''}`,
                 value: i.toString()
             });
         }
+        options.push({
+            label: 'Unlimited',
+            value: '100'
+        })
         return options;
     }
 
