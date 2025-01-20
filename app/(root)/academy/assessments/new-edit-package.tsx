@@ -3,7 +3,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { updatePackage } from '@/lib/actions/packages.actions';
-import { Loader2, Pencil, TrashIcon, X } from 'lucide-react';
+import { Loader2, Download, TrashIcon, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { z } from 'zod';
@@ -32,6 +32,7 @@ import { DateSelector } from '@/components/shared/date-selector';
 import { useToast } from '@/hooks/use-toast';
 import { useGendersStore } from '@/providers/store-provider';
 import { Badge } from '@/components/ui/badge';
+import ImportSchedulesDialog from './import-schedules-dialog';
 
 const packageSchema = z.object({
     type: z.enum(["Term", "Monthly", "Full Season", "Assessment"]),
@@ -176,6 +177,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
             (_, i) => startMonth + i
         );
     });
+    const [importSchedulesOpen, setImportSchedulesOpen] = useState(false);
 
     const form = useForm<z.infer<typeof packageSchema>>({
         resolver: zodResolver(packageSchema),
@@ -803,6 +805,47 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                         />
                                     </div>
                                 )}
+
+                                <>
+                                    <div className="flex items-center justify-between">
+                                        <div></div>
+                                        <Button
+                                            type="button"
+                                            onClick={() => setImportSchedulesOpen(true)}
+                                            variant="outline"
+                                            className="gap-2 text-main-green border-main-green hover:bg-main-green/10"
+                                        >
+                                            <Download className="h-4 w-4" />
+                                            Import Schedules
+                                        </Button>
+                                    </div>
+
+                                    <ImportSchedulesDialog
+                                        open={importSchedulesOpen}
+                                        onOpenChange={setImportSchedulesOpen}
+                                        onScheduleImport={(importedSchedules) => {
+
+                                            const newScheduleGenders: Record<number, string[]> = {};
+                                            importedSchedules.forEach((schedule, index) => {
+                                                if (schedule.gender) {
+                                                    newScheduleGenders[index] = schedule.gender.split(',');
+                                                }
+                                            });
+                                            setScheduleGenders(newScheduleGenders);
+
+                                            form.setValue('schedules', importedSchedules.map(schedule => ({
+                                                day: schedule.day,
+                                                from: schedule.from,
+                                                to: schedule.to,
+                                                memo: schedule.memo ?? '',
+                                                startDateOfBirth: schedule.startDateOfBirth ? new Date(schedule.startDateOfBirth) : null,
+                                                endDateOfBirth: schedule.endDateOfBirth ? new Date(schedule.endDateOfBirth) : null,
+                                                gender: null
+                                            })));
+
+                                        }}
+                                    />
+                                </>
 
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center">

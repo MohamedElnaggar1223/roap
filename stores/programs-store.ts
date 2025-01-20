@@ -366,7 +366,16 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
             if (!program) return
 
             set({
-                programs: get().programs.map(p => p.id === program.id ? ({ ...program, packages: program.packages.map(pk => pk.id === packageData.id ? ({ ...pk, deleted: true }) : pk) }) : p)
+                programs: get().programs.map(p => p.id === program.id ? ({
+                    ...program,
+                    packages: packageData.id
+                        ? program.packages.map(pk =>
+                            pk.id === packageData.id
+                                ? { ...pk, deleted: true }
+                                : pk
+                        )
+                        : program.packages.filter(pk => pk.tempId !== packageData.tempId)
+                }) : p)
             })
         },
         editDiscount: (discountData: Discount) => {

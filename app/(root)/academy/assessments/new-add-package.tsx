@@ -3,7 +3,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { createPackage } from '@/lib/actions/packages.actions';
-import { Loader2, TrashIcon, X } from 'lucide-react';
+import { Download, Loader2, TrashIcon, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { z } from 'zod';
@@ -31,6 +31,7 @@ import { DateSelector } from '@/components/shared/date-selector';
 import { useToast } from '@/hooks/use-toast';
 import { useGendersStore } from '@/providers/store-provider';
 import { Badge } from '@/components/ui/badge';
+import ImportSchedulesDialog from './import-schedules-dialog';
 
 const packageSchema = z.object({
     type: z.enum(["Term", "Monthly", "Full Season", "Assessment"]),
@@ -160,6 +161,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
     const [loading, setLoading] = useState(false)
     const [scheduleGenders, setScheduleGenders] = useState<Record<number, string[]>>({})
     const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
+    const [importSchedulesOpen, setImportSchedulesOpen] = useState(false);
 
     const form = useForm<z.infer<typeof packageSchema>>({
         resolver: zodResolver(packageSchema),
@@ -671,7 +673,45 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                     </div>
                                 )}
 
+                                <>
+                                    <div className="flex items-center justify-between">
+                                        <div></div>
+                                        <Button
+                                            type="button"
+                                            onClick={() => setImportSchedulesOpen(true)}
+                                            variant="outline"
+                                            className="gap-2 text-main-green border-main-green hover:bg-main-green/10"
+                                        >
+                                            <Download className="h-4 w-4" />
+                                            Import Schedules
+                                        </Button>
+                                    </div>
 
+                                    <ImportSchedulesDialog
+                                        open={importSchedulesOpen}
+                                        onOpenChange={setImportSchedulesOpen}
+                                        onScheduleImport={(importedSchedules) => {
+
+                                            const newScheduleGenders: Record<number, string[]> = {};
+                                            importedSchedules.forEach((schedule, index) => {
+                                                if (schedule.gender) {
+                                                    newScheduleGenders[index] = schedule.gender.split(',');
+                                                }
+                                            });
+                                            setScheduleGenders(newScheduleGenders);
+
+                                            form.setValue('schedules', importedSchedules.map(schedule => ({
+                                                day: schedule.day,
+                                                from: schedule.from,
+                                                to: schedule.to,
+                                                memo: schedule.memo ?? '',
+                                                startDateOfBirth: schedule.startDateOfBirth ? new Date(schedule.startDateOfBirth) : null,
+                                                endDateOfBirth: schedule.endDateOfBirth ? new Date(schedule.endDateOfBirth) : null,
+                                                gender: schedule.gender
+                                            })));
+                                        }}
+                                    />
+                                </>
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center">
                                         <FormLabel>Sessions</FormLabel>
