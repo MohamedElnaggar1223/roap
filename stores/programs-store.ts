@@ -24,6 +24,7 @@ export type Package = {
     capacity: number | null;
     sessionDuration: number | null;
     deleted?: boolean;
+    hidden?: boolean;
     schedules: {
         id?: number;
         createdAt: string | null;
@@ -72,6 +73,7 @@ export type Program = {
     packages: Package[];
     discounts: Discount[];
     flexible: boolean;
+    hidden?: boolean;
     // sport: {
     // id: number;
     // createdAt: string | null;
@@ -134,6 +136,8 @@ export type ProgramsActions = {
     deleteDiscount: (discountData: Discount) => void
     addTempProgram: (program: Program) => void
     removeTempPrograms: () => void
+    toggleProgramVisibility: (programId: number) => void
+    togglePackageVisibility: (programId: number, packageId: number) => void
 }
 
 export type ProgramsStore = ProgramsState & ProgramsActions
@@ -414,6 +418,91 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
             set({
                 programs: get().programs.filter(p => p.tempId === undefined)
             })
+        },
+        toggleProgramVisibility: async (programId: number) => {
+            const program = get().programs.find(p => p.id === programId);
+            if (!program) return;
+
+            // Update local state immediately
+            set({
+                programs: get().programs.map(p =>
+                    p.id === programId
+                        ? { ...p, hidden: !p.hidden, pending: true }
+                        : p
+                )
+            });
+
+            // Call server action (to be implemented)
+            const result = await updateProgramStore({
+                ...program,
+                hidden: !program.hidden
+            }, program);
+
+            if (result?.error) {
+                // Revert on error
+                set({
+                    programs: get().programs.map(p =>
+                        p.id === programId
+                            ? program
+                            : p
+                    )
+                });
+            } else {
+                // Update to remove pending state
+                set({
+                    programs: get().programs.map(p =>
+                        p.id === programId
+                            ? { ...p, pending: false }
+                            : p
+                    )
+                });
+            }
+        },
+
+        // Add new toggle package visibility action
+        togglePackageVisibility: async (programId: number, packageId: number) => {
+            const program = get().programs.find(p => p.id === programId);
+            if (!program) return;
+
+            const packageData = program.packages.find(pkg => pkg.id === packageId);
+            if (!packageData) return;
+
+            // Update local state immediately
+            set({
+                programs: get().programs.map(p =>
+                    p.id === programId
+                        ? {
+                            ...p,
+                            packages: p.packages.map(pkg =>
+                                pkg.id === packageId
+                                    ? { ...pkg, hidden: !pkg.hidden }
+                                    : pkg
+                            )
+                        }
+                        : p
+                )
+            });
+
+            // Call server action (to be implemented)
+            const result = await updateProgramStore({
+                ...program,
+                packages: program.packages.map(pkg =>
+                    pkg.id === packageId
+                        ? { ...pkg, hidden: !pkg.hidden }
+                        : pkg
+                )
+            }, program);
+
+            if (result?.error) {
+                // Revert on error
+                set({
+                    programs: get().programs.map(p =>
+                        p.id === programId
+                            ? program
+                            : p
+                    )
+                });
+            }
         },
     }))
 }

@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, Fragment, useEffect } from 'react'
-import { ChevronDown, Copy, Loader2, SearchIcon, Trash2Icon } from 'lucide-react'
+import { useState, Fragment, useEffect, useCallback } from 'react'
+import { ChevronDown, Copy, Eye, EyeOff, Loader2, SearchIcon, Trash2Icon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import DuplicateProgramDialog from './duplicate-program'
@@ -50,6 +50,7 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
     const fetched = useProgramsStore((state) => state.fetched)
     const fetchPrograms = useProgramsStore((state) => state.fetchPrograms)
     const deletePrograms = useProgramsStore((state) => state.deletePrograms)
+    const toggleProgramVisibility = useProgramsStore((state) => state.toggleProgramVisibility);
     const [selectedProgramForDuplication, setSelectedProgramForDuplication] = useState<Program | null>(null);
 
     const genders = useGendersStore((state) => state.genders).map((g) => g.name)
@@ -185,6 +186,11 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
         // setBulkDeleteLoading(false)
         setBulkDeleteOpen(false)
     }
+
+    const handleVisibilityToggle = useCallback((programId: number, e: React.MouseEvent) => {
+        e.stopPropagation(); // Prevent row selection
+        toggleProgramVisibility(programId);
+    }, [toggleProgramVisibility]);
 
     return (
         <>
@@ -326,7 +332,7 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
             </div>
 
             <div className="w-full max-w-screen-2xl overflow-x-auto">
-                <div className="min-w-full grid grid-cols-[auto,0.75fr,auto,auto,auto,auto,auto,auto,auto] gap-y-2 text-nowrap">
+                <div className="min-w-full grid grid-cols-[auto,0.75fr,auto,auto,auto,auto,auto,auto,auto,auto] gap-y-2 text-nowrap">
                     {/* Header */}
                     <div className="contents">
                         <div className="py-4 px-4 flex items-center justify-center">
@@ -343,6 +349,7 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
                         <div className="py-4 px-4">Start Age</div>
                         <div className="py-4 px-4">Coaches</div>
                         <div className="py-4 px-4">Packages</div>
+                        <div className="py-4 px-4">Visibility</div>
                         <div className="py-4 px-4"></div>
                     </div>
 
@@ -381,6 +388,23 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
                                 </div>
                                 <div className={cn("py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter", program.pending && 'opacity-60')}>
                                     {program.packages?.filter(p => !p.deleted).length ?? 0}
+                                </div>
+                                <div className={cn("py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter", program.pending && 'opacity-60')}>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="hover:bg-transparent"
+                                        disabled={program.pending}
+                                        onClick={(e) => handleVisibilityToggle(program.id, e)}
+                                    >
+                                        {program.pending ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : program.hidden ? (
+                                            <EyeOff className="h-4 w-4" />
+                                        ) : (
+                                            <Eye className="h-4 w-4" />
+                                        )}
+                                    </Button>
                                 </div>
                                 <div className={cn("py-4 px-4 bg-main-white rounded-r-[20px] flex items-center justify-end font-bold font-inter", program.pending && 'opacity-60')}>
                                     {program.pending ? (

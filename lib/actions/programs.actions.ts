@@ -770,6 +770,7 @@ export async function updateProgramStore(program: Program, oldProgram: Program) 
                     type: program.type,
                     updatedAt: sql`now()`,
                     color: program.color,
+                    hidden: program.hidden ?? false
                 })
                 .where(eq(programs.id, program.id))
 
@@ -915,6 +916,7 @@ export async function updateProgramStore(program: Program, oldProgram: Program) 
                                     entryFeesEndDate: packageData.entryFeesEndDate,
                                     entryFeesExplanation: packageData.entryFeesExplanation,
                                     entryFeesAppliedUntil: packageData.entryFeesAppliedUntil || null,
+                                    hidden: packageData.hidden ?? false
                                 })
                                 .where(eq(packages.id, packageData.id!))
 

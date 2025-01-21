@@ -2,7 +2,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { updateProgram } from '@/lib/actions/programs.actions';
-import { Copy, Loader2, Plus, X } from 'lucide-react';
+import { Copy, Eye, EyeOff, Loader2, Plus, X } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -404,6 +404,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
     const deletePackage = useProgramsStore((state) => state.deletePackage)
     const triggerFlexibleChange = useProgramsStore((state) => state.triggerFlexibleChange)
     const addPackage = useProgramsStore((state) => state.addPackage)
+    const editPackage = useProgramsStore((state) => state.editPackage)
 
     // useEffect(() => {
     //     if (isLoading || isValidating) return
@@ -1307,6 +1308,21 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                         {packageData.schedules.length}{program.flexible && `, ${packageData.sessionPerWeek} per week ${packageData.sessionDuration ? `(${packageData.sessionDuration} minutes)` : ''}`}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white gap-4 rounded-r-[20px] flex items-center justify-end font-bold font-inter">
+                                                        <Button
+                                                            type='button'
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => editPackage({
+                                                                ...packageData,
+                                                                hidden: !packageData.hidden
+                                                            })}
+                                                        >
+                                                            {packageData.hidden ? (
+                                                                <EyeOff className="h-4 w-4" />
+                                                            ) : (
+                                                                <Eye className="h-4 w-4" />
+                                                            )}
+                                                        </Button>
                                                         <Button
                                                             type='button'
                                                             variant="ghost"

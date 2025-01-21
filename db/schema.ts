@@ -678,6 +678,7 @@ export const programs = pgTable("programs", {
     color: varchar({ length: 255 }).default(sql`NULL`),
     assessmentDeductedFromProgram: boolean("assessment_deducted_from_program").default(false).notNull(),
     flexible: boolean("flexible").default(false).notNull(),
+    hidden: boolean("hidden").default(false).notNull(),
 }, (table) => {
     return {
         programsAcademicIdForeign: foreignKey({
@@ -811,6 +812,7 @@ export const packages = pgTable("packages", {
     entryFeesStartDate: date("entry_fees_start_date"),
     entryFeesEndDate: date("entry_fees_end_date"),
     flexible: boolean("flexible"),
+    hidden: boolean("hidden").default(false).notNull(),
 }, (table) => {
     return {
         packagesProgramIdForeign: foreignKey({
