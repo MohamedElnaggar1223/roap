@@ -318,6 +318,16 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                     startDate = dates.startDate;
                     endDate = dates.endDate;
                 }
+                else {
+                    if (!(startDate instanceof Date) || !(endDate instanceof Date)) {
+                        toast({
+                            title: "Start and End Dates are required",
+                            description: "Please select a start and end date",
+                            variant: "destructive",
+                        });
+                        return;
+                    }
+                }
 
                 addPackage({
                     name: packageName!,

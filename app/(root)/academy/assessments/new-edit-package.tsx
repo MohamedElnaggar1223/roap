@@ -5,7 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { updatePackage } from '@/lib/actions/packages.actions';
 import { Loader2, Download, TrashIcon, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -34,6 +34,73 @@ import { useGendersStore } from '@/providers/store-provider';
 import { Badge } from '@/components/ui/badge';
 import ImportSchedulesDialog from './import-schedules-dialog';
 
+export const calculateAgeFromDate = (birthDate: string) => {
+    const today = new Date();
+    const birth = new Date(birthDate);
+
+    // Calculate total months
+    let months = (today.getFullYear() - birth.getFullYear()) * 12;
+    months += today.getMonth() - birth.getMonth();
+
+    // Adjust for day of month
+    if (today.getDate() < birth.getDate()) {
+        months--;
+    }
+
+    // First check if it's cleanly divisible by 12
+    if (Math.abs(Math.round(months) - 12 * Math.round(months / 12)) < 0.1) {
+        return {
+            age: Math.round(months / 12),
+            unit: 'years'
+        };
+    }
+
+    // If less than or equal to 18 months and not cleanly divisible by 12
+    if (months <= 18) {
+        return {
+            age: Math.round(months),
+            unit: 'months'
+        };
+    }
+
+    // Convert to years
+    const years = months / 12;
+    const roundedToHalfYear = Math.round(years * 2) / 2;
+
+    return {
+        age: roundedToHalfYear,
+        unit: 'years'
+    };
+};
+
+const calculateDateFromAge = (age: number, unit: string): Date => {
+    const date = new Date();
+
+    if (unit === 'months') {
+        // For months input, check if it can be converted to a clean year interval
+        const years = age / 12;
+        const roundedToHalfYear = Math.round(years * 2) / 2;
+
+        if (Math.abs(years - roundedToHalfYear) < 0.01) {
+            // If it can be represented as a clean half-year, convert to years
+            const years = Math.floor(roundedToHalfYear);
+            const monthsFraction = (roundedToHalfYear - years) * 12;
+            date.setFullYear(date.getFullYear() - years);
+            date.setMonth(date.getMonth() - Math.round(monthsFraction));
+        } else {
+            // Otherwise keep as months
+            date.setMonth(date.getMonth() - age);
+        }
+    } else { // years
+        const years = Math.floor(age);
+        const monthsFraction = (age - years) * 12;
+        date.setFullYear(date.getFullYear() - years);
+        date.setMonth(date.getMonth() - Math.round(monthsFraction));
+    }
+
+    return date;
+};
+
 const packageSchema = z.object({
     type: z.enum(["Term", "Monthly", "Full Season", "Assessment"]),
     termNumber: z.string().optional(),
@@ -57,12 +124,10 @@ const packageSchema = z.object({
         to: z.string().min(1, "End time is required"),
         memo: z.string().optional().nullable(),
         id: z.number().optional(),
-        startDateOfBirth: z.date({
-            required_error: "Start age is required",
-        }).nullable(),
-        endDateOfBirth: z.date({
-            required_error: "End age is required",
-        }).nullable(),
+        startAge: z.number().min(0, "Start age must be 0 or greater").max(100, "Start age must be 100 or less").multipleOf(0.5, "Start age must be in increments of 0.5").nullable(),
+        startAgeUnit: z.enum(["months", "years"]),
+        endAge: z.number().min(0, "End age must be 0.5 or greater").max(100, "End age must be 100 or less").multipleOf(0.5, "End age must be in increments of 0.5").optional().nullable(),
+        endAgeUnit: z.enum(["months", "years", "unlimited"]),
         gender: z.string().min(1, "Gender is required").nullable(),
     }))
 }).refine((data) => {
@@ -150,6 +215,21 @@ const months = [
     { label: "December", value: 12 }
 ];
 
+const checkInitialGenderSync = (schedules: any[]) => {
+    if (schedules.length <= 1) return true;
+    const firstGender = schedules[0].gender;
+    return schedules.every(schedule => schedule.gender === firstGender);
+};
+
+const checkInitialAgeSync = (schedules: any[]) => {
+    if (schedules.length <= 1) return true;
+    const first = schedules[0];
+    return schedules.every(schedule =>
+        schedule.startDateOfBirth instanceof Date ? schedule.startDateOfBirth.getTime() === first.startDateOfBirth.getTime() : true &&
+            schedule.endDateOfBirth instanceof Date ? schedule.endDateOfBirth.getTime() === first.endDateOfBirth.getTime() : true
+    );
+};
+
 export default function EditPackage({ packageEdited, open, onOpenChange, mutate, setEditedPackage, setCreatedPackages, index }: Props) {
     const router = useRouter()
 
@@ -177,7 +257,22 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
             (_, i) => startMonth + i
         );
     });
+    const [originalAges, setOriginalAges] = useState<Record<number, {
+        startAge: number | null;
+        startAgeUnit: 'months' | 'years';
+        endAge: number | null | undefined;
+        endAgeUnit: 'months' | 'years' | 'unlimited';
+    }>>({});
     const [importSchedulesOpen, setImportSchedulesOpen] = useState(false);
+    const [unifyGender, setUnifyGender] = useState(() =>
+        checkInitialGenderSync(packageEdited.schedules)
+    );
+    const [unifyAges, setUnifyAges] = useState(() =>
+        checkInitialAgeSync(packageEdited.schedules)
+    );
+
+    console.log(checkInitialAgeSync(packageEdited.schedules))
+    console.log(unifyAges)
 
     const form = useForm<z.infer<typeof packageSchema>>({
         resolver: zodResolver(packageSchema),
@@ -193,10 +288,34 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
             startDate: new Date(packageEdited.startDate),
             endDate: new Date(packageEdited.endDate),
             schedules: packageEdited.schedules?.length > 0 ?
-                packageEdited.schedules as Schedule[] :
+                packageEdited.schedules.map((s) => ({
+                    ...s,
+                    startAge: (() => {
+                        if (!s.startDateOfBirth) return 0;
+                        const { age, unit } = calculateAgeFromDate(format(s.startDateOfBirth, 'yyyy-MM-dd 00:00:00'));
+                        return age;
+                    })(),
+                    startAgeUnit: (() => {
+                        if (!s.startDateOfBirth) return 'years';
+                        return calculateAgeFromDate(format(s.startDateOfBirth, 'yyyy-MM-dd 00:00:00')).unit as 'months' | 'years' | undefined;
+                    })(),
+                    endAge: (() => {
+                        if (!s.endDateOfBirth) return undefined;
+                        const { age, unit } = calculateAgeFromDate(format(s.endDateOfBirth, 'yyyy-MM-dd 00:00:00'));
+                        if (age >= 100) return undefined; // For unlimited
+                        return age;
+                    })(),
+                    endAgeUnit: (() => {
+                        if (!s.endDateOfBirth) return 'unlimited';
+                        const { age } = calculateAgeFromDate(format(s.endDateOfBirth, 'yyyy-MM-dd 00:00:00'));
+                        if (age >= 100) return 'unlimited';
+                        return calculateAgeFromDate(format(s.endDateOfBirth, 'yyyy-MM-dd 00:00:00')).unit as "months" | "years" | undefined;
+                    })(),
+                    gender: s.gender
+                })) :
                 [{
-                    day: '', from: '', to: '', memo: '', startDateOfBirth: null, endDateOfBirth: null, gender: null
-                }] as Schedule[],
+                    day: '', from: '', to: '', memo: '', startAge: 0, startAgeUnit: 'years', endAge: undefined, endAgeUnit: 'unlimited', gender: null
+                }],
             memo: packageEdited.memo ?? '',
             entryFees: (packageEdited.entryFees ?? 0).toString(),
             entryFeesExplanation: packageEdited.entryFeesExplanation,
@@ -212,6 +331,83 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
         control: form.control,
         name: "schedules"
     })
+
+
+    console.log("FIELDS, SCHEDULES", fields)
+
+    const unifyAgesRef = useRef(unifyAges);
+    const unifyGenderRef = useRef(unifyGender);
+
+    const [ran, setRan] = useState(false)
+
+    useEffect(() => {
+        unifyAgesRef.current = unifyAges;
+    }, [unifyAges]);
+
+    useEffect(() => {
+        unifyGenderRef.current = unifyGender;
+    }, [unifyGender]);
+
+    useEffect(() => {
+        if (fields.length > 0) {
+            const ages: Record<number, any> = {};
+            fields.forEach((field, index) => {
+                ages[index] = {
+                    startAge: form.getValues(`schedules.${index}.startAge`),
+                    startAgeUnit: form.getValues(`schedules.${index}.startAgeUnit`),
+                    endAge: form.getValues(`schedules.${index}.endAge`),
+                    endAgeUnit: form.getValues(`schedules.${index}.endAgeUnit`),
+                };
+            });
+            setOriginalAges(ages);
+        }
+    }, [fields.length]);
+
+    useEffect(() => {
+        if (packageEdited.schedules) {
+            const initialGenders: Record<number, string[]> = {};
+            packageEdited.schedules.forEach((schedule, index) => {
+                // Initialize all schedule genders, even empty ones, to prevent undefined issues
+                initialGenders[index] = schedule.gender ? schedule.gender.split(',') : [];
+            });
+            setScheduleGenders(initialGenders);
+        }
+    }, [packageEdited]);
+
+    useEffect(() => {
+        setRan(true)
+    }, [])
+
+    useEffect(() => {
+        if (fields.length > 0) {
+            if (unifyGender) {
+                // Take the first non-empty gender array as reference, or the first one if all are empty
+                const referenceIndex = Object.entries(scheduleGenders).find(([_, genders]) => genders.length > 0)?.[0] || '0';
+                const referenceGenders = scheduleGenders[parseInt(referenceIndex)] || [];
+
+                // Create unified genders object
+                const unifiedGenders = Object.fromEntries(
+                    fields.map((_, idx) => [idx, referenceGenders])
+                );
+
+                // Update all schedules
+                setScheduleGenders(unifiedGenders);
+
+                // Update all form fields
+                fields.forEach((_, idx) => {
+                    form.setValue(`schedules.${idx}.gender`, referenceGenders.join(','));
+                });
+            }
+            // When turning off unification, ensure all form fields maintain their current values
+            else {
+                if (!ran) return
+                fields.forEach((_, idx) => {
+                    const currentGenders = scheduleGenders[idx] || [];
+                    form.setValue(`schedules.${idx}.gender`, currentGenders.join(','));
+                });
+            }
+        }
+    }, [unifyGender]);
 
     useEffect(() => {
         if (packageEdited.schedules) {
@@ -233,6 +429,41 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
         try {
             const missingFields: string[] = handleToastValidation();
 
+            const transformedSchedules = values.schedules.map((schedule, index) => {
+                if (!schedule.startAge) {
+                    missingFields.push('Start Age ' + (index + 1));
+                    return {
+                        ...schedule,
+                        startDateOfBirth: null,
+                        endDateOfBirth: null
+                    };
+                };
+
+                const startDate = calculateDateFromAge(schedule.startAge, schedule.startAgeUnit);
+
+                let endDate;
+                if (schedule.endAgeUnit === 'unlimited') {
+                    endDate = new Date();
+                    endDate.setFullYear(endDate.getFullYear() - 100); // Set to 100 years ago for unlimited
+                } else {
+                    if (!schedule.endAge) {
+                        missingFields.push('End Age ' + (index + 1));
+                        return {
+                            ...schedule,
+                            startDateOfBirth: null,
+                            endDateOfBirth: null
+                        };
+                    }
+                    endDate = calculateDateFromAge(schedule.endAge, schedule.endAgeUnit);
+                }
+
+                return {
+                    ...schedule,
+                    startDateOfBirth: startDate,
+                    endDateOfBirth: endDate
+                }
+            })
+
             if (missingFields.length > 0) return
 
             if (packageEdited.id) {
@@ -250,7 +481,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                     price: parseFloat(values.price),
                     startDate: format(values.startDate, 'yyyy-MM-dd 00:00:00'),
                     endDate: format(values.endDate, 'yyyy-MM-dd 00:00:00'),
-                    schedules: values.schedules.map(schedule => ({
+                    schedules: transformedSchedules.map(schedule => ({
                         id: (schedule as any).id,
                         day: schedule.day,
                         from: schedule.from,
@@ -290,7 +521,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                         price: parseFloat(values.price),
                         startDate: values.startDate,
                         endDate: values.endDate,
-                        schedules: values.schedules.map(schedule => ({
+                        schedules: transformedSchedules.map(schedule => ({
                             id: (schedule as any).id,
                             day: schedule.day,
                             from: schedule.from,
@@ -321,7 +552,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                         price: parseFloat(values.price),
                         startDate: values.startDate,
                         endDate: values.endDate,
-                        schedules: values.schedules.map(schedule => ({
+                        schedules: transformedSchedules.map(schedule => ({
                             id: (schedule as any).id,
                             day: schedule.day,
                             from: schedule.from,
@@ -363,7 +594,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                         price: parseFloat(values.price),
                         startDate: values.startDate,
                         endDate: values.endDate,
-                        schedules: values.schedules.map(schedule => ({
+                        schedules: transformedSchedules.map(schedule => ({
                             id: (schedule as any).id,
                             day: schedule.day,
                             from: schedule.from,
@@ -394,7 +625,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                         price: parseFloat(values.price),
                         startDate: values.startDate,
                         endDate: values.endDate,
-                        schedules: values.schedules.map(schedule => ({
+                        schedules: transformedSchedules.map(schedule => ({
                             ...schedule,
                             memo: schedule.memo ?? '',
                             startDateOfBirth: schedule.startDateOfBirth ? new Date(schedule.startDateOfBirth) : null,
@@ -479,12 +710,49 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
         if (!values.schedules || values.schedules.length === 0) {
             missingFields.push('At least one session');
         } else {
+            // values.schedules.forEach((schedule, index) => {
+            //     if (!schedule.gender) {
+            //         missingFields.push('Gender ' + (index + 1));
+            //     }
+            //     if (!schedule.startAge) {
+            //         missingFields.push('Start Age ' + (index + 1));
+            //         return {
+            //             ...schedule,
+            //             startDateOfBirth: null,
+            //             endDateOfBirth: null
+            //         };
+            //     };
+
+            //     const startDate = calculateDateFromAge(schedule.startAge, schedule.startAgeUnit);
+
+            //     let endDate;
+            //     if (schedule.endAgeUnit === 'unlimited') {
+            //         endDate = new Date();
+            //         endDate.setFullYear(endDate.getFullYear() - 100); // Set to 100 years ago for unlimited
+            //     } else {
+            //         if (!schedule.endAge) {
+            //             missingFields.push('End Age ' + (index + 1));
+            //             return {
+            //                 ...schedule,
+            //                 startDateOfBirth: null,
+            //                 endDateOfBirth: null
+            //             };
+            //         }
+            //         endDate = calculateDateFromAge(schedule.endAge, schedule.endAgeUnit);
+            //     }
+
+            //     return {
+            //         ...schedule,
+            //         startDateOfBirth: startDate,
+            //         endDateOfBirth: endDate
+            //     }
+            // })
             values.schedules.forEach((schedule, index) => {
                 if (!schedule.day) missingFields.push(`Session ${index + 1} Day`);
                 if (!schedule.from) missingFields.push(`Session ${index + 1} Start Time`);
                 if (!schedule.to) missingFields.push(`Session ${index + 1} End Time`);
-                if (!schedule.startDateOfBirth) missingFields.push(`Session ${index + 1} Start Age Date`);
-                if (!schedule.endDateOfBirth) missingFields.push(`Session ${index + 1} End Age Date`);
+                if (!schedule.startAge) missingFields.push(`Session ${index + 1} Start Age`);
+                if (!schedule.endAge && schedule.endAgeUnit !== 'unlimited') missingFields.push(`Session ${index + 1} End Age`);
                 if (!schedule.gender) missingFields.push(`Session ${index + 1} Gender`);
             });
         }
@@ -838,8 +1106,10 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                                 from: schedule.from,
                                                 to: schedule.to,
                                                 memo: schedule.memo ?? '',
-                                                startDateOfBirth: schedule.startDateOfBirth ? new Date(schedule.startDateOfBirth) : null,
-                                                endDateOfBirth: schedule.endDateOfBirth ? new Date(schedule.endDateOfBirth) : null,
+                                                startAge: 0,
+                                                startAgeUnit: 'years' as 'months' | 'years',
+                                                endAge: undefined,
+                                                endAgeUnit: 'unlimited' as 'months' | 'years' | 'unlimited',
                                                 gender: null
                                             })));
 
@@ -850,7 +1120,47 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center">
                                         <FormLabel>Sessions</FormLabel>
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-2">
+                                                <Checkbox
+                                                    id="unifyGender"
+                                                    checked={unifyGender}
+                                                    onCheckedChange={(checked) => setUnifyGender(checked as boolean)}
+                                                    className='data-[state=checked]:!bg-main-green'
+                                                />
+                                                <label htmlFor="unifyGender" className="text-sm cursor-pointer">
+                                                    Unify Gender
+                                                </label>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Checkbox
+                                                    id="unifyAges"
+                                                    checked={unifyAges}
+                                                    onCheckedChange={(checked) => {
+                                                        setUnifyAges(checked as boolean);
+                                                        if (checked) {
+                                                            // When checking the box, sync all fields to the first schedule's values
+                                                            const firstSchedule = form.getValues('schedules.0');
+                                                            fields.forEach((_, idx) => {
+                                                                if (idx !== 0) { // Skip the first one
+                                                                    form.setValue(`schedules.${idx}.startAge`, firstSchedule.startAge);
+                                                                    form.setValue(`schedules.${idx}.startAgeUnit`, firstSchedule.startAgeUnit);
+                                                                    form.setValue(`schedules.${idx}.endAge`, firstSchedule.endAge);
+                                                                    form.setValue(`schedules.${idx}.endAgeUnit`, firstSchedule.endAgeUnit);
+                                                                }
+                                                            });
+                                                        }
+                                                    }}
+                                                    className='data-[state=checked]:!bg-main-green'
+                                                />
+                                                <label htmlFor="unifyAges" className="text-sm cursor-pointer">
+                                                    Unify Ages
+                                                </label>
+                                            </div>
+                                        </div>
                                     </div>
+
+
 
                                     {fields.map((field, index) => (
                                         <div key={field.id} className="space-y-4 p-4 border rounded-[10px] relative pt-8 bg-[#E0E4D9] overflow-hidden">
@@ -930,70 +1240,159 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                                     )}
                                                 />
                                             </div>
-                                            <div className="flex gap-4">
-                                                <FormField
-                                                    control={form.control}
-                                                    name={`schedules.${index}.startDateOfBirth`}
-                                                    render={({ field }) => (
-                                                        <FormItem className="flex-1">
-                                                            <FormLabel>Start Age</FormLabel>
-                                                            <Select
-                                                                onValueChange={(value) => {
-                                                                    field.onChange(getDateFromAge(parseInt(value)));
-                                                                }}
-                                                                value={field.value ?
-                                                                    getAgeFromDate(new Date(field.value)).toString()
-                                                                    : ''}
-                                                            >
+                                            <div className="flex w-full gap-4 items-start justify-between">
+                                                <div className="flex flex-1 gap-2">
+                                                    <FormField
+                                                        control={form.control}
+                                                        name={`schedules.${index}.startAge`}
+                                                        render={({ field }) => (
+                                                            <FormItem className="flex flex-col flex-1">
+                                                                <FormLabel>Start Age <span className='text-xs text-red-500'>*</span></FormLabel>
                                                                 <FormControl>
-                                                                    <SelectTrigger className='border border-gray-500 bg-transparent'>
-                                                                        <SelectValue placeholder="Select age" />
-                                                                    </SelectTrigger>
-                                                                </FormControl>
-                                                                <SelectContent className='!bg-[#F1F2E9]'>
-                                                                    {generateAgeOptions().map(option => (
-                                                                        <SelectItem key={option.value} value={option.value}>
-                                                                            {option.label}
-                                                                        </SelectItem>
-                                                                    ))}
-                                                                </SelectContent>
-                                                            </Select>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
+                                                                    <Input
+                                                                        type="number"
+                                                                        {...field}
+                                                                        value={field.value ?? ''}
+                                                                        onChange={e => {
+                                                                            const newValue = Number(e.target.value);
+                                                                            // Just update the current field
+                                                                            field.onChange(newValue);
 
-                                                <FormField
-                                                    control={form.control}
-                                                    name={`schedules.${index}.endDateOfBirth`}
-                                                    render={({ field }) => (
-                                                        <FormItem className="flex-1">
-                                                            <FormLabel>End Age</FormLabel>
-                                                            <Select
-                                                                onValueChange={(value) => {
-                                                                    field.onChange(getDateFromAge(parseInt(value)));
-                                                                }}
-                                                                value={field.value ?
-                                                                    getAgeFromDate(new Date(field.value)).toString()
-                                                                    : ''}
-                                                            >
-                                                                <FormControl>
-                                                                    <SelectTrigger className='border border-gray-500 bg-transparent'>
-                                                                        <SelectValue placeholder="Select age" />
-                                                                    </SelectTrigger>
+                                                                            // Only sync others if unification is active
+                                                                            if (unifyAgesRef.current) {
+                                                                                fields.forEach((_, idx) => {
+                                                                                    if (idx !== index) { // Skip the current field as it's already updated
+                                                                                        form.setValue(`schedules.${idx}.startAge`, newValue);
+                                                                                    }
+                                                                                });
+                                                                            }
+                                                                        }}
+                                                                        step={form.watch(`schedules.${index}.startAgeUnit`) === 'months' ? 1 : 0.5}
+                                                                        min={0}
+                                                                        max={100}
+                                                                        disabled={loading}
+                                                                        className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
+                                                                    />
                                                                 </FormControl>
-                                                                <SelectContent className='!bg-[#F1F2E9]'>
-                                                                    {generateAgeOptions().map(option => (
-                                                                        <SelectItem key={option.value} value={option.value}>
-                                                                            {option.label}
-                                                                        </SelectItem>
-                                                                    ))}
-                                                                </SelectContent>
-                                                            </Select>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                    <FormField
+                                                        control={form.control}
+                                                        name={`schedules.${index}.startAgeUnit`}
+                                                        render={({ field }) => (
+                                                            <FormItem className="flex flex-col flex-1">
+                                                                <FormLabel>Unit</FormLabel>
+                                                                <Select
+                                                                    onValueChange={(value) => {
+                                                                        // Just update the current field
+                                                                        field.onChange(value);
+
+                                                                        // Only sync others if unification is active
+                                                                        if (unifyAgesRef.current) {
+                                                                            fields.forEach((_, idx) => {
+                                                                                if (idx !== index) { // Skip the current field as it's already updated
+                                                                                    form.setValue(`schedules.${idx}.startAgeUnit`, value as 'months' | 'years');
+                                                                                }
+                                                                            });
+                                                                        }
+                                                                    }}
+                                                                    defaultValue={field.value}
+                                                                    disabled={loading}
+                                                                >
+                                                                    <FormControl>
+                                                                        <SelectTrigger className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'>
+                                                                            <SelectValue placeholder="Select unit" />
+                                                                        </SelectTrigger>
+                                                                    </FormControl>
+                                                                    <SelectContent className='!bg-[#F1F2E9]'>
+                                                                        <SelectItem value="months">Months</SelectItem>
+                                                                        <SelectItem value="years">Years</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                </div>
+
+                                                <div className="flex flex-1 gap-2">
+                                                    <FormField
+                                                        control={form.control}
+                                                        name={`schedules.${index}.endAge`}
+                                                        render={({ field }) => (
+                                                            <FormItem className="flex flex-col flex-1">
+                                                                <FormLabel>End Age <span className='text-xs text-red-500'>*</span></FormLabel>
+                                                                <FormControl>
+                                                                    <Input
+                                                                        type="number"
+                                                                        {...field}
+                                                                        value={field.value ?? ''}
+                                                                        onChange={e => {
+                                                                            const newValue = Number(e.target.value);
+                                                                            // Just update the current field
+                                                                            field.onChange(newValue);
+
+                                                                            // Only sync others if unification is active
+                                                                            if (unifyAgesRef.current) {
+                                                                                fields.forEach((_, idx) => {
+                                                                                    if (idx !== index) { // Skip the current field as it's already updated
+                                                                                        form.setValue(`schedules.${idx}.endAge`, newValue);
+                                                                                    }
+                                                                                });
+                                                                            }
+                                                                        }}
+                                                                        step={form.watch(`schedules.${index}.endAgeUnit`) === 'months' ? 1 : 0.5}
+                                                                        min={0}
+                                                                        max={100}
+                                                                        disabled={loading || form.watch(`schedules.${index}.endAgeUnit`) === 'unlimited'}
+                                                                        className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
+                                                                    />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                    <FormField
+                                                        control={form.control}
+                                                        name={`schedules.${index}.endAgeUnit`}
+                                                        render={({ field }) => (
+                                                            <FormItem className="flex flex-col flex-1">
+                                                                <FormLabel>Unit</FormLabel>
+                                                                <Select
+                                                                    onValueChange={(value) => {
+                                                                        // Just update the current field
+                                                                        field.onChange(value);
+
+                                                                        // Only sync others if unification is active
+                                                                        if (unifyAgesRef.current) {
+                                                                            fields.forEach((_, idx) => {
+                                                                                if (idx !== index) { // Skip the current field as it's already updated
+                                                                                    form.setValue(`schedules.${idx}.endAgeUnit`, value as 'months' | 'years' | 'unlimited');
+                                                                                }
+                                                                            });
+                                                                        }
+                                                                    }}
+                                                                    defaultValue={field.value}
+                                                                    disabled={loading}
+                                                                >
+                                                                    <FormControl>
+                                                                        <SelectTrigger className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'>
+                                                                            <SelectValue placeholder="Select unit" />
+                                                                        </SelectTrigger>
+                                                                    </FormControl>
+                                                                    <SelectContent className='!bg-[#F1F2E9]'>
+                                                                        <SelectItem value="months">Months</SelectItem>
+                                                                        <SelectItem value="years">Years</SelectItem>
+                                                                        <SelectItem value="unlimited">Unlimited</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                </div>
                                             </div>
 
                                             {/* Add gender selection */}
@@ -1015,12 +1414,27 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                                                         <button
                                                                             type="button"
                                                                             onClick={() => {
-                                                                                const newGenders = scheduleGenders[index].filter(g => g !== gender)
-                                                                                setScheduleGenders(prev => ({
-                                                                                    ...prev,
-                                                                                    [index]: newGenders
-                                                                                }))
-                                                                                field.onChange(newGenders.join(','))
+                                                                                const newGenders = scheduleGenders[index].filter(g => g !== gender);
+
+                                                                                if (unifyGenderRef.current) {
+                                                                                    // Update all schedules
+                                                                                    const unifiedGenders = Object.fromEntries(
+                                                                                        fields.map((_, idx) => [idx, newGenders])
+                                                                                    );
+                                                                                    setScheduleGenders(unifiedGenders);
+
+                                                                                    // Update all form fields
+                                                                                    fields.forEach((_, idx) => {
+                                                                                        form.setValue(`schedules.${idx}.gender`, newGenders.join(','));
+                                                                                    });
+                                                                                } else {
+                                                                                    // Update only current schedule
+                                                                                    setScheduleGenders(prev => ({
+                                                                                        ...prev,
+                                                                                        [index]: newGenders
+                                                                                    }));
+                                                                                    field.onChange(newGenders.join(','));
+                                                                                }
                                                                             }}
                                                                             className="ml-1 rounded-full p-0.5 hover:bg-secondary-foreground/20"
                                                                         >
@@ -1045,15 +1459,30 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                                                             <p
                                                                                 key={gender}
                                                                                 onClick={() => {
-                                                                                    const currentGenders = scheduleGenders[index] || []
+                                                                                    const currentGenders = scheduleGenders[index] || [];
                                                                                     const newGenders = currentGenders.includes(gender)
                                                                                         ? currentGenders.filter(g => g !== gender)
-                                                                                        : [...currentGenders, gender]
-                                                                                    setScheduleGenders(prev => ({
-                                                                                        ...prev,
-                                                                                        [index]: newGenders
-                                                                                    }))
-                                                                                    field.onChange(newGenders.join(','))
+                                                                                        : [...currentGenders, gender];
+
+                                                                                    if (unifyGenderRef.current) {
+                                                                                        // Update all schedules
+                                                                                        const unifiedGenders = Object.fromEntries(
+                                                                                            fields.map((_, idx) => [idx, newGenders])
+                                                                                        );
+                                                                                        setScheduleGenders(unifiedGenders);
+
+                                                                                        // Update all form fields
+                                                                                        fields.forEach((_, idx) => {
+                                                                                            form.setValue(`schedules.${idx}.gender`, newGenders.join(','));
+                                                                                        });
+                                                                                    } else {
+                                                                                        // Update only current schedule
+                                                                                        setScheduleGenders(prev => ({
+                                                                                            ...prev,
+                                                                                            [index]: newGenders
+                                                                                        }));
+                                                                                        field.onChange(newGenders.join(','));
+                                                                                    }
                                                                                 }}
                                                                                 className="p-2 flex items-center justify-start gap-2 text-left cursor-pointer hover:bg-[#fafafa] rounded-lg"
                                                                             >
@@ -1096,7 +1525,12 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                         variant="outline"
                                         size="sm"
                                         className="rounded-3xl text-main-yellow bg-main-green px-4 py-5 hover:bg-main-green hover:text-main-yellow w-full text-sm"
-                                        onClick={() => append({ day: '', from: '', to: '', memo: '', startDateOfBirth: null, endDateOfBirth: null, gender: null })}
+                                        onClick={() => append({
+                                            day: '', from: '', to: '', memo: '', startAge: 0,
+                                            startAgeUnit: 'years',
+                                            endAge: undefined,
+                                            endAgeUnit: 'unlimited', gender: null
+                                        })}
                                     >
                                         Add Session
                                     </Button>
