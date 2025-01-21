@@ -29,7 +29,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useOnboarding } from '@/providers/onboarding-provider';
 import { DateSelector } from '@/components/shared/date-selector';
 import { useToast } from '@/hooks/use-toast';
-import { useGendersStore } from '@/providers/store-provider';
+import { useGendersStore, useProgramsStore } from '@/providers/store-provider';
 import { Badge } from '@/components/ui/badge';
 import ImportSchedulesDialog from './import-schedules-dialog';
 
@@ -112,6 +112,7 @@ interface Props {
     programId?: number
     setCreatedPackages?: React.Dispatch<React.SetStateAction<Package[]>>
     packagesLength?: number
+    branchId: number
 }
 
 const days = {
@@ -206,7 +207,7 @@ const calculateDateFromAge = (age: number, unit: string): Date => {
     return date;
 };
 
-export default function AddPackage({ open, onOpenChange, programId, setCreatedPackages, packagesLength }: Props) {
+export default function AddPackage({ open, onOpenChange, programId, setCreatedPackages, packagesLength, branchId }: Props) {
     const router = useRouter()
 
     const { toast } = useToast()
@@ -846,6 +847,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                     <ImportSchedulesDialog
                                         open={importSchedulesOpen}
                                         onOpenChange={setImportSchedulesOpen}
+                                        branchId={branchId}
                                         onScheduleImport={(importedSchedules) => {
 
                                             const newScheduleGenders: Record<number, string[]> = {};

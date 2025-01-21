@@ -6,18 +6,26 @@ interface Props {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onScheduleImport: (schedules: any[]) => void;
+    branchId: number;
 }
 
-export default function ImportSchedulesDialog({ open, onOpenChange, onScheduleImport }: Props) {
+export default function ImportSchedulesDialog({ open, onOpenChange, onScheduleImport, branchId }: Props) {
     const programs = useProgramsStore((state) => state.programs);
 
     const availablePackages = programs
         .filter(program => !program.packages.some(pkg => pkg.name.toLowerCase().includes('assessment')))
-        .flatMap(program => program.packages.map(pkg => ({
-            ...pkg,
-            programName: program.name
-        })))
-        .filter(pkg => !pkg.deleted);
+        .filter(program => program.branchId === branchId)
+        .reduce<Array<typeof programs[0]['packages'][0] & { programName: string }>>((acc, program) => {
+            const firstValidPackage = program.packages.find(pkg => !pkg.deleted);
+
+            if (firstValidPackage) {
+                acc.push({
+                    ...firstValidPackage,
+                    programName: program.name ?? ''
+                });
+            }
+            return acc;
+        }, []);
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>

@@ -188,6 +188,7 @@ interface Props {
     mutate?: () => void
     index?: number
     setCreatedPackages?: React.Dispatch<React.SetStateAction<Package[]>>
+    branchId: number
 }
 
 const days = {
@@ -230,7 +231,7 @@ const checkInitialAgeSync = (schedules: any[]) => {
     );
 };
 
-export default function EditPackage({ packageEdited, open, onOpenChange, mutate, setEditedPackage, setCreatedPackages, index }: Props) {
+export default function EditPackage({ packageEdited, open, onOpenChange, mutate, setEditedPackage, setCreatedPackages, index, branchId }: Props) {
     const router = useRouter()
 
     const { toast } = useToast()
@@ -1091,6 +1092,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                     <ImportSchedulesDialog
                                         open={importSchedulesOpen}
                                         onOpenChange={setImportSchedulesOpen}
+                                        branchId={branchId}
                                         onScheduleImport={(importedSchedules) => {
 
                                             const newScheduleGenders: Record<number, string[]> = {};

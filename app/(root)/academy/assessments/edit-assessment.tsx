@@ -761,6 +761,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                 onOpenChange={setPackagesOpen}
                 setCreatedPackages={setCreatedPackages}
                 packagesLength={assessment.packages.length}
+                branchId={assessment.branchId!}
             />
 
             {editedPackage && (
@@ -771,6 +772,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                     setEditedPackage={setEditedPackage}
                     index={editedPackage.index}
                     setCreatedPackages={setCreatedPackages}
+                    branchId={assessment.branchId!}
                 />
             )}
         </>
