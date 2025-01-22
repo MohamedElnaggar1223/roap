@@ -3,7 +3,7 @@
 import { db } from '@/db'
 import { branches, branchTranslations, branchFacility, branchSport, coaches, coachSpokenLanguage, coachSport, packages, programs, coachProgram, schedules, academics } from '@/db/schema'
 import { auth } from '@/auth'
-import { and, eq, inArray, sql } from 'drizzle-orm'
+import { and, eq, inArray, like, sql } from 'drizzle-orm'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { formatDateForDB, slugify } from '../utils'
 import { cookies } from 'next/headers'
@@ -25,7 +25,8 @@ async function manageAssessmentPrograms(tx: any, branchId: number, academicId: n
         .where(
             and(
                 eq(programs.branchId, branchId),
-                inArray(programs.sportId, sportIds)
+                inArray(programs.sportId, sportIds),
+                like(programs.name, '%Assessment%')
             )
         );
 

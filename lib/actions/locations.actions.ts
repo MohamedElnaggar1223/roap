@@ -2,7 +2,7 @@
 import { db } from '@/db'
 import { branches, branchTranslations, branchFacility, branchSport, programs, reviews } from '@/db/schema'
 import { auth } from '@/auth'
-import { and, eq, inArray, not, sql } from 'drizzle-orm'
+import { and, eq, inArray, like, not, sql } from 'drizzle-orm'
 import { revalidateTag, unstable_cache } from 'next/cache'
 import { slugify } from '../utils'
 import { cookies } from 'next/headers'
@@ -115,7 +115,8 @@ async function manageAssessmentPrograms(tx: any, branchId: number, academicId: n
         .where(
             and(
                 eq(programs.branchId, branchId),
-                inArray(programs.sportId, sportIds)
+                inArray(programs.sportId, sportIds),
+                like(programs.name, '%Assessment%')
             )
         );
 
@@ -430,6 +431,7 @@ export async function updateLocation(id: number, data: {
         const facilitiesToRemove = existingFacilityIds.filter(id => !data.facilities.includes(id))
 
         await Promise.all([
+            manageAssessmentPrograms(db, id, academy.id, data.sports),
             sportsToRemove.length > 0 ?
                 db.delete(branchSport)
                     .where(and(
@@ -475,8 +477,8 @@ export async function updateLocation(id: number, data: {
                         inArray(programs.sportId, sportsToRemove),
                         eq(programs.type, 'assessment')
                     )) : Promise.resolve(),
-            sportsToAdd.length > 0 ?
-                manageAssessmentPrograms(db, id, academy.id, sportsToAdd) : Promise.resolve()
+            // sportsToAdd.length > 0 ?
+            //     manageAssessmentPrograms(db, id, academy.id, sportsToAdd) : Promise.resolve()
         ])
 
         // revalidatePath('/academy/locations')
