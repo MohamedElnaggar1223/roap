@@ -25,8 +25,10 @@ if (!GOOGLE_API_KEY) {
 
 export async function getPlaceId(name: string): Promise<string | null> {
     try {
+        console.log('Fetching place ID for:', encodeURIComponent(name))
+        const encodedName = name.replace(/\s+/g, '-');
         const response = await fetch(
-            `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(name)}&key=${GOOGLE_API_KEY}`,
+            `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(encodedName)}&key=${GOOGLE_API_KEY}`,
             {
                 headers: {
                     'Content-Type': 'application/json',
@@ -41,7 +43,22 @@ export async function getPlaceId(name: string): Promise<string | null> {
         const data = (await response.json()) as PlaceSearchResponse
 
         if (data.status === 'OK' && data.results.length > 0) {
-            return data.results[0].place_id
+            console.log(data.results)
+            if (data.results.length === 1) {
+                return data.results[0].place_id;
+            }
+
+            const uaeLocation = data.results.find(place =>
+                place.formatted_address.includes('United Arab Emirates') ||
+                place.formatted_address.includes('UAE') ||
+                place.formatted_address.includes('Dubai') ||
+                place.formatted_address.includes('Abu Dhabi')
+            );
+
+            console.log("Uae Location: ", uaeLocation)
+            console.log(data.results)
+
+            return uaeLocation ? uaeLocation.place_id : data.results[0].place_id;
         }
 
         return null

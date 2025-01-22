@@ -17,7 +17,6 @@ import { Inter } from 'next/font/google'
 import { checkAcademyStatus } from "@/lib/actions/check-academy-status";
 import { OnboardingProvider } from "@/providers/onboarding-provider";
 import { OnboardingSaveProvider } from "@/providers/onboarding-save-provider";
-import { fetchPlaceInformation } from "@/lib/actions/reviews.actions";
 import { StoreProvider } from "@/providers/store-provider";
 import { DataPrefetcher } from "@/providers/data-prefetcher";
 import Providers from "@/providers/query-provider";
