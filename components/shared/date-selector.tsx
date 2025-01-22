@@ -39,6 +39,21 @@ export function DateSelector({ field, optional }: DateSelectorProps) {
         }
     }, [field.value, selectedDate, initialValue])
 
+    useEffect(() => {
+        if (field.value && !(field.value instanceof Date)) {
+            try {
+                const parsed = new Date(field.value);
+                if (!isNaN(parsed.getTime())) {
+                    setSelectedDate(parsed);
+                } else {
+                    setSelectedDate(new Date());
+                }
+            } catch {
+                setSelectedDate(new Date());
+            }
+        }
+    }, [field.value]);
+
     const handleDateChange = (type: 'day' | 'month' | 'year', value: number) => {
         // If there's no selected date, create a new one from the current date
         // but only if this is the first interaction

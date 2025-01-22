@@ -537,8 +537,8 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                 createdAt: programEdited.createdAt,
                 updatedAt: programEdited.updatedAt,
                 gender: selectedGenders.join(','),
-                startDateOfBirth: startDate.toLocaleString(),
-                endDateOfBirth: endDate.toLocaleString(),
+                startDateOfBirth: startDate.toISOString(),
+                endDateOfBirth: endDate.toISOString(),
             }, mutateProgram)
 
             // if (result.error) {

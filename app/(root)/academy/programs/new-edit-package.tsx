@@ -164,7 +164,6 @@ type EditedPackage = {
 function getFirstAndLastDayOfMonths(months: string[]) {
     if (!months.length) return { startDate: new Date(), endDate: new Date() }
 
-    // Sort months chronologically
     const sortedMonths = [...months].sort((a, b) => {
         const dateA = new Date(a);
         const dateB = new Date(b);
@@ -175,9 +174,19 @@ function getFirstAndLastDayOfMonths(months: string[]) {
     const firstMonth = new Date(sortedMonths[0]);
     const startDate = new Date(firstMonth.getFullYear(), firstMonth.getMonth(), 1);
 
-    // Get last day of last month
+    // Get last day of last month - FIXED VERSION
     const lastMonth = new Date(sortedMonths[sortedMonths.length - 1]);
-    const endDate = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0);
+    let endYear = lastMonth.getFullYear();
+    let endMonth = lastMonth.getMonth() + 1;
+
+    // Handle year rollover
+    if (endMonth > 11) {  // if past December
+        endMonth = 0;     // set to January
+        endYear++;        // increment year
+    }
+
+    // Get the last day by getting day 0 of next month
+    const endDate = new Date(endYear, endMonth, 0);
 
     return { startDate, endDate };
 }
@@ -201,6 +210,12 @@ const days = {
     fri: "Friday",
     sat: "Saturday"
 }
+
+const validateDate = (dateString: string | undefined) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    return isNaN(date.getTime()) ? null : date;
+};
 
 const getMonthsInRange = (startDate: Date, endDate: Date) => {
     const months: Array<{ label: string, value: string }> = [];
@@ -262,8 +277,22 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                 packageData?.name.startsWith('Monthly') ?
                     packageData?.name.split(' ')[1] : packageData?.name.split(' ')[1],
             price: packageData?.price.toString(),
-            startDate: new Date(packageData?.startDate ?? ''),
-            endDate: new Date(packageData?.endDate ?? ''),
+            startDate: (() => {
+                try {
+                    const date = new Date(packageData?.startDate ?? '');
+                    return isNaN(date.getTime()) ? undefined : date;
+                } catch {
+                    return undefined;
+                }
+            })(),
+            endDate: (() => {
+                try {
+                    const date = new Date(packageData?.endDate ?? '');
+                    return isNaN(date.getTime()) ? undefined : date;
+                } catch {
+                    return undefined;
+                }
+            })(),
             months: packageData?.months || [],
             schedules: (packageData?.schedules ?? []).length > 0 ?
                 packageData?.schedules.map(s => ({
@@ -437,16 +466,16 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                     ...packageData,
                     name: packageName!,
                     price: parseFloat(values.price),
-                    startDate: (startDate!).toLocaleString(),
-                    endDate: (endDate!).toLocaleString(),
+                    startDate: (startDate!).toISOString(),
+                    endDate: (endDate!).toISOString(),
                     months: values.months ?? [],
                     schedules: values.schedules.map(s => ({
                         ...s,
                         capacity: program?.flexible ?
                             (s.capacityType === "unlimited" ? 9999 : parseInt(s.capacity)) :
                             (values.capacityType === "unlimited" ? 9999 : parseInt(values.capacity)),
-                        createdAt: new Date().toLocaleString(),
-                        updatedAt: new Date().toLocaleString(),
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
                         memo: s.memo ?? '',
                         id: undefined,
                         packageId: undefined
@@ -457,15 +486,15 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                     entryFeesAppliedUntil: values.type === "Monthly" && showEntryFeesFields ?
                         values.entryFeesAppliedUntil ?? [] : null,
                     entryFeesStartDate: values.type !== "Monthly" && showEntryFeesFields ?
-                        values.entryFeesStartDate?.toLocaleString() ?? '' : null,
+                        values.entryFeesStartDate?.toISOString() ?? '' : null,
                     entryFeesEndDate: values.type !== "Monthly" && showEntryFeesFields ?
-                        values.entryFeesEndDate?.toLocaleString() ?? '' : null,
+                        values.entryFeesEndDate?.toISOString() ?? '' : null,
                     capacity: program?.flexible ? null : (values.capacityType === "unlimited" ? 9999 : parseInt(values.capacity)),
                     // flexible: values.flexible,
                     sessionPerWeek: values.flexible ? (values.sessionPerWeek ?? 0) : values.schedules.length,
                     sessionDuration: values.flexible ? (values.sessionDuration ?? 0) : null,
-                    createdAt: new Date().toLocaleString(),
-                    updatedAt: new Date().toLocaleString(),
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
                 });
 
                 if (mutate) await mutate();
@@ -475,14 +504,14 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                         ...packageData,
                         name: packageName!,
                         price: parseFloat(values.price),
-                        startDate: (startDate!).toLocaleString(),
-                        endDate: (endDate!).toLocaleString(),
+                        startDate: (startDate!).toISOString(),
+                        endDate: (endDate!).toISOString(),
                         months: values.months ?? [],
                         schedules: values.schedules.map(s => ({
                             ...s,
                             capacity: parseInt(values.flexible ? s.capacity : values.capacity),
-                            createdAt: new Date().toLocaleString(),
-                            updatedAt: new Date().toLocaleString(),
+                            createdAt: new Date().toISOString(),
+                            updatedAt: new Date().toISOString(),
                             memo: s.memo ?? '',
                             id: undefined,
                             packageId: undefined
@@ -493,15 +522,15 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                         entryFeesAppliedUntil: values.type === "Monthly" && showEntryFeesFields ?
                             values.entryFeesAppliedUntil ?? [] : null,
                         entryFeesStartDate: values.type !== "Monthly" && showEntryFeesFields ?
-                            values.entryFeesStartDate?.toLocaleString() ?? '' : null,
+                            values.entryFeesStartDate?.toISOString() ?? '' : null,
                         entryFeesEndDate: values.type !== "Monthly" && showEntryFeesFields ?
-                            values.entryFeesEndDate?.toLocaleString() ?? '' : null,
+                            values.entryFeesEndDate?.toISOString() ?? '' : null,
                         capacity: values.flexible ? null : parseInt(values.capacity),
                         // flexible: values.flexible,
                         sessionPerWeek: values.flexible ? (values.sessionPerWeek ?? 0) : values.schedules.length,
                         sessionDuration: values.flexible ? (values.sessionDuration ?? 0) : null,
-                        createdAt: new Date().toLocaleString(),
-                        updatedAt: new Date().toLocaleString(),
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
                     }
                 })
 

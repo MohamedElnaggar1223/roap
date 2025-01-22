@@ -368,7 +368,6 @@ interface ProgramDiscountData {
 function getFirstAndLastDayOfMonths(months: string[]) {
     if (!months.length) return { startDate: new Date(), endDate: new Date() }
 
-    // Sort months chronologically
     const sortedMonths = [...months].sort((a, b) => {
         const dateA = new Date(a);
         const dateB = new Date(b);
@@ -379,9 +378,19 @@ function getFirstAndLastDayOfMonths(months: string[]) {
     const firstMonth = new Date(sortedMonths[0]);
     const startDate = new Date(firstMonth.getFullYear(), firstMonth.getMonth(), 1);
 
-    // Get last day of last month
+    // Get last day of last month - FIXED VERSION
     const lastMonth = new Date(sortedMonths[sortedMonths.length - 1]);
-    const endDate = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0);
+    let endYear = lastMonth.getFullYear();
+    let endMonth = lastMonth.getMonth() + 1;
+
+    // Handle year rollover
+    if (endMonth > 11) {  // if past December
+        endMonth = 0;     // set to January
+        endYear++;        // increment year
+    }
+
+    // Get the last day by getting day 0 of next month
+    const endDate = new Date(endYear, endMonth, 0);
 
     return { startDate, endDate };
 }

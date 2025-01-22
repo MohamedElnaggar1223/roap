@@ -47,7 +47,6 @@ const formatTimeValue = (value: string) => {
 function getFirstAndLastDayOfMonths(months: string[]) {
     if (!months.length) return { startDate: new Date(), endDate: new Date() }
 
-    // Sort months chronologically
     const sortedMonths = [...months].sort((a, b) => {
         const dateA = new Date(a);
         const dateB = new Date(b);
@@ -58,9 +57,19 @@ function getFirstAndLastDayOfMonths(months: string[]) {
     const firstMonth = new Date(sortedMonths[0]);
     const startDate = new Date(firstMonth.getFullYear(), firstMonth.getMonth(), 1);
 
-    // Get last day of last month
+    // Get last day of last month - FIXED VERSION
     const lastMonth = new Date(sortedMonths[sortedMonths.length - 1]);
-    const endDate = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0);
+    let endYear = lastMonth.getFullYear();
+    let endMonth = lastMonth.getMonth() + 1;
+
+    // Handle year rollover
+    if (endMonth > 11) {  // if past December
+        endMonth = 0;     // set to January
+        endYear++;        // increment year
+    }
+
+    // Get the last day by getting day 0 of next month
+    const endDate = new Date(endYear, endMonth, 0);
 
     return { startDate, endDate };
 }
@@ -319,9 +328,18 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                     endDate = dates.endDate;
                 }
                 else {
-                    if (!(startDate instanceof Date) || !(endDate instanceof Date)) {
+                    if (!(startDate instanceof Date) || isNaN(startDate.getTime())) {
                         toast({
-                            title: "Start and End Dates are required",
+                            title: "Start Date is required",
+                            description: "Please select a start and end date",
+                            variant: "destructive",
+                        });
+                        return;
+                    }
+
+                    if (!(endDate instanceof Date) || isNaN(endDate.getTime())) {
+                        toast({
+                            title: "End Date is required",
                             description: "Please select a start and end date",
                             variant: "destructive",
                         });
@@ -333,8 +351,8 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                     name: packageName!,
                     price: parseFloat(values.price),
                     tempId: parseInt(uuid().split('-')[0], 16),
-                    startDate: startDate?.toLocaleString() ?? '',
-                    endDate: endDate?.toLocaleString() ?? '',
+                    startDate: startDate?.toISOString() ?? '',
+                    endDate: endDate?.toISOString() ?? '',
                     months: values.months ?? [],
                     programId,
                     memo: values.memo ?? '',
@@ -343,9 +361,9 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                     entryFeesAppliedUntil: values.type === "Monthly" && showEntryFeesFields ?
                         values.entryFeesAppliedUntil ?? [] : null,
                     entryFeesStartDate: values.type !== "Monthly" && showEntryFeesFields ?
-                        values.entryFeesStartDate?.toLocaleString() ?? '' : null,
+                        values.entryFeesStartDate?.toISOString() ?? '' : null,
                     entryFeesEndDate: values.type !== "Monthly" && showEntryFeesFields ?
-                        values.entryFeesEndDate?.toLocaleString() ?? '' : null,
+                        values.entryFeesEndDate?.toISOString() ?? '' : null,
                     schedules: values.schedules.map(schedule => ({
                         day: schedule.day,
                         from: schedule.from,
@@ -355,16 +373,16 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                             (schedule.capacityType === "unlimited" ? 9999 : parseInt(schedule.capacity)) :
                             (values.capacityType === "unlimited" ? 9999 : parseInt(values.capacity)),
                         id: undefined,
-                        createdAt: new Date().toLocaleString(),
-                        updatedAt: new Date().toLocaleString(),
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
                         packageId: undefined
                     })),
                     capacity: values.flexible ? null : (values.capacityType === "unlimited" ? 9999 : parseInt(values.capacity)),
                     // flexible: values.flexible,
                     sessionPerWeek: values.flexible ? (values.sessionPerWeek ?? 0) : values.schedules.length,
                     sessionDuration: values.flexible ? (values.sessionDuration ?? 0) : null,
-                    createdAt: new Date().toLocaleString(),
-                    updatedAt: new Date().toLocaleString(),
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
                 })
 
                 onOpenChange(false)
