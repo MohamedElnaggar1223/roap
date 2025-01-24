@@ -107,7 +107,7 @@ const NotificationsComponent: React.FC<Props> = ({ academicId }) => {
                         }
                     } else if (payload.eventType === 'UPDATE') {
                         setNotifications(prev =>
-                            prev.map(notification =>
+                            prev?.map(notification =>
                                 notification.id === payload.new.id
                                     ? { ...notification, ...payload.new }
                                     : notification
@@ -137,7 +137,7 @@ const NotificationsComponent: React.FC<Props> = ({ academicId }) => {
             if (error) throw error
 
             setNotifications(prev =>
-                prev.map(notification =>
+                prev?.map(notification =>
                     notification.id === notificationId
                         ? { ...notification, read_at: new Date().toISOString() }
                         : notification
@@ -193,7 +193,7 @@ const NotificationsComponent: React.FC<Props> = ({ academicId }) => {
                             <p className="text-[#454745]">Loading notifications...</p>
                         </div>
                     ) : notifications.length > 0 ? (
-                        notifications.map((notification) => (
+                        notifications?.map((notification) => (
                             <div
                                 key={notification.id}
                                 className={`p-4 border-b border-[#CDD1C7] cursor-pointer ${!notification.read_at ? 'bg-[#F1F2E9]' : 'bg-white'}`}
