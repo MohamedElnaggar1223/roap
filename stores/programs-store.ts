@@ -375,7 +375,7 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
                     packages: packageData.id
                         ? program.packages.map(pk =>
                             pk.id === packageData.id
-                                ? { ...pk, deleted: true }
+                                ? { ...pk, deleted: true, pending: true }
                                 : pk
                         )
                         : program.packages.filter(pk => pk.tempId !== packageData.tempId)

@@ -1,5 +1,5 @@
 'use client'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { updateProgram } from '@/lib/actions/programs.actions';
 import { Copy, Eye, EyeOff, Loader2, Plus, X } from 'lucide-react';
@@ -318,9 +318,9 @@ interface ChangedFields {
     packages: {
         changed: boolean;
         count: {
-            added: number;
-            edited: number;
-            deleted: number;
+            added: number | undefined;
+            edited: number | undefined;
+            deleted: number | undefined;
         };
     };
     discounts: {
@@ -372,7 +372,12 @@ export default function EditProgram({ branches, sports, programEdited, academySp
     const [editedDiscount, setEditedDiscount] = useState<{ editedDiscount: Discount, index?: number } | null>(null);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
-    const [originalPackages] = useState(programEdited.packages);
+    const [originalPackages, setOriginalPackages] = useState(() => {
+        // Create a deep copy without deleted packages and without undefined ids
+        return JSON.parse(JSON.stringify(
+            programEdited.packages.filter(p => !p.deleted && p.id !== undefined)
+        )) as Package[];
+    });
     const [originalDiscounts] = useState(programEdited.discounts);
     const [changedFields, setChangedFields] = useState<ChangedFields>({
         form: [],
@@ -541,6 +546,9 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                 endDateOfBirth: endDate.toISOString(),
             }, mutateProgram)
 
+            const updatedPackages = program?.packages.filter(p => !p.deleted) ?? [];
+            setOriginalPackages(updatedPackages);
+
             // if (result.error) {
             //     console.error('Error creating program:', result.error)
             //     if (result?.field) {
@@ -649,6 +657,201 @@ export default function EditProgram({ branches, sports, programEdited, academySp
         };
     }, []);
 
+    const normalizePackage = (pkg: Package) => {
+        // Helper function to normalize time string
+        const normalizeTime = (time: string) => {
+            // Remove seconds if they exist and add them back consistently
+            const [hours, minutes] = time.split(':').slice(0, 2);
+            return `${hours}:${minutes}:00`;
+        };
+
+        // Helper function to normalize date string
+        const normalizeDate = (dateStr: string | null) => {
+            if (!dateStr) return null;
+            // Parse the date and format it consistently
+            const date = new Date(dateStr);
+            return date.toISOString().replace('+00:00', '.000Z');
+        };
+
+        const normalizedSchedules = pkg.schedules.map(schedule => ({
+            day: schedule.day,
+            from: normalizeTime(schedule.from),
+            to: normalizeTime(schedule.to),
+            capacity: schedule.capacity,
+            memo: schedule.memo,
+            startDateOfBirth: null,
+            endDateOfBirth: null,
+            gender: null
+        })).sort((a, b) => {
+            if (a.day !== b.day) return a.day.localeCompare(b.day);
+            return a.from.localeCompare(b.from);
+        });
+
+        return {
+            name: pkg.name,
+            price: pkg.price,
+            startDate: normalizeDate(pkg.startDate),
+            endDate: normalizeDate(pkg.endDate),
+            sessionPerWeek: pkg.sessionPerWeek,
+            sessionDuration: pkg.sessionDuration ?? 0,
+            capacity: pkg.capacity,
+            memo: pkg.memo,
+            entryFees: pkg.entryFees,
+            entryFeesExplanation: pkg.entryFeesExplanation,
+            entryFeesAppliedUntil: pkg.entryFeesAppliedUntil,
+            entryFeesStartDate: normalizeDate(pkg.entryFeesStartDate),
+            entryFeesEndDate: normalizeDate(pkg.entryFeesEndDate),
+            flexible: pkg.flexible,
+            hidden: pkg.hidden,
+            schedules: normalizedSchedules
+        };
+    };
+
+    // Compare two arrays of packages
+    const comparePackages = (currentPackages: Package[], originalPackages: Package[]) => {
+        console.log("Compare Packages Debug:");
+        console.log("Original Packages:", originalPackages.length);
+        console.log("Current Packages:", currentPackages.length);
+        console.log("Current Packages (non-deleted):", currentPackages.filter(p => !p.deleted).length);
+
+        // Get non-deleted packages from current
+        const activeCurrentPackages = currentPackages.filter(p => !p.deleted);
+
+        // Filter out any original packages with undefined ids before comparison
+        const validOriginalPackages = originalPackages.filter(op => op.id !== undefined);
+
+        // Calculate deleted by looking at which original packages don't exist in active current
+        const deleted = validOriginalPackages.filter(op => {
+            const stillExists = activeCurrentPackages.some(cp => cp.id === op.id);
+            console.log(`Package ${op.id}: ${stillExists ? 'exists' : 'deleted'}`);
+            return !stillExists;
+        }).length;
+
+        // Identify added packages (ones without IDs)
+        const added = activeCurrentPackages.filter(p => !p.id).length;
+
+        // Identify edited packages
+        const edited = activeCurrentPackages.filter(p => {
+            if (!p.id) return false;
+            const original = validOriginalPackages.find(op => op.id === p.id);
+            if (!original) return false;
+
+            const normalizedCurrent = normalizePackage(p);
+            const normalizedOriginal = normalizePackage(original);
+
+            if (JSON.stringify(normalizedCurrent) !== JSON.stringify(normalizedOriginal)) {
+                console.log(`Package ${p.id} has been edited`);
+                return true;
+            }
+            return false;
+        }).length;
+
+        console.log("Final counts:", { added, edited, deleted });
+
+        const hasChanges = added > 0 || edited > 0 || deleted > 0;
+
+        return {
+            changed: hasChanges,
+            count: {
+                added: added || undefined,
+                edited: edited || undefined,
+                deleted: deleted || undefined
+            }
+        };
+    };
+
+    // Compare two arrays of discounts
+    const compareDiscounts = (currentDiscounts: Discount[], originalDiscounts: Discount[]) => {
+        const normalizeDiscount = (discount: Discount) => ({
+            type: discount.type,
+            value: discount.value,
+            startDate: discount.startDate,
+            endDate: discount.endDate,
+            packageDiscounts: discount.packageDiscounts.sort((a, b) =>
+                (a.packageId || 0) - (b.packageId || 0)
+            )
+        });
+
+        const normalizedCurrent = currentDiscounts.map(normalizeDiscount);
+        const normalizedOriginal = originalDiscounts.map(normalizeDiscount);
+
+        const added = currentDiscounts.filter(d => !d.id).length;
+
+        const edited = currentDiscounts.filter(d => {
+            if (!d.id) return false;
+            const original = originalDiscounts.find(od => od.id === d.id);
+            if (!original) return false;
+
+            return JSON.stringify(normalizeDiscount(d)) !== JSON.stringify(normalizeDiscount(original));
+        }).length;
+
+        const deleted = originalDiscounts.filter(d =>
+            !currentDiscounts.find(cd => cd.id === d.id)
+        ).length;
+
+        const hasChanges =
+            added > 0 ||
+            edited > 0 ||
+            deleted > 0 ||
+            normalizedCurrent.length !== normalizedOriginal.length;
+
+        return {
+            changed: hasChanges,
+            count: {
+                added,
+                edited,
+                deleted
+            }
+        };
+    };
+
+    const compareChanges = (
+        formValues: any,
+        initialFormValues: any,
+        selectedCoaches: number[],
+        originalCoaches: number[],
+        selectedGenders: string[],
+        originalGenders: string[],
+        currentPackages: Package[],
+        originalPackages: Package[],
+        currentDiscounts: Discount[],
+        originalDiscounts: Discount[]
+    ) => {
+        // Check which form fields have changed
+        const changedFormFields = Object.keys(formValues).filter(key =>
+            JSON.stringify(formValues[key]) !== JSON.stringify(initialFormValues[key])
+        );
+
+        // Compare coaches (sort arrays for consistent comparison)
+        const coachesChanged = JSON.stringify([...selectedCoaches].sort()) !==
+            JSON.stringify([...originalCoaches].sort());
+
+        // Compare genders (sort arrays for consistent comparison)
+        const gendersChanged = JSON.stringify([...selectedGenders].sort()) !==
+            JSON.stringify([...originalGenders].sort());
+
+        // Compare packages and discounts
+        const packageChanges = comparePackages(currentPackages, originalPackages);
+        const discountChanges = compareDiscounts(currentDiscounts, originalDiscounts);
+
+        const hasChanges = changedFormFields.length > 0 ||
+            coachesChanged ||
+            gendersChanged ||
+            packageChanges.changed ||
+            discountChanges.changed;
+
+        return {
+            hasChanges,
+            changedFields: {
+                form: changedFormFields,
+                coaches: coachesChanged,
+                genders: gendersChanged,
+                packages: packageChanges,
+                discounts: discountChanges
+            }
+        };
+    };
+
     // Add this function to check for changes
     const checkForChanges = () => {
         const formValues = form.getValues();
@@ -684,60 +887,25 @@ export default function EditProgram({ branches, sports, programEdited, academySp
             })(),
         };
 
-        // Check which form fields have changed
-        const changedFormFields = Object.keys(formValues).filter(key =>
-            JSON.stringify(formValues[key as keyof typeof formValues]) !== JSON.stringify(initialFormValues[key as keyof typeof initialFormValues])
+        const originalCoaches = programEdited.coachPrograms.map(coach => coach.coach.id);
+        const originalGenders = programEdited.gender?.split(',') ?? [];
+
+        const { hasChanges, changedFields } = compareChanges(  // Use renamed function
+            formValues,
+            initialFormValues,
+            selectedCoaches,
+            originalCoaches,
+            selectedGenders,
+            originalGenders,
+            program?.packages ?? [],
+            originalPackages,
+            program?.discounts ?? [],
+            originalDiscounts
         );
 
-        // Count package changes
-        const packageChanges = {
-            added: program?.packages?.filter(p => !p.id && !p.deleted).length || 0,
-            edited: program?.packages?.filter(p => {
-                const original = originalPackages?.find(op => op.id === p.id);
-                return original && JSON.stringify({ ...original, updatedAt: undefined, schedules: original.schedules.map(s => ({ ...s, updatedAt: undefined, id: undefined })) }) !== JSON.stringify({ ...p, updatedAt: undefined, schedules: p.schedules.map(s => ({ ...s, updatedAt: undefined, id: undefined })) }) && !p.deleted;
-            }).length || 0,
-            deleted: program?.packages?.filter(p => p.deleted).length || 0
-        };
-
-        // Count discount changes
-        const discountChanges = {
-            added: program?.discounts?.filter(d => !d.id).length || 0,
-            edited: program?.discounts?.filter(d => {
-                const original = originalDiscounts?.find(od => od.id === d.id);
-                return original && JSON.stringify({ ...original, updatedAt: undefined }) !== JSON.stringify({ ...d, updatedAt: undefined });
-            }).length || 0,
-            deleted: originalDiscounts?.filter(d =>
-                !program?.discounts?.find(pd => pd.id === d.id)
-            ).length || 0
-        };
-
-        const formChanged = changedFormFields.length > 0;
-        const coachesChanged = JSON.stringify(selectedCoaches) !== JSON.stringify(programEdited.coachPrograms.map(coach => coach.coach.id));
-        const gendersChanged = JSON.stringify(selectedGenders) !== JSON.stringify(programEdited.gender?.split(',') ?? []);
-        const packagesChanged = JSON.stringify(program?.packages.map(p => ({ ...p, updatedAt: undefined, schedules: p.schedules.map(s => ({ ...s, updatedAt: undefined, id: undefined, createdAt: undefined })), createdAt: undefined }))) !== JSON.stringify(originalPackages.map(pk => ({ ...pk, updatedAt: undefined, schedules: pk.schedules.map(sk => ({ ...sk, updatedAt: undefined, id: undefined, createdAt: undefined })), createdAt: undefined })));
-        const discountsChanged = JSON.stringify(program?.discounts.map(d => ({ ...d, updatedAt: undefined }))) !== JSON.stringify(originalDiscounts.map(d => ({ ...d, updatedAt: undefined })));
-
-        console.log("NOW Packages", JSON.stringify(program?.packages.map(p => ({ ...p, updatedAt: undefined, schedules: p.schedules.map(s => ({ ...s, updatedAt: undefined, id: undefined })) }))))
-        console.log("Original Packages", JSON.stringify(originalPackages.map(pk => ({ ...pk, updatedAt: undefined, schedules: pk.schedules.map(sk => ({ ...sk, updatedAt: undefined, id: undefined })) }))))
-
-        const hasChanges = formChanged || coachesChanged || gendersChanged || packagesChanged || discountsChanged;
-
-        setChangedFields({
-            form: changedFormFields,
-            coaches: coachesChanged,
-            genders: gendersChanged,
-            packages: {
-                changed: packagesChanged,
-                count: packageChanges
-            },
-            discounts: {
-                changed: discountsChanged,
-                count: discountChanges
-            }
-        });
-
-
+        setChangedFields(changedFields);
         setHasUnsavedChanges(hasChanges);
+
         return { hasChanges, changedFields };
     };
 
@@ -784,11 +952,11 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                     height={20}
                 />
             </Button>
-            <AlertDialog open={showUnsavedChangesDialog} onOpenChange={setShowUnsavedChangesDialog}>
-                <AlertDialogContent className="max-w-md">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
-                        <AlertDialogDescription className="space-y-2">
+            <Dialog open={showUnsavedChangesDialog} onOpenChange={setShowUnsavedChangesDialog}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Unsaved Changes</DialogTitle>
+                        <div className="space-y-2">
                             <p>The following changes will be discarded:</p>
 
                             <div className="pl-4 space-y-1 text-sm">
@@ -822,9 +990,9 @@ export default function EditProgram({ branches, sports, programEdited, academySp
 
                                 {changedFields.packages.changed && (
                                     <p>• Package changes: {[
-                                        changedFields.packages.count.added > 0 && `${changedFields.packages.count.added} added`,
-                                        changedFields.packages.count.edited > 0 && `${changedFields.packages.count.edited} edited`,
-                                        changedFields.packages.count.deleted > 0 && `${changedFields.packages.count.deleted} deleted`
+                                        (changedFields.packages.count?.added ?? 0) > 0 && `${changedFields.packages.count.added} added`,
+                                        (changedFields.packages.count?.edited ?? 0) > 0 && `${changedFields.packages.count.edited} edited`,
+                                        (changedFields.packages.count?.deleted ?? 0) > 0 && `${changedFields.packages.count.deleted} deleted`
                                     ].filter(Boolean).join(', ')}</p>
                                 )}
 
@@ -838,13 +1006,16 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                             </div>
 
                             <p className="pt-2">Are you sure you want to discard these changes?</p>
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5 hover:bg-main-green hover:text-main-yellow'>
+                        </div>
+                    </DialogHeader>
+                    <DialogFooter className="flex gap-2 justify-end">
+                        <Button
+                            onClick={() => setShowUnsavedChangesDialog(false)}
+                            className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-main-yellow bg-main-green px-4 py-2.5 hover:bg-main-green hover:text-main-yellow'
+                        >
                             Continue Editing
-                        </AlertDialogCancel>
-                        <AlertDialogAction
+                        </Button>
+                        <Button
                             onClick={() => {
                                 setShowUnsavedChangesDialog(false);
                                 setEditProgramOpen(false);
@@ -855,10 +1026,15 @@ export default function EditProgram({ branches, sports, programEdited, academySp
 
                                 // Reset packages and discounts to their initial state
                                 if (program?.id) {
+                                    const cleanOriginalPackages = originalPackages.map(pkg => ({
+                                        ...pkg,
+                                        deleted: false  // Reset deleted flag
+                                    }));
+
                                     editProgram({
                                         ...programEdited,
                                         id: program.id,
-                                        packages: originalPackages,
+                                        packages: cleanOriginalPackages,
                                         discounts: originalDiscounts
                                     }, mutateProgram);
                                 }
@@ -866,10 +1042,10 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                             className='flex disabled:opacity-60 items-center justify-center gap-1 rounded-3xl text-white bg-red-500 px-4 py-2.5 hover:bg-red-500 hover:text-white'
                         >
                             Discard Changes
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
             <Dialog open={editProgramOpen} onOpenChange={handleDialogClose}>
                 <DialogContent className='bg-main-white min-w-[1024px] max-w-[1024px] min-h-[360px]'>
                     <Form {...form}>

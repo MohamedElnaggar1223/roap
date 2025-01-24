@@ -45,31 +45,63 @@ const formatTimeValue = (value: string) => {
 };
 
 function getFirstAndLastDayOfMonths(months: string[]) {
-    if (!months.length) return { startDate: new Date(), endDate: new Date() }
+    if (!months.length) {
+        console.error("No months provided to getFirstAndLastDayOfMonths");
+        throw new Error("At least one month must be selected");
+    }
+
+    console.log("Processing months:", months);
 
     const sortedMonths = [...months].sort((a, b) => {
-        const dateA = new Date(a);
-        const dateB = new Date(b);
+        const [monthA, yearA] = a.split(' ');
+        const [monthB, yearB] = b.split(' ');
+        const dateA = new Date(`${monthA} 1, ${yearA}`);
+        const dateB = new Date(`${monthB} 1, ${yearB}`);
         return dateA.getTime() - dateB.getTime();
     });
 
     // Get first day of first month
-    const firstMonth = new Date(sortedMonths[0]);
-    const startDate = new Date(firstMonth.getFullYear(), firstMonth.getMonth(), 1);
+    const [firstMonth, firstYear] = sortedMonths[0].split(' ');
+    const monthIndex = {
+        'January': 0, 'February': 1, 'March': 2, 'April': 3,
+        'May': 4, 'June': 5, 'July': 6, 'August': 7,
+        'September': 8, 'October': 9, 'November': 10, 'December': 11
+    };
 
-    // Get last day of last month - FIXED VERSION
-    const lastMonth = new Date(sortedMonths[sortedMonths.length - 1]);
-    let endYear = lastMonth.getFullYear();
-    let endMonth = lastMonth.getMonth() + 1;
+    // Create dates using UTC
+    const startDate = new Date(Date.UTC(
+        parseInt(firstYear),
+        monthIndex[firstMonth as keyof typeof monthIndex],
+        1,
+        12, 0, 0, 0
+    ));
 
-    // Handle year rollover
-    if (endMonth > 11) {  // if past December
-        endMonth = 0;     // set to January
-        endYear++;        // increment year
+    // Get last day of last month
+    const [lastMonth, lastYear] = sortedMonths[sortedMonths.length - 1].split(' ');
+    const lastMonthIndex = monthIndex[lastMonth as keyof typeof monthIndex];
+
+    // Get the last day by moving to the first day of next month and subtracting one day
+    const endDate = new Date(Date.UTC(
+        parseInt(lastYear),
+        lastMonthIndex + 1,
+        0,  // This gives us the last day of the current month
+        12, 0, 0, 0
+    ));
+
+    console.log("Calculated dates:", {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString()
+    });
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        console.error("Invalid date calculation:", {
+            startDate,
+            endDate,
+            firstMonth: sortedMonths[0],
+            lastMonth: sortedMonths[sortedMonths.length - 1]
+        });
+        throw new Error("Failed to calculate valid dates from months");
     }
-
-    // Get the last day by getting day 0 of next month
-    const endDate = new Date(endYear, endMonth, 0);
 
     return { startDate, endDate };
 }
@@ -323,67 +355,154 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                 let endDate = values.endDate;
 
                 if (values.type === "Monthly" && values.months && values.months.length > 0) {
-                    const dates = getFirstAndLastDayOfMonths(values.months);
-                    startDate = dates.startDate;
-                    endDate = dates.endDate;
-                }
-                else {
-                    if (!(startDate instanceof Date) || isNaN(startDate.getTime())) {
+                    try {
+                        console.log("Processing monthly dates for months:", values.months);
+                        const dates = getFirstAndLastDayOfMonths(values.months);
+                        console.log("Got dates from months:", dates);
+
+                        startDate = new Date(dates.startDate);
+                        startDate.setUTCHours(12, 0, 0, 0);
+
+                        endDate = new Date(dates.endDate);
+                        endDate.setUTCHours(12, 0, 0, 0);
+
+                        console.log("Final dates:", {
+                            startDate: startDate.toISOString(),
+                            endDate: endDate.toISOString()
+                        });
+                    } catch (error) {
+                        console.error("Error processing monthly dates:", error);
                         toast({
-                            title: "Start Date is required",
-                            description: "Please select a start and end date",
+                            title: "Date Error",
+                            description: "Failed to process package dates. Please check your month selection.",
+                            variant: "destructive",
+                        });
+                        return;
+                    }
+                } else {
+                    // Handle non-monthly packages
+                    if (!values.startDate || !values.endDate) {
+                        toast({
+                            title: "Dates Required",
+                            description: "Please select both start and end dates",
                             variant: "destructive",
                         });
                         return;
                     }
 
-                    if (!(endDate instanceof Date) || isNaN(endDate.getTime())) {
+                    try {
+                        startDate = new Date(values.startDate);
+                        startDate.setUTCHours(12, 0, 0, 0);
+
+                        endDate = new Date(values.endDate);
+                        endDate.setUTCHours(12, 0, 0, 0);
+
+                        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                            throw new Error("Invalid date values");
+                        }
+                    } catch (error) {
+                        console.error("Error processing dates:", error);
                         toast({
-                            title: "End Date is required",
-                            description: "Please select a start and end date",
+                            title: "Invalid Dates",
+                            description: "Please ensure your dates are valid",
                             variant: "destructive",
                         });
                         return;
                     }
                 }
 
-                addPackage({
-                    name: packageName!,
-                    price: parseFloat(values.price),
-                    tempId: parseInt(uuid().split('-')[0], 16),
-                    startDate: startDate?.toISOString() ?? '',
-                    endDate: endDate?.toISOString() ?? '',
-                    months: values.months ?? [],
-                    programId,
-                    memo: values.memo ?? '',
-                    entryFees: parseFloat(values.entryFees),
-                    entryFeesExplanation: showEntryFeesFields ? values.entryFeesExplanation ?? '' : null,
-                    entryFeesAppliedUntil: values.type === "Monthly" && showEntryFeesFields ?
-                        values.entryFeesAppliedUntil ?? [] : null,
-                    entryFeesStartDate: values.type !== "Monthly" && showEntryFeesFields ?
-                        values.entryFeesStartDate?.toISOString() ?? '' : null,
-                    entryFeesEndDate: values.type !== "Monthly" && showEntryFeesFields ?
-                        values.entryFeesEndDate?.toISOString() ?? '' : null,
-                    schedules: values.schedules.map(schedule => ({
-                        day: schedule.day,
-                        from: schedule.from,
-                        to: schedule.to,
-                        memo: schedule.memo ?? '',
-                        capacity: values.flexible ?
-                            (schedule.capacityType === "unlimited" ? 9999 : parseInt(schedule.capacity)) :
-                            (values.capacityType === "unlimited" ? 9999 : parseInt(values.capacity)),
-                        id: undefined,
+                try {
+                    const baseFields = {
+                        ...values,
+                        name: packageName!,
+                        price: parseFloat(values.price),
+                    };
+
+                    let startDateISO: string;
+                    let endDateISO: string;
+
+                    try {
+                        if (!(startDate instanceof Date) || isNaN(startDate.getTime())) {
+                            throw new Error("Invalid start date");
+                        }
+                        if (!(endDate instanceof Date) || isNaN(endDate.getTime())) {
+                            throw new Error("Invalid end date");
+                        }
+
+                        // Ensure we have valid dates by creating new Date objects
+                        const validStartDate = new Date(startDate);
+                        const validEndDate = new Date(endDate);
+
+                        // Set to noon UTC to avoid timezone issues
+                        validStartDate.setUTCHours(12, 0, 0, 0);
+                        validEndDate.setUTCHours(12, 0, 0, 0);
+
+                        startDateISO = validStartDate.toISOString();
+                        endDateISO = validEndDate.toISOString();
+
+                        console.log("Processed startDateISO:", startDateISO);
+                        console.log("Processed endDateISO:", endDateISO);
+                    } catch (dateError: any) {
+                        console.error("Date processing error:", dateError);
+                        console.error("StartDate:", startDate);
+                        console.error("EndDate:", endDate);
+                        throw new Error(`Invalid date format: ${dateError.message}`);
+                    }
+
+                    const withDates = {
+                        ...baseFields,
+                        startDate: startDateISO,
+                        endDate: endDateISO,
+                    };
+                    const withMonths = {
+                        ...withDates,
+                        months: values.months ?? [],
+                    };
+                    const schedules = values.schedules.map(s => {
+                        console.log("Processing schedule:", s);
+                        return {
+                            ...s,
+                            capacity: program?.flexible ?
+                                (s.capacityType === "unlimited" ? 9999 : parseInt(s.capacity)) :
+                                (values.capacityType === "unlimited" ? 9999 : parseInt(values.capacity)),
+                            createdAt: new Date().toISOString(),
+                            updatedAt: new Date().toISOString(),
+                            memo: s.memo ?? '',
+                            id: undefined,
+                            packageId: undefined
+                        };
+                    });
+                    const withSchedules = {
+                        ...withMonths,
+                        schedules,
+                    };
+                    const withEntryFees = {
+                        ...withSchedules,
+                        memo: values.memo ?? '',
+                        entryFees: parseFloat(values.entryFees),
+                        entryFeesExplanation: showEntryFeesFields ? values.entryFeesExplanation ?? '' : null,
+                        entryFeesAppliedUntil: values.type === "Monthly" && showEntryFeesFields ?
+                            values.entryFeesAppliedUntil ?? [] : null,
+                        entryFeesStartDate: values.type !== "Monthly" && showEntryFeesFields ?
+                            values.entryFeesStartDate?.toISOString() ?? null : null,
+                        entryFeesEndDate: values.type !== "Monthly" && showEntryFeesFields ?
+                            values.entryFeesEndDate?.toISOString() ?? null : null,
+                    };
+                    const addedPackage = {
+                        ...withEntryFees,
+                        capacity: program?.flexible ? null : (values.capacityType === "unlimited" ? 9999 : parseInt(values.capacity)),
+                        sessionPerWeek: values.flexible ? (values.sessionPerWeek ?? 0) : values.schedules.length,
+                        sessionDuration: values.flexible ? (values.sessionDuration ?? 0) : null,
                         createdAt: new Date().toISOString(),
                         updatedAt: new Date().toISOString(),
-                        packageId: undefined
-                    })),
-                    capacity: values.flexible ? null : (values.capacityType === "unlimited" ? 9999 : parseInt(values.capacity)),
-                    // flexible: values.flexible,
-                    sessionPerWeek: values.flexible ? (values.sessionPerWeek ?? 0) : values.schedules.length,
-                    sessionDuration: values.flexible ? (values.sessionDuration ?? 0) : null,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                })
+                        programId,
+                    };
+
+                    addPackage(addedPackage);
+                } catch (error) {
+                    console.error("Error occurred at:", error);
+                    throw error
+                }
 
                 onOpenChange(false)
                 mutate()
