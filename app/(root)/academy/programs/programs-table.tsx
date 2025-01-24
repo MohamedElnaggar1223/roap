@@ -71,7 +71,13 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
     const [selectedGender, setSelectedGender] = useState<string | null>(null)
     const [selectedType, setSelectedType] = useState<string | null>(null)
     const [selectedBranch, setSelectedBranch] = useState<string | null>(null)
-    const [filteredData, setFilteredData] = useState<Program[]>(data)
+    const [filteredData, setFilteredData] = useState<Program[]>(data.sort((a, b) => {
+        // Handle null cases
+        if (!a.createdAt) return 1
+        if (!b.createdAt) return -1
+        // Sort in descending order (newest first)
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    }))
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedRows, setSelectedRows] = useState<number[]>([])
     const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false)
@@ -84,6 +90,13 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
             .filter((program) => selectedGender ? program.gender?.includes(selectedGender) : true)
             .filter((program) => selectedType ? program.type?.toLowerCase() === selectedType?.toLowerCase() : true)
             .filter((program) => selectedBranch ? program.branchId === parseInt(selectedBranch) : true)
+            .sort((a, b) => {
+                // Handle null cases
+                if (!a.createdAt) return 1
+                if (!b.createdAt) return -1
+                // Sort in descending order (newest first)
+                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            })
 
         setFilteredData(filtered)
     }, [data])
@@ -95,6 +108,13 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
                 .filter((program) => selectedGender ? program.gender?.includes(selectedGender) : true)
                 .filter((program) => selectedType ? program.type?.toLowerCase() === selectedType?.toLowerCase() : true)
                 .filter((program) => selectedBranch ? program.branchId === parseInt(selectedBranch) : true)
+                .sort((a, b) => {
+                    // Handle null cases
+                    if (!a.createdAt) return 1
+                    if (!b.createdAt) return -1
+                    // Sort in descending order (newest first)
+                    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                })
             return filtered
         })
     }, [data, selectedSport, selectedGender, selectedType, selectedBranch])
@@ -161,13 +181,25 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
     const debouncedSearch = useDebouncedCallback((value: string) => {
         const lowercasedValue = value.toLowerCase()
         if (!lowercasedValue) {
-            setFilteredData(data)
+            setFilteredData(data.sort((a, b) => {
+                // Handle null cases
+                if (!a.createdAt) return 1
+                if (!b.createdAt) return -1
+                // Sort in descending order (newest first)
+                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            }))
         }
         else {
             const filtered = data.filter(program =>
                 program.name?.toLowerCase().includes(lowercasedValue)
             )
-            setFilteredData(filtered)
+            setFilteredData(filtered.sort((a, b) => {
+                // Handle null cases
+                if (!a.createdAt) return 1
+                if (!b.createdAt) return -1
+                // Sort in descending order (newest first)
+                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            }))
         }
     }, 300)
 

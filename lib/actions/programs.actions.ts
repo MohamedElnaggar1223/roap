@@ -449,6 +449,7 @@ export async function createProgramStore(program: Program): Promise<{
                     numberOfSeats: program.numberOfSeats,
                     type: program.type,
                     updatedAt: sql`now()`,
+                    createdAt: sql`now()`,
                     color: program.color,
                     academicId: academy.id,
                 })
