@@ -321,13 +321,33 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
                                         height={16}
                                         alt='Sports'
                                     />
-                                    {selectedSport ? academySports.find(sport => sport.id === parseInt(selectedSport))?.name : 'Sports'}
+                                    {selectedSport ? academySports.reduce((unique, sport) => {
+                                        if (!unique.some(item => item.id === sport.id)) {
+                                            unique.push(sport);
+                                        }
+                                        return unique;
+                                    }, [] as {
+                                        id: number;
+                                        image: string | null;
+                                        name: string;
+                                        locale: string;
+                                    }[]).find(sport => sport.id === parseInt(selectedSport))?.name : 'Sports'}
                                     <ChevronDown className="w-4 h-4" />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className='max-h-48 overflow-auto bg-[#F1F2E9]'>
                                 <DropdownMenuItem onClick={() => setSelectedSport(null)}>All</DropdownMenuItem>
-                                {academySports?.map(sport => (
+                                {academySports?.reduce((unique, sport) => {
+                                    if (!unique.some(item => item.id === sport.id)) {
+                                        unique.push(sport);
+                                    }
+                                    return unique;
+                                }, [] as {
+                                    id: number;
+                                    image: string | null;
+                                    name: string;
+                                    locale: string;
+                                }[]).map(sport => (
                                     <DropdownMenuItem
                                         key={sport.id}
                                         onClick={() => setSelectedSport(sport.id.toString())}
@@ -404,7 +424,17 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
                                     {program.name}
                                 </div>
                                 <div className={cn("py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter", program.pending && 'opacity-60')}>
-                                    {academySports.find(s => s.id === program.sportId)?.name}
+                                    {academySports.reduce((unique, sport) => {
+                                        if (!unique.some(item => item.id === sport.id)) {
+                                            unique.push(sport);
+                                        }
+                                        return unique;
+                                    }, [] as {
+                                        id: number;
+                                        image: string | null;
+                                        name: string;
+                                        locale: string;
+                                    }[]).find(s => s.id === program.sportId)?.name}
                                 </div>
                                 <div className={cn("py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter", program.pending && 'opacity-60')}>
                                     {branches.find(b => b.id === program.branchId)?.name}
