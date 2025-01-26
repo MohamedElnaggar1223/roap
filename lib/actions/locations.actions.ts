@@ -1,6 +1,6 @@
 'use server'
 import { db } from '@/db'
-import { branches, branchTranslations, branchFacility, branchSport, programs, reviews } from '@/db/schema'
+import { branches, branchTranslations, branchFacility, branchSport, programs, reviews, entryFeesHistory } from '@/db/schema'
 import { auth } from '@/auth'
 import { and, eq, inArray, like, not, sql } from 'drizzle-orm'
 import { revalidateTag, unstable_cache } from 'next/cache'
@@ -430,6 +430,8 @@ export async function updateLocation(id: number, data: {
         const facilitiesToAdd = data.facilities.filter(id => !existingFacilityIds.includes(typeof id === 'string' ? parseInt(id) : id))
         const facilitiesToRemove = existingFacilityIds.filter(id => !data.facilities.includes(id))
 
+        console.log("Sports to remove", sportsToRemove)
+
         await Promise.all([
             manageAssessmentPrograms(db, id, academy.id, data.sports),
             sportsToRemove.length > 0 ?
@@ -440,11 +442,26 @@ export async function updateLocation(id: number, data: {
                     )) : Promise.resolve(),
 
             sportsToRemove.length > 0 ?
-                db.delete(programs)
-                    .where(and(
-                        eq(programs.branchId, id),
-                        inArray(programs.sportId, sportsToRemove),
-                    )) : Promise.resolve(),
+                db.transaction(async (tx) => {
+                    await tx.delete(entryFeesHistory)
+                        .where(and(
+                            inArray(entryFeesHistory.programId,
+                                db.select({ id: programs.id })
+                                    .from(programs)
+                                    .where(and(
+                                        eq(programs.branchId, id),
+                                        inArray(programs.sportId, sportsToRemove)
+                                    ))
+                            )
+                        ));
+
+                    // Then delete the programs
+                    await tx.delete(programs)
+                        .where(and(
+                            eq(programs.branchId, id),
+                            inArray(programs.sportId, sportsToRemove)
+                        ));
+                }) : Promise.resolve(),
 
             sportsToAdd.length > 0 ?
                 db.insert(branchSport)
@@ -470,13 +487,13 @@ export async function updateLocation(id: number, data: {
                         createdAt: sql`now()`,
                         updatedAt: sql`now()`,
                     }))) : Promise.resolve(),
-            sportsToRemove.length > 0 ?
-                db.delete(programs)
-                    .where(and(
-                        eq(programs.branchId, id),
-                        inArray(programs.sportId, sportsToRemove),
-                        eq(programs.type, 'assessment')
-                    )) : Promise.resolve(),
+            // sportsToRemove.length > 0 ?
+            //     db.delete(programs)
+            //         .where(and(
+            //             eq(programs.branchId, id),
+            //             inArray(programs.sportId, sportsToRemove),
+            //             eq(programs.type, 'assessment')
+            //         )) : Promise.resolve(),
             // sportsToAdd.length > 0 ?
             //     manageAssessmentPrograms(db, id, academy.id, sportsToAdd) : Promise.resolve()
         ])

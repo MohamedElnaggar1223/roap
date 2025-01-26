@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from '@/db'
-import { programs, branches, branchTranslations, sports, sportTranslations, coachProgram, packages, schedules, coaches, discounts, packageDiscount } from '@/db/schema'
+import { programs, branches, branchTranslations, sports, sportTranslations, coachProgram, packages, schedules, coaches, discounts, packageDiscount, entryFeesHistory } from '@/db/schema'
 import { auth } from '@/auth'
 import { and, eq, sql, inArray, asc, not } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
@@ -1330,9 +1330,19 @@ export async function deletePrograms(ids: number[]) {
         return { error: 'Unauthorized' }
     }
 
-    await Promise.all(ids.map(async id =>
-        await db.delete(programs).where(eq(programs.id, id))
-    ))
+    await db.transaction(async (tx) => {
+        for (const id of ids) {
+            // First delete related entry fees history records
+            await tx
+                .delete(entryFeesHistory)
+                .where(eq(entryFeesHistory.programId, id));
+
+            // Then delete the program
+            await tx
+                .delete(programs)
+                .where(eq(programs.id, id));
+        }
+    });
 
     revalidatePath('/academy/programs')
     return { success: true }

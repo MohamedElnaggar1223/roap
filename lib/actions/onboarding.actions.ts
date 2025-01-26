@@ -809,7 +809,8 @@ export const academyOnBoarded = async () => {
         })
 
         await db.update(academics).set({
-            onboarded: true
+            onboarded: true,
+            updatedAt: sql`now()`
         }).where(eq(academics.id, academic?.id!))
     }
     catch (error) {
@@ -837,7 +838,8 @@ export const academyNotOnBoarded = async () => {
 
         if (academic?.onboarded) {
             await db.update(academics).set({
-                onboarded: false
+                onboarded: false,
+                updatedAt: sql`now()`
             }).where(eq(academics.id, academic?.id!))
         }
     }
