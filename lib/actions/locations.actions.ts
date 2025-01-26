@@ -425,9 +425,9 @@ export async function updateLocation(id: number, data: {
         const existingSportIds = existingSports.map(s => s.sportId)
         const existingFacilityIds = existingFacilities.map(f => f.facilityId)
 
-        const sportsToAdd = data.sports.filter(id => !existingSportIds.includes(id))
-        const sportsToRemove = existingSportIds.filter(id => !data.sports.includes(id))
-        const facilitiesToAdd = data.facilities.filter(id => !existingFacilityIds.includes(id))
+        const sportsToAdd = data.sports.filter(id => !existingSportIds.includes(typeof id === 'string' ? parseInt(id) : id))
+        const sportsToRemove = existingSportIds.filter(id => !data.sports.includes(typeof id === 'string' ? parseInt(id) : id))
+        const facilitiesToAdd = data.facilities.filter(id => !existingFacilityIds.includes(typeof id === 'string' ? parseInt(id) : id))
         const facilitiesToRemove = existingFacilityIds.filter(id => !data.facilities.includes(id))
 
         await Promise.all([
@@ -449,7 +449,7 @@ export async function updateLocation(id: number, data: {
             sportsToAdd.length > 0 ?
                 db.insert(branchSport)
                     .values(sportsToAdd.map(sportId => ({
-                        branchId: id,
+                        branchId: typeof id === 'string' ? parseInt(id) : id,
                         sportId,
                         createdAt: sql`now()`,
                         updatedAt: sql`now()`,

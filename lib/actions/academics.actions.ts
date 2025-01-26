@@ -1126,8 +1126,8 @@ export async function updateAcademyDetails(data: UpdateAcademyDetailsInput) {
 			return image
 		}))
 
-		const sportsToAdd = data.sports.filter(id => !existingSportIds.includes(id))
-		const sportsToRemove = existingSportIds.filter(id => !data.sports.includes(id))
+		const sportsToAdd = data.sports.filter(id => !existingSportIds.includes(typeof id === 'string' ? parseInt(id) : id))
+		const sportsToRemove = existingSportIds.filter(id => !data.sports.includes(typeof id === 'string' ? parseInt(id) : id))
 		const galleryToAdd = data.gallery.filter(url => !finalExistingGalleryUrls.includes(url))
 		const galleryToRemove = finalExistingGalleryUrls.filter(url => !data.gallery.includes(url!)).map(url => url?.includes('images/') ? url?.startsWith('images/') ? url : 'images/' + url?.split('images/')[1] : 'images/' + url) as string[]
 
