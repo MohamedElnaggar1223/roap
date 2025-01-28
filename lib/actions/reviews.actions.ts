@@ -26,9 +26,9 @@ if (!GOOGLE_API_KEY) {
 export async function getPlaceId(name: string): Promise<string | null> {
     try {
         console.log('Fetching place ID for:', encodeURIComponent(name))
-        const encodedName = name.replace(/\s+/g, '-');
+        // const encodedName = name.replace(/\s+/g, '-');
         const response = await fetch(
-            `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(encodedName)}&key=${GOOGLE_API_KEY}`,
+            `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(name)}&key=${GOOGLE_API_KEY}`,
             {
                 headers: {
                     'Content-Type': 'application/json',
