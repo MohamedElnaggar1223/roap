@@ -443,7 +443,7 @@ export async function updateLocation(id: number, data: {
 
                     await tx.insert(branchSportDeletionLog).values(
                         sportsToLog.map(sport => ({
-                            deleted_row_data: sport,
+                            deleted_row_data: { sportId: sport.sportId, branchId: id },
                             deleted_by_ip: clientIp as any,
                             academy_id: academy.id,
                             deleted_at: sql`now()`
