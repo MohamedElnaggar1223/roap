@@ -1,4 +1,4 @@
-import { pgTable, uniqueIndex, index, bigint, varchar, boolean, timestamp, unique, foreignKey, date, time, doublePrecision, text, integer, check, uuid, pgEnum } from "drizzle-orm/pg-core"
+import { pgTable, uniqueIndex, index, bigint, varchar, boolean, timestamp, unique, foreignKey, date, time, doublePrecision, text, integer, check, uuid, pgEnum, jsonb, inet } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 import { relations } from "drizzle-orm/relations";
 
@@ -884,6 +884,30 @@ export const notifications = pgTable("notifications", {
         }).onDelete("cascade"),
     }
 });
+
+export const branchSportDeletionLog = pgTable("branch_sport_deletion_log", {
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({
+        name: "branch_sport_deletion_log_id_seq",
+        startWith: 1000,
+        increment: 1,
+        minValue: 1,
+        maxValue: 9223372036854775807,
+        cache: 1
+    }),
+    deleted_row_data: jsonb("deleted_row_data").notNull(),
+    deleted_by_ip: inet("deleted_by_ip").notNull(),
+    academy_id: bigint("academy_id", { mode: "number" })
+        .references(() => academics.id, { onDelete: 'cascade' }),
+    deleted_at: timestamp("deleted_at", { mode: 'string' })
+        .defaultNow()
+});
+
+export const branchSportDeletionLogRelations = relations(branchSportDeletionLog, ({ one }) => ({
+    academic: one(academics, {
+        fields: [branchSportDeletionLog.academy_id],
+        references: [academics.id]
+    })
+}));
 
 export const notificationsRelations = relations(notifications, ({ one }) => ({
     user: one(users, {

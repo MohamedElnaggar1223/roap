@@ -82,7 +82,6 @@ export default function AcademyDetails() {
     const inputRef = useRef<HTMLInputElement>(null)
 
     const [selectedSports, setSelectedSports] = useState<number[]>(data?.academyDetails.sports ?? [])
-    const [sportsOpen, setSportsOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [selectedImage, setSelectedImage] = useState<FileState>({
         preview: data?.academyDetails.logo ?? '',
@@ -486,7 +485,7 @@ export default function AcademyDetails() {
                                                     {(field.value || selectedImage.preview) ? (
                                                         <div className="relative w-44 h-44">
                                                             <img
-                                                                src={selectedImage.preview || '/images/placeholder.svg'}
+                                                                src={selectedImage?.preview || '/images/placeholder.svg'}
                                                                 alt="Preview"
                                                                 width={176}
                                                                 height={176}

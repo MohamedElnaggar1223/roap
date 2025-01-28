@@ -1,6 +1,6 @@
 'use server'
 import { db } from '@/db'
-import { branches, branchTranslations, branchFacility, branchSport, programs, reviews, entryFeesHistory } from '@/db/schema'
+import { branches, branchTranslations, branchFacility, branchSport, programs, reviews, entryFeesHistory, branchSportDeletionLog } from '@/db/schema'
 import { auth } from '@/auth'
 import { and, eq, inArray, like, not, sql } from 'drizzle-orm'
 import { revalidateTag, unstable_cache } from 'next/cache'
@@ -309,7 +309,7 @@ export async function updateLocation(id: number, data: {
     facilities: number[]
     latitude?: string
     longitude?: string
-}) {
+}, headers: { 'x-forwarded-for'?: string } | null = null) {
     const session = await auth()
 
     if (!session?.user) {
@@ -432,17 +432,32 @@ export async function updateLocation(id: number, data: {
 
         console.log("Sports to remove", sportsToRemove)
 
+        const clientIp = headers?.['x-forwarded-for']?.split(',')[0] || '0.0.0.0'
+
         await Promise.all([
             manageAssessmentPrograms(db, id, academy.id, data.sports),
             sportsToRemove.length > 0 ?
-                db.delete(branchSport)
-                    .where(and(
-                        eq(branchSport.branchId, id),
-                        inArray(branchSport.sportId, sportsToRemove)
-                    )) : Promise.resolve(),
-
-            sportsToRemove.length > 0 ?
                 db.transaction(async (tx) => {
+                    // First, log the deletions
+                    const sportsToLog = existingSports.filter(s => sportsToRemove.includes(s.sportId))
+
+                    await tx.insert(branchSportDeletionLog).values(
+                        sportsToLog.map(sport => ({
+                            deleted_row_data: sport,
+                            deleted_by_ip: clientIp as any,
+                            academy_id: academy.id,
+                            deleted_at: sql`now()`
+                        }))
+                    )
+
+                    // Then delete from branch_sport
+                    await tx.delete(branchSport)
+                        .where(and(
+                            eq(branchSport.branchId, id),
+                            inArray(branchSport.sportId, sportsToRemove)
+                        ))
+
+                    // Delete related entry fees history
                     await tx.delete(entryFeesHistory)
                         .where(and(
                             inArray(entryFeesHistory.programId,
@@ -453,14 +468,14 @@ export async function updateLocation(id: number, data: {
                                         inArray(programs.sportId, sportsToRemove)
                                     ))
                             )
-                        ));
+                        ))
 
-                    // Then delete the programs
+                    // Finally delete the programs
                     await tx.delete(programs)
                         .where(and(
                             eq(programs.branchId, id),
                             inArray(programs.sportId, sportsToRemove)
-                        ));
+                        ))
                 }) : Promise.resolve(),
 
             sportsToAdd.length > 0 ?

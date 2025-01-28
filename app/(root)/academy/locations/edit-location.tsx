@@ -102,6 +102,10 @@ export default function EditLocation({ locationEdited, academySports }: Props) {
             return
         }
 
+        const headers = {
+            'x-forwarded-for': await fetch('/api/client-ip').then(res => res.text())
+        }
+
         await updateLocation(locationEdited.id, {
             facilities: selectedAmenities,
             name: values.name,
@@ -111,7 +115,7 @@ export default function EditLocation({ locationEdited, academySports }: Props) {
             isDefault: values.isDefault,
             latitude: coordinates?.latitude,
             longitude: coordinates?.longitude
-        })
+        }, headers)
         setLoading(false)
         setEditOpen(false)
         mutate()
