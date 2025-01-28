@@ -65,7 +65,7 @@ export function AcademySidebar({ onboarded, ...props }: React.ComponentProps<typ
                 </SidebarHeader>
                 <SidebarContent className="bg-[#E0E4D9]">
                     <SidebarGroup className='space-y-2'>
-                        <Link href='/academy' className='h-10 rounded-[12px] overflow-hidden'>
+                        <Link prefetch={true} href='/academy' className='h-10 rounded-[12px] overflow-hidden'>
                             <SidebarMenuButton className={cn('h-full text-sm', pathname?.includes('/academy') && 'bg-[#F1F2E9]')} tooltip='Academy'>
                                 <Image src='/images/academy.svg' width={20} height={20} alt='academy' />
                                 <span>Academy</span>
