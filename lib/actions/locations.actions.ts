@@ -436,6 +436,14 @@ export async function updateLocation(id: number, data: {
 
         await Promise.all([
             manageAssessmentPrograms(db, id, academy.id, data.sports),
+            sportsToAdd.length > 0 ?
+                db.insert(branchSport)
+                    .values(sportsToAdd.map(sportId => ({
+                        branchId: typeof id === 'string' ? parseInt(id) : id,
+                        sportId,
+                        createdAt: sql`now()`,
+                        updatedAt: sql`now()`,
+                    }))) : Promise.resolve(),
             sportsToRemove.length > 0 ?
                 db.transaction(async (tx) => {
                     // First, log the deletions
@@ -477,15 +485,6 @@ export async function updateLocation(id: number, data: {
                             inArray(programs.sportId, sportsToRemove)
                         ))
                 }) : Promise.resolve(),
-
-            sportsToAdd.length > 0 ?
-                db.insert(branchSport)
-                    .values(sportsToAdd.map(sportId => ({
-                        branchId: typeof id === 'string' ? parseInt(id) : id,
-                        sportId,
-                        createdAt: sql`now()`,
-                        updatedAt: sql`now()`,
-                    }))) : Promise.resolve(),
 
             facilitiesToRemove.length > 0 ?
                 db.delete(branchFacility)

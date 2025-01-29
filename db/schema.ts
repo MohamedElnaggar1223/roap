@@ -909,6 +909,51 @@ export const branchSportDeletionLogRelations = relations(branchSportDeletionLog,
     })
 }));
 
+export const branchSportViolations = pgTable("branch_sport_violations", {
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({
+        name: "branch_sport_violations_id_seq",
+        startWith: 1000,
+        increment: 1,
+        minValue: 1,
+        maxValue: 9223372036854775807,
+        cache: 1
+    }),
+    branchId: bigint("branch_id", { mode: "number" })
+        .references(() => branches.id, { onDelete: 'cascade' })
+        .notNull(),
+    attemptedAt: timestamp("attempted_at", { mode: 'string' }).defaultNow().notNull(),
+    violationType: varchar("violation_type", { length: 255 }).notNull(),
+    details: jsonb("details").notNull(),
+    createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+});
+
+// Table for tracking any deletions in the sports table
+export const sportDeletionAudit = pgTable("sport_deletion_audit", {
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({
+        name: "sport_deletion_audit_id_seq",
+        startWith: 1000,
+        increment: 1,
+        minValue: 1,
+        maxValue: 9223372036854775807,
+        cache: 1
+    }),
+    tableName: varchar("table_name", { length: 255 }).notNull(),
+    recordId: bigint("record_id", { mode: "number" }).notNull(),
+    deletedAt: timestamp("deleted_at", { mode: 'string' }).defaultNow().notNull(),
+    deletedBy: varchar("deleted_by", { length: 255 }),
+    deletionContext: jsonb("deletion_context").notNull(),
+    createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+});
+
+export const branchSportViolationsRelations = relations(branchSportViolations, ({ one }) => ({
+    branch: one(branches, {
+        fields: [branchSportViolations.branchId],
+        references: [branches.id],
+    }),
+}));
+
 export const notificationsRelations = relations(notifications, ({ one }) => ({
     user: one(users, {
         fields: [notifications.userId],

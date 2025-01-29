@@ -1160,9 +1160,38 @@ export async function updateAcademyDetails(data: UpdateAcademyDetailsInput) {
 				))
 
 			if (sportsToRemove.length > 0) {
+				const branchesWithoutSports = await tx
+					.select({
+						branchId: branches.id,
+						remainingSports: sql<number>`count(DISTINCT CASE 
+                            WHEN ${branchSport.sportId} NOT IN (${sql.join(sportsToRemove)}) 
+                            THEN ${branchSport.sportId} 
+                            END)`
+					})
+					.from(branches)
+					.leftJoin(branchSport, eq(branches.id, branchSport.branchId))
+					.where(eq(branches.academicId, academy.id))
+					.groupBy(branches.id);
+
+				const branchesWithZeroSports = branchesWithoutSports.filter(b => Number(b.remainingSports) === 0);
+
+				if (branchesWithZeroSports.length > 0) {
+					throw new Error("BRANCHES_WITHOUT_SPORTS");
+				}
+
 				// First remove the sport from all branches
 				await tx.delete(branchSport)
-					.where(inArray(branchSport.sportId, sportsToRemove))
+					.where(
+						and(
+							inArray(branchSport.sportId, sportsToRemove),
+							inArray(
+								branchSport.branchId,
+								db.select({ id: branches.id })
+									.from(branches)
+									.where(eq(branches.academicId, academy.id))
+							)
+						)
+					)
 
 				// Then remove all assessments for this sport
 				await tx.delete(programs)
@@ -1220,6 +1249,13 @@ export async function updateAcademyDetails(data: UpdateAcademyDetailsInput) {
 		console.error('Error updating academy details:', error)
 
 		if (error instanceof Error) {
+			if (error.message === "BRANCHES_WITHOUT_SPORTS") {
+				return {
+					error: "Cannot remove sports that would leave locations without any sports. Please add new sports to affected locations first.",
+					field: "sports"
+				};
+			}
+
 			return {
 				error: error.message,
 				field: 'root'

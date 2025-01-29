@@ -224,18 +224,39 @@ export default function AcademyDetails() {
             })
 
             if (result.error) {
-                if (result?.field) {
+                // Reset sports selection if error is related to sports
+                if (result.field === 'sports') {
+                    setSelectedSports(data?.academyDetails.sports ?? []);
+                    form.reset({
+                        policy: data?.academyDetails.policy ?? '',
+                        entryFees: data?.academyDetails.entryFees ?? 0,
+                        extra: data?.academyDetails.extra ?? '',
+                        name: data?.academyDetails.name ?? '',
+                        logo: data?.academyDetails.logo ?? '',
+                        description: data?.academyDetails.description ?? '',
+                        gallery: data?.academyDetails.gallery ?? [],
+                    });
+                    toast({
+                        title: "Error",
+                        description: result.error,
+                        variant: "destructive"
+                    });
+                    return;
+                }
+
+                if (result.field) {
                     form.setError(result.field as any, {
                         type: 'custom',
                         message: result.error
-                    })
-                    return
+                    });
+                    return;
                 }
+
                 form.setError('root', {
                     type: 'custom',
                     message: result.error
-                })
-                return
+                });
+                return;
             }
 
             if (selectedImage.preview) {
@@ -273,11 +294,26 @@ export default function AcademyDetails() {
     }
 
     const handleSelectSport = (id: number) => {
-        if (loading) return
-        setSelectedSports(prev =>
-            prev.includes(id) ? prev.filter(sportId => sportId !== id) : [...prev, id]
-        )
-    }
+        if (loading) return;
+
+        setSelectedSports(prev => {
+            const newSelection = prev.includes(id)
+                ? prev.filter(sportId => sportId !== id)
+                : [...prev, id];
+
+            // Prevent empty selection
+            if (newSelection.length === 0) {
+                toast({
+                    title: "Error",
+                    description: "At least one sport must be selected",
+                    variant: "destructive"
+                });
+                return prev;
+            }
+
+            return newSelection;
+        });
+    };
 
     useEffect(() => {
         return () => {
