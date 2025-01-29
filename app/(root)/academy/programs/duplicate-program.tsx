@@ -54,7 +54,7 @@ export default function DuplicateProgramDialog({ open, onOpenChange, program, br
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="bg-main-white max-w-md">
+            <DialogContent className="bg-main-white max-w-2xl">
                 <DialogHeader className="flex flex-row pr-6 text-center items-center justify-between gap-2">
                     <DialogTitle className="font-normal text-base">Duplicate Program</DialogTitle>
                 </DialogHeader>
