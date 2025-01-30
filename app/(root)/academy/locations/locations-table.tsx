@@ -200,7 +200,7 @@ export function LocationsDataTable({ data, sports, academySports }: LocationsDat
                                         aria-label={`Select ${location.name}`}
                                     />
                                 </div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{location.name} {location.id}</div>
+                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{location.name}</div>
                                 <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{location.amenities?.length ?? 0}</div>
                                 <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{location.sports?.length}</div>
                                 <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{location.rate}</div>
