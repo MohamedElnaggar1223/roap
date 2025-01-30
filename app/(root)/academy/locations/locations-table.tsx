@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, Fragment, useEffect } from 'react'
-import { ChevronDown, Loader2, SearchIcon, Trash2Icon } from 'lucide-react'
+import { useState, Fragment, useEffect, useCallback } from 'react'
+import { ChevronDown, Eye, EyeOff, Loader2, SearchIcon, Trash2Icon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -16,9 +16,10 @@ import { useDebouncedCallback } from 'use-debounce'
 import Image from 'next/image'
 import EditLocation from './edit-location'
 import { useRouter } from 'next/navigation'
-import { deleteLocations } from '@/lib/actions/locations.actions'
+import { deleteLocations, toggleBranchVisibility } from '@/lib/actions/locations.actions'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useOnboarding } from '@/providers/onboarding-provider'
+import { useToast } from '@/hooks/use-toast'
 
 interface Location {
     id: number
@@ -30,6 +31,7 @@ interface Location {
     sports: string[]
     amenities: string[]
     locale: string
+    hidden: boolean
 }
 
 interface Sport {
@@ -55,7 +57,9 @@ export function LocationsDataTable({ data, sports, academySports }: LocationsDat
     const [selectedRows, setSelectedRows] = useState<number[]>([])
     const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false)
     const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+    const [pendingVisibilityToggles, setPendingVisibilityToggles] = useState<number[]>([])
     const { mutate } = useOnboarding()
+    const { toast } = useToast()
 
     const handleSelectLocation = (id: number) => {
         setSelectedLocations(prev =>
@@ -102,6 +106,34 @@ export function LocationsDataTable({ data, sports, academySports }: LocationsDat
         setBulkDeleteLoading(false)
         setBulkDeleteOpen(false)
     }
+
+    const handleVisibilityToggle = useCallback(async (locationId: number, e: React.MouseEvent) => {
+        e.stopPropagation() // Prevent row selection
+
+        // Add to pending state
+        setPendingVisibilityToggles(prev => [...prev, locationId])
+
+        try {
+            const result = await toggleBranchVisibility(locationId)
+            if (result.error) {
+                toast({
+                    title: "Error",
+                    description: result.error,
+                    variant: "destructive",
+                })
+            }
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "Failed to toggle visibility",
+                variant: "destructive",
+            })
+        } finally {
+            // Remove from pending state
+            setPendingVisibilityToggles(prev => prev.filter(id => id !== locationId))
+            router.refresh()
+        }
+    }, [router])
 
     useEffect(() => {
         setFilteredData(() => {
@@ -171,7 +203,7 @@ export function LocationsDataTable({ data, sports, academySports }: LocationsDat
             </div>
 
             <div className="w-full max-w-screen-2xl overflow-x-auto">
-                <div className="min-w-full grid grid-cols-[auto,0.75fr,auto,auto,auto,auto,auto] gap-y-2 text-nowrap">
+                <div className="min-w-full grid grid-cols-[auto,0.75fr,auto,auto,auto,auto,auto,auto] gap-y-2 text-nowrap">
                     {/* Header */}
                     <div className="contents">
                         <div className="py-4 px-4 flex items-center justify-center">
@@ -186,6 +218,7 @@ export function LocationsDataTable({ data, sports, academySports }: LocationsDat
                         <div className="py-4 px-4">Sports</div>
                         <div className="py-4 px-4">Rate</div>
                         <div className="py-4 px-4">Is Default</div>
+                        <div className="py-4 px-4">Visibility</div>
                         <div className="py-4 px-4"></div>
                     </div>
 
@@ -208,6 +241,23 @@ export function LocationsDataTable({ data, sports, academySports }: LocationsDat
                                     <span className={location.isDefault ? "text-main-green" : "text-red-600"}>
                                         {location.isDefault ? "Yes" : "No"}
                                     </span>
+                                </div>
+                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="hover:bg-transparent"
+                                        disabled={pendingVisibilityToggles.includes(location.id)}
+                                        onClick={(e) => handleVisibilityToggle(location.id, e)}
+                                    >
+                                        {pendingVisibilityToggles.includes(location.id) ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : location.hidden ? (
+                                            <EyeOff className="h-4 w-4" />
+                                        ) : (
+                                            <Eye className="h-4 w-4" />
+                                        )}
+                                    </Button>
                                 </div>
                                 <div className="py-4 px-4 bg-main-white rounded-r-[20px] flex items-center justify-end font-bold font-inter">
                                     <EditLocation locationEdited={location} academySports={academySports} />

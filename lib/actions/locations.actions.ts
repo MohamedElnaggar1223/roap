@@ -19,6 +19,7 @@ const getLocationsAction = async (academicId: number) => {
                 url: branches.url,
                 isDefault: branches.isDefault,
                 rate: branches.rate,
+                hidden: branches.hidden,
                 sports: sql<string[]>`(
                 SELECT COALESCE(array_agg(sport_id), ARRAY[]::integer[])
                 FROM ${branchSport}
@@ -522,6 +523,62 @@ export async function updateLocation(id: number, data: {
     finally {
         revalidateTag(`locations-${academy?.id}`)
         revalidateTag(`programs-${academy?.id}`)
+    }
+}
+
+export async function toggleBranchVisibility(id: number) {
+    const session = await auth()
+
+    if (!session?.user) {
+        return { error: 'You are not authorized to perform this action' }
+    }
+
+    const cookieStore = await cookies()
+    const impersonatedId = session.user.role === 'admin'
+        ? cookieStore.get('impersonatedAcademyId')?.value
+        : null
+
+    const academicId = session.user.role === 'admin' && impersonatedId
+        ? parseInt(impersonatedId)
+        : parseInt(session.user.id)
+
+    if (session.user.role !== 'admin' && session.user.role !== 'academic') {
+        return { error: 'You are not authorized to perform this action' }
+    }
+
+    const academy = await db.query.academics.findFirst({
+        where: (academics, { eq }) => eq(academics.userId, academicId),
+        columns: {
+            id: true,
+        }
+    })
+
+    if (!academy) return { error: 'Academy not found' }
+
+    try {
+        // First get current hidden status
+        const branch = await db.query.branches.findFirst({
+            where: (branches, { eq }) => eq(branches.id, id),
+            columns: {
+                hidden: true
+            }
+        })
+
+        if (!branch) return { error: 'Branch not found' }
+
+        // Toggle the hidden status
+        await db.update(branches)
+            .set({
+                hidden: !branch.hidden,
+                updatedAt: sql`now()`
+            })
+            .where(eq(branches.id, id))
+
+        revalidateTag(`locations-${academy.id}`)
+        return { success: true }
+    } catch (error) {
+        console.error('Error toggling branch visibility:', error)
+        return { error: 'Failed to toggle branch visibility' }
     }
 }
 

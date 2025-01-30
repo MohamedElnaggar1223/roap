@@ -462,6 +462,7 @@ export const branches = pgTable("branches", {
     url: text().default(sql`NULL`),
     placeId: varchar("place_id", { length: 255 }).default(sql`NULL`),
     nameInGoogleMap: varchar("name_in_google_map", { length: 255 }).default(sql`NULL`),
+    hidden: boolean("hidden").default(false).notNull(),
 }, (table) => {
     return {
         // slugUnique: uniqueIndex("branches_slug_unique").using("btree", table.slug.asc().nullsLast().op("text_ops")),
