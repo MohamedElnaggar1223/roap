@@ -280,122 +280,123 @@ export default function Calendar() {
 				<BookingDialog setRefetch={setRefetch} />
 				{/* <AddBlock setRefetch={setRefetch} /> */}
 			</div>
-			<div className="w-full max-w-7xl mx-auto p-2 sm:p-4 bg-[#E0E4D9]">
+			<div className="w-full max-w-full overflow-x-auto lg:max-w-7xl mx-auto p-2 sm:p-3 lg:p-4 bg-[#E0E4D9]">
 				{/* Header */}
-				<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 bg-[#E0E4D9] p-2 sm:p-4 rounded-lg">
-					<div className="flex flex-wrap items-center gap-2 mb-2 sm:mb-0">
-						<span className="text-sm font-medium">Filters:</span>
-
-						{/* Location Filter */}
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
-									<MapPin className="h-4 w-4" />
-									{selectedLocation || 'Locations'}
-									<ChevronDown className="w-4 h-4" />
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent className='bg-[#F1F2E9]'>
-								<DropdownMenuItem onClick={() => setSelectedLocation(null)}>
-									All Locations
-								</DropdownMenuItem>
-								{locations.map(location => (
-									<DropdownMenuItem
-										key={location}
-										onClick={() => setSelectedLocation(location)}
-									>
-										{location}
+				<div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 bg-[#E0E4D9] p-2 sm:p-3 lg:p-4 rounded-lg">
+					<div className="flex flex-wrap items-center gap-2 mb-2 sm:mb-0 w-full sm:w-auto">
+						<span className="text-sm font-medium whitespace-nowrap">Filters:</span>
+						<div className="flex flex-wrap gap-2 w-full sm:w-auto">
+							{/* Location Filter */}
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
+										<MapPin className="h-4 w-4" />
+										{selectedLocation || 'Locations'}
+										<ChevronDown className="w-4 h-4" />
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent className='bg-[#F1F2E9]'>
+									<DropdownMenuItem onClick={() => setSelectedLocation(null)}>
+										All Locations
 									</DropdownMenuItem>
-								))}
-							</DropdownMenuContent>
-						</DropdownMenu>
+									{locations.map(location => (
+										<DropdownMenuItem
+											key={location}
+											onClick={() => setSelectedLocation(location)}
+										>
+											{location}
+										</DropdownMenuItem>
+									))}
+								</DropdownMenuContent>
+							</DropdownMenu>
 
-						{/* Sports Filter */}
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
-									<Image
-										src='/images/sports.svg'
-										width={16}
-										height={16}
-										alt='Sports'
-									/>
-									{selectedSport || 'Sports'}
-									<ChevronDown className="w-4 h-4" />
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent className='bg-[#F1F2E9]'>
-								<DropdownMenuItem onClick={() => setSelectedSport(null)}>
-									All Sports
-								</DropdownMenuItem>
-								{sports.map(sport => (
-									<DropdownMenuItem
-										key={sport}
-										onClick={() => setSelectedSport(sport)}
-									>
-										{sport}
+							{/* Sports Filter */}
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
+										<Image
+											src='/images/sports.svg'
+											width={16}
+											height={16}
+											alt='Sports'
+										/>
+										{selectedSport || 'Sports'}
+										<ChevronDown className="w-4 h-4" />
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent className='bg-[#F1F2E9]'>
+									<DropdownMenuItem onClick={() => setSelectedSport(null)}>
+										All Sports
 									</DropdownMenuItem>
-								))}
-							</DropdownMenuContent>
-						</DropdownMenu>
+									{sports.map(sport => (
+										<DropdownMenuItem
+											key={sport}
+											onClick={() => setSelectedSport(sport)}
+										>
+											{sport}
+										</DropdownMenuItem>
+									))}
+								</DropdownMenuContent>
+							</DropdownMenu>
 
-						{/* Packages Filter */}
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
-									<Image
-										src='/images/sports.svg'
-										width={16}
-										height={16}
-										alt='Programs'
-									/>
-									{selectedProgram || 'Programs'}
-									<ChevronDown className="w-4 h-4" />
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent className='bg-[#F1F2E9]'>
-								<DropdownMenuItem onClick={() => setSelectedProgram(null)}>
-									All Programs
-								</DropdownMenuItem>
-								{programs.map(program => (
-									<DropdownMenuItem
-										key={program}
-										onClick={() => setSelectedProgram(program)}
-									>
-										{program}
+							{/* Packages Filter */}
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
+										<Image
+											src='/images/sports.svg'
+											width={16}
+											height={16}
+											alt='Programs'
+										/>
+										{selectedProgram || 'Programs'}
+										<ChevronDown className="w-4 h-4" />
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent className='bg-[#F1F2E9]'>
+									<DropdownMenuItem onClick={() => setSelectedProgram(null)}>
+										All Programs
 									</DropdownMenuItem>
-								))}
-							</DropdownMenuContent>
-						</DropdownMenu>
+									{programs.map(program => (
+										<DropdownMenuItem
+											key={program}
+											onClick={() => setSelectedProgram(program)}
+										>
+											{program}
+										</DropdownMenuItem>
+									))}
+								</DropdownMenuContent>
+							</DropdownMenu>
 
-						{/* Coaches Filter */}
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
-									<Image
-										src='/images/sports.svg'
-										width={16}
-										height={16}
-										alt='Gender'
-									/>
-									{selectedGender || 'For'}
-									<ChevronDown className="w-4 h-4" />
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent className='bg-[#F1F2E9]'>
-								<DropdownMenuItem onClick={() => setSelectedGender(null)}>
-									All Genders
-								</DropdownMenuItem>
-								{availableGenders.map(gender => (
-									<DropdownMenuItem
-										key={gender}
-										onClick={() => setSelectedGender(gender ?? '')}
-									>
-										{gender?.slice(0, 1).toUpperCase()}{gender?.slice(1)}
+							{/* Coaches Filter */}
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
+										<Image
+											src='/images/sports.svg'
+											width={16}
+											height={16}
+											alt='Gender'
+										/>
+										{selectedGender || 'For'}
+										<ChevronDown className="w-4 h-4" />
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent className='bg-[#F1F2E9]'>
+									<DropdownMenuItem onClick={() => setSelectedGender(null)}>
+										All Genders
 									</DropdownMenuItem>
-								))}
-							</DropdownMenuContent>
-						</DropdownMenu>
+									{availableGenders.map(gender => (
+										<DropdownMenuItem
+											key={gender}
+											onClick={() => setSelectedGender(gender ?? '')}
+										>
+											{gender?.slice(0, 1).toUpperCase()}{gender?.slice(1)}
+										</DropdownMenuItem>
+									))}
+								</DropdownMenuContent>
+							</DropdownMenu>
+						</div>
 					</div>
 
 					<div className="flex items-center gap-2">

@@ -42,10 +42,11 @@ const formatTime = (time: string) => {
 
 const COLORS = ['#AA7CBF', '#87B28A', '#87B2B2', '#E5DCAE']
 
-const CustomPieChart = ({ data, title, isTime }: {
+const CustomPieChart = ({ data, title, isTime, className }: {
     data: Array<{ name: string | null; count: number }>,
     title: string,
     isTime?: boolean
+    className?: string
 }) => {
     // Check if data is empty or all counts are 0
     const hasData = data.length > 0 && data.some(item => item.count > 0)
@@ -56,9 +57,9 @@ const CustomPieChart = ({ data, title, isTime }: {
     // If no data, display a message
     if (!hasData) {
         return (
-            <Card className="p-4 bg-[#F1F2E9] border-none shadow-none">
-                <h3 className="text-lg font-semibold mb-4 text-[#1F441F] font-inter">{title}</h3>
-                <div className="h-[300px] flex items-center justify-center">
+            <Card className="p-4 bg-[#F1F2E9] border-none shadow-none w-full">
+                <h3 className="text-base md:text-lg font-semibold mb-4 text-[#1F441F] font-inter">{title}</h3>
+                <div className="h-[200px] md:h-[300px] flex items-center justify-center">
                     <p className="text-[#6A6C6A] text-sm">No data yet</p>
                 </div>
             </Card>
@@ -70,7 +71,7 @@ const CustomPieChart = ({ data, title, isTime }: {
         const { payload } = props
 
         return (
-            <ul className="flex flex-col gap-2">
+            <ul className="flex flex-col gap-1 md:gap-2 text-xs md:text-sm">
                 {payload.map((entry: any, index: number) => {
                     const percentage = ((entry.payload.count / total) * 100).toFixed(1)
                     const displayName = isTime && entry.value !== 'Others'
@@ -78,16 +79,10 @@ const CustomPieChart = ({ data, title, isTime }: {
                         : entry.value
 
                     return (
-                        <li
-                            key={`item-${index}`}
-                            className="flex items-center gap-2 text-sm w-full"
-                        >
-                            <span
-                                className="w-3 h-3 rounded-full"
-                                style={{ backgroundColor: entry.color }}
-                            />
-                            <span className="text-[#1F441F] flex items-center justify-between gap-4 w-full font-inter">
-                                <p>{displayName}  </p>
+                        <li key={`item-${index}`} className="flex items-center gap-1 md:gap-2">
+                            <span className="w-2 md:w-3 h-2 md:h-3 rounded-full" style={{ backgroundColor: entry.color }} />
+                            <span className="text-[#1F441F] flex items-center justify-between gap-2 md:gap-4 w-full font-inter">
+                                <p className="truncate max-w-[100px] md:max-w-full">{displayName}</p>
                                 <span className="text-xs text-[#6A6C6A]">{percentage}%</span>
                             </span>
                         </li>
@@ -98,9 +93,9 @@ const CustomPieChart = ({ data, title, isTime }: {
     }
 
     return (
-        <Card className="p-4 bg-[#F1F2E9] border-none shadow-none">
-            <h3 className="text-lg font-semibold mb-4 text-[#1F441F] font-inter">{title}</h3>
-            <ResponsiveContainer width="100%" height={300}>
+        <Card className="p-3 md:p-4 bg-[#F1F2E9] border-none shadow-none w-full">
+            <h3 className="text-base md:text-lg font-semibold mb-2 md:mb-4 text-[#1F441F] font-inter">{title}</h3>
+            <ResponsiveContainer width="100%" height={200} className="hidden 2xl:block">
                 <PieChart>
                     <Pie
                         data={data}
@@ -109,6 +104,29 @@ const CustomPieChart = ({ data, title, isTime }: {
                         cx="50%"
                         cy="50%"
                         outerRadius={80}
+                        fill="#DCE5AE"
+                    >
+                        {data.map((_, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                    </Pie>
+                    <Legend
+                        content={renderLegend}
+                        layout="vertical"
+                        align="right"
+                        verticalAlign="middle"
+                    />
+                </PieChart>
+            </ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={150} className="2xl:hidden">
+                <PieChart layout='vertical'>
+                    <Pie
+                        data={data}
+                        dataKey="count"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={40}
                         fill="#DCE5AE"
                     >
                         {data.map((_, index) => (
@@ -259,188 +277,172 @@ export function DashboardClient({ stats }: { stats: DashboardStats }) {
     const transformedBranchTraffic = useMemo(() => transformData(filteredStats.branchTraffic, 'name'), [filteredStats.branchTraffic])
 
     return (
-        <div className="space-y-8 p-6 font-inter">
+        <div className="space-y-3 sm:space-y-4 lg:space-y-8 p-3 sm:p-4 lg:p-6 font-inter">
             {/* Filters Section */}
-            <div className="flex flex-wrap items-center gap-2 mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2 sm:mb-3 lg:mb-4">
+                <span className="text-xs sm:text-sm font-medium">Filters:</span>
+                <div className="flex flex-wrap gap-2">
+                    {/* Date Filter */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="text-xs sm:text-sm px-2 sm:px-3 lg:px-4 gap-1 sm:gap-2 rounded-xl border border-none shadow-none hover:bg-transparent bg-transparent w-full sm:w-auto">
+                                {selectedDate === 'none' ? 'Date' : selectedDate}
+                                <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="bg-[#F1F2E9] min-w-[120px] sm:min-w-[140px]">
+                            <DropdownMenuItem onClick={() => setSelectedDate('none')}>None</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setSelectedDate('today')}>Today</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setSelectedDate('last week')}>Last Week</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setSelectedDate('last month')}>Last Month</DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
 
-                <span className="text-sm font-medium">Filters:</span>
+                    {/* Location Filter */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="text-xs sm:text-sm px-2 sm:px-3 lg:px-4 gap-1 sm:gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9] w-full sm:w-auto">
+                                {selectedLocation || 'Locations'}
+                                <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="bg-[#F1F2E9] min-w-[120px] sm:min-w-[140px]">
+                            <DropdownMenuItem onClick={() => setSelectedLocation(null)}>All Locations</DropdownMenuItem>
+                            {locations.map(location => (
+                                <DropdownMenuItem key={location} onClick={() => setSelectedLocation(location)}>
+                                    {location}
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
 
-                {/* Date Filter */}
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="gap-2 rounded-xl border border-none shadow-none hover:bg-transparent bg-transparent">
-                            {selectedDate === 'none' ? 'Date' : selectedDate}
-                            <ChevronDown className="w-4 h-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className='bg-[#F1F2E9]'>
-                        <DropdownMenuItem onClick={() => setSelectedDate('none')}>
-                            None
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setSelectedDate('today')}>
-                            Today
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setSelectedDate('last week')}>
-                            Last Week
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setSelectedDate('last month')}>
-                            Last Month
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                    {/* Sport Filter */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="text-xs sm:text-sm px-2 sm:px-3 lg:px-4 gap-1 sm:gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9] w-full sm:w-auto">
+                                {selectedSport || 'Sports'}
+                                <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="bg-[#F1F2E9] min-w-[120px] sm:min-w-[140px]">
+                            <DropdownMenuItem onClick={() => setSelectedSport(null)}>All Sports</DropdownMenuItem>
+                            {sports.map(sport => (
+                                <DropdownMenuItem key={sport} onClick={() => setSelectedSport(sport)}>
+                                    {sport}
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
 
-                {/* Location Filter */}
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
-                            {selectedLocation || 'Locations'}
-                            <ChevronDown className="w-4 h-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className='bg-[#F1F2E9]'>
-                        <DropdownMenuItem onClick={() => setSelectedLocation(null)}>
-                            All Locations
-                        </DropdownMenuItem>
-                        {locations.map(location => (
-                            <DropdownMenuItem
-                                key={location}
-                                onClick={() => setSelectedLocation(location)}
-                            >
-                                {location}
-                            </DropdownMenuItem>
-                        ))}
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                    {/* Program Filter */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="text-xs sm:text-sm px-2 sm:px-3 lg:px-4 gap-1 sm:gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9] w-full sm:w-auto">
+                                {selectedProgram || 'Programs'}
+                                <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="bg-[#F1F2E9] min-w-[120px] sm:min-w-[140px]">
+                            <DropdownMenuItem onClick={() => setSelectedProgram(null)}>All Programs</DropdownMenuItem>
+                            {programs.map(program => (
+                                <DropdownMenuItem key={program} onClick={() => setSelectedProgram(program)}>
+                                    {program}
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
 
-                {/* Sport Filter */}
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
-                            {selectedSport || 'Sports'}
-                            <ChevronDown className="w-4 h-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className='bg-[#F1F2E9]'>
-                        <DropdownMenuItem onClick={() => setSelectedSport(null)}>
-                            All Sports
-                        </DropdownMenuItem>
-                        {sports.map(sport => (
-                            <DropdownMenuItem
-                                key={sport}
-                                onClick={() => setSelectedSport(sport)}
-                            >
-                                {sport}
-                            </DropdownMenuItem>
-                        ))}
-                    </DropdownMenuContent>
-                </DropdownMenu>
-
-                {/* Program Filter */}
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
-                            {selectedProgram || 'Programs'}
-                            <ChevronDown className="w-4 h-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className='bg-[#F1F2E9]'>
-                        <DropdownMenuItem onClick={() => setSelectedProgram(null)}>
-                            All Programs
-                        </DropdownMenuItem>
-                        {programs.map(program => (
-                            <DropdownMenuItem
-                                key={program}
-                                onClick={() => setSelectedProgram(program)}
-                            >
-                                {program}
-                            </DropdownMenuItem>
-                        ))}
-                    </DropdownMenuContent>
-                </DropdownMenu>
-
-                {/* Gender Filter */}
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9]">
-                            {selectedGender || 'For'}
-                            <ChevronDown className="w-4 h-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className='bg-[#F1F2E9]'>
-                        <DropdownMenuItem onClick={() => setSelectedGender(null)}>
-                            All Genders
-                        </DropdownMenuItem>
-                        {availableGenders.map(gender => (
-                            <DropdownMenuItem
-                                key={gender}
-                                onClick={() => setSelectedGender(gender)}
-                            >
-                                {gender}
-                            </DropdownMenuItem>
-                        ))}
-                    </DropdownMenuContent>
-                </DropdownMenu>
-
-
+                    {/* Gender Filter */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="text-xs sm:text-sm px-2 sm:px-3 lg:px-4 gap-1 sm:gap-2 rounded-xl border border-[#868685] bg-[#F1F2E9] w-full sm:w-auto">
+                                {selectedGender || 'For'}
+                                <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="bg-[#F1F2E9] min-w-[120px] sm:min-w-[140px]">
+                            <DropdownMenuItem onClick={() => setSelectedGender(null)}>All Genders</DropdownMenuItem>
+                            {availableGenders.map(gender => (
+                                <DropdownMenuItem key={gender} onClick={() => setSelectedGender(gender)}>
+                                    {gender}
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
             </div>
-            {/* Top Section */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <Card className="p-6 space-y-4 bg-[#F1F2E9] shadow-none border-none col-span-1">
-                    <h3 className="text-sm font-normal mb-2 text-[#1F441F] font-inter">New Bookings</h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+                <Card className="p-4 sm:p-5 lg:p-6 space-y-2 sm:space-y-3 lg:space-y-4 bg-[#F1F2E9] shadow-none border-none">
+                    <h3 className="text-xs sm:text-sm font-normal mb-1 sm:mb-2 text-[#1F441F] font-inter">New Bookings</h3>
                     <div className="flex items-center justify-between">
-                        <p className="text-3xl font-bold text-[#1F441F] font-inter">
+                        <p className="text-lg sm:text-xl lg:text-2xl font-bold text-[#1F441F] font-inter">
                             {isNaN(filteredStats.currentMonthCount) ? 'No data yet' : filteredStats.currentMonthCount}
                         </p>
                         {!isNaN(percentageChange) && (
-                            <div className={`flex items-center ${percentageChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {percentageChange >= 0 ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
+                            <div className={`flex items-center text-xs sm:text-sm ${percentageChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {percentageChange >= 0 ? <ArrowUp className="w-3 h-3 sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4" /> : <ArrowDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4" />}
                                 <span className="ml-1">{Math.abs(percentageChange).toFixed(1)}%</span>
                             </div>
                         )}
                     </div>
                 </Card>
 
-                <Card className="p-6 space-y-4 bg-[#F1F2E9] shadow-none border-none col-span-3">
-                    <h3 className="text-sm font-normal mb-2 text-[#1F441F] font-inter">Total Bookings</h3>
-                    <p className="text-3xl font-bold text-[#1F441F] font-inter">
+                <Card className="p-4 sm:p-5 lg:p-6 space-y-2 sm:space-y-3 lg:space-y-4 bg-[#F1F2E9] shadow-none border-none sm:col-span-1 lg:col-span-3">
+                    <h3 className="text-xs sm:text-sm font-normal mb-1 sm:mb-2 text-[#1F441F] font-inter">Total Bookings</h3>
+                    <p className="text-lg sm:text-xl lg:text-2xl font-bold text-[#1F441F] font-inter">
                         {isNaN(filteredStats.totalBookings) ? 'No data yet' : filteredStats.totalBookings}
                     </p>
                 </Card>
             </div>
 
-
-
-            {/* Middle Section */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-[#F1F2E9] rounded-[24px]">
-                <CustomPieChart
-                    data={transformedTimeTraffic as any}
-                    title="Traffic by Time"
-                    isTime
-                />
-                <CustomPieChart
-                    data={transformedPackageTraffic as any}
-                    title="Traffic by Package"
-                />
-                <CustomPieChart
-                    data={transformedProgramTraffic as any}
-                    title="Traffic by Program"
-                />
+            {/* First Row */}
+            <div className="bg-[#F1F2E9] rounded-[24px] p-2 sm:p-3 lg:p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+                    <div className="w-full min-w-0">
+                        <CustomPieChart
+                            data={transformedTimeTraffic as any}
+                            title="Traffic by Time"
+                            isTime
+                        />
+                    </div>
+                    <div className="w-full min-w-0">
+                        <CustomPieChart
+                            data={transformedPackageTraffic as any}
+                            title="Traffic by Package"
+                        />
+                    </div>
+                    <div className="w-full min-w-0 col-span-1 sm:col-span-2 lg:col-span-1">
+                        <CustomPieChart
+                            data={transformedProgramTraffic as any}
+                            title="Traffic by Program"
+                        />
+                    </div>
+                </div>
             </div>
 
-            {/* Bottom Section */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-[#F1F2E9] rounded-[24px]">
-                <CustomPieChart
-                    data={transformedCoachTraffic as any}
-                    title="Traffic by Coach"
-                />
-                <CustomPieChart
-                    data={transformedSportTraffic as any}
-                    title="Traffic by Sport"
-                />
-                <CustomPieChart
-                    data={transformedBranchTraffic as any}
-                    title="Traffic by Location"
-                />
+            {/* Second Row */}
+            <div className="bg-[#F1F2E9] rounded-[24px] p-2 sm:p-3 lg:p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+                    <div className="w-full min-w-0">
+                        <CustomPieChart
+                            data={transformedCoachTraffic as any}
+                            title="Traffic by Coach"
+                        />
+                    </div>
+                    <div className="w-full min-w-0">
+                        <CustomPieChart
+                            data={transformedSportTraffic as any}
+                            title="Traffic by Sport"
+                        />
+                    </div>
+                    <div className="w-full min-w-0 col-span-1 sm:col-span-2 lg:col-span-1">
+                        <CustomPieChart
+                            data={transformedBranchTraffic as any}
+                            title="Traffic by Location"
+                        />
+                    </div>
+                </div>
             </div>
         </div>
     )
