@@ -203,7 +203,7 @@ export function DashboardClient({ stats }: { stats: DashboardStats }) {
                 const locationMatch = !selectedLocation || item.branchName === selectedLocation;
                 const sportMatch = !selectedSport || item.sportName === selectedSport;
                 const programMatch = !selectedProgram || item.programName === selectedProgram;
-                const genderMatch = !selectedGender || (item.genders && item.genders.includes(selectedGender));
+                const genderMatch = !selectedGender || (item?.genders && item?.genders?.includes(selectedGender));
                 return locationMatch && sportMatch && programMatch && genderMatch;
             }));
         };
@@ -248,7 +248,7 @@ export function DashboardClient({ stats }: { stats: DashboardStats }) {
     }
 
     const availableGenders = useMemo(() => {
-        return [...stats.programTraffic.map(item => item.genders.split(',')).flat().filter(Boolean), ...stats.packageTraffic.map(item => item.genders.split(',')).flat().filter(Boolean)].filter(value => value !== '').filter((value, index, self) => self.indexOf(value) === index)
+        return [...stats.programTraffic.map(item => item?.genders?.split(',')).flat().filter(Boolean), ...stats.packageTraffic.map(item => item?.genders?.split(',')).flat().filter(Boolean)].filter(value => value !== '').filter((value, index, self) => self.indexOf(value) === index)
     }, [stats]);
 
     const transformedTimeTraffic = useMemo(() => transformData(filteredStats.timeTraffic, 'hour'), [filteredStats.timeTraffic])
