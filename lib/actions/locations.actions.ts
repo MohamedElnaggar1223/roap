@@ -68,7 +68,7 @@ const getLocationsAction = async (academicId: number) => {
             data: transformedLocations,
             error: null
         }
-    }, [`locations-${academicId.toString()}`], { tags: [`locations-${academicId.toString()}`], revalidate: 1 })(academicId)
+    }, [`locations-${academicId.toString()}`], { tags: [`locations-${academicId.toString()}`], revalidate: 60 })(academicId)
 }
 
 export async function getLocations() {

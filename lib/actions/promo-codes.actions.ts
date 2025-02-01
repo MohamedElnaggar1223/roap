@@ -28,7 +28,7 @@ const getPromoCodesAction = async (academicId: number) => {
             data: promoCodesData,
             error: null
         }
-    }, [`promoCodes-${academicId.toString()}`], { tags: [`promoCodes-${academicId.toString()}`], revalidate: 1 })(academicId)
+    }, [`promoCodes-${academicId.toString()}`], { tags: [`promoCodes-${academicId.toString()}`], revalidate: 60 })(academicId)
 }
 
 export const getPromoCodes = async () => {

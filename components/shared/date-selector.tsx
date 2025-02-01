@@ -1,5 +1,3 @@
-'use client'
-
 import React, { useState, useEffect } from 'react'
 import { format, setYear, setMonth, setDate, getDaysInMonth } from 'date-fns'
 import { FormControl } from "@/components/ui/form"
@@ -21,10 +19,9 @@ export function DateSelector({ field, optional }: DateSelectorProps) {
 
     const years = Array.from({ length: 105 }, (_, i) => (new Date().getFullYear()) + 5 - i)
     const months = Array.from({ length: 12 }, (_, i) => i)
-    const daysInMonth = selectedDate ? getDaysInMonth(selectedDate) : 31 // Default to 31 days when no date is selected
+    const daysInMonth = selectedDate ? getDaysInMonth(selectedDate) : 31
     const days = Array.from({ length: daysInMonth }, (_, i) => i + 1)
 
-    // Skip the initial effect when field.value is undefined
     const [initialValue] = useState(field.value)
 
     const areDatesEqual = (date1: Date | undefined, date2: Date | undefined) => {
@@ -55,31 +52,57 @@ export function DateSelector({ field, optional }: DateSelectorProps) {
     }, [field.value]);
 
     const handleDateChange = (type: 'day' | 'month' | 'year', value: number) => {
-        // If there's no selected date, create a new one from the current date
-        // but only if this is the first interaction
         const baseDate = selectedDate || new Date()
-        const currentYear = baseDate.getFullYear()
-        const currentMonth = baseDate.getMonth()
-        const currentDay = baseDate.getDate()
 
-        let newDate = new Date(currentYear, currentMonth, currentDay)
+        // Create date using UTC to avoid timezone shifts
+        let newDate = new Date(Date.UTC(
+            baseDate.getFullYear(),
+            baseDate.getMonth(),
+            baseDate.getDate(),
+            12, 0, 0, 0
+        ))
 
         switch (type) {
             case 'day':
-                newDate = setDate(newDate, value)
+                newDate = new Date(Date.UTC(
+                    newDate.getUTCFullYear(),
+                    newDate.getUTCMonth(),
+                    value,
+                    12, 0, 0, 0
+                ))
                 break
             case 'month':
-                const daysInNewMonth = getDaysInMonth(setMonth(newDate, value))
-                const newDay = Math.min(currentDay, daysInNewMonth)
-                newDate = setDate(setMonth(newDate, value), newDay)
+                const daysInNewMonth = getDaysInMonth(new Date(Date.UTC(
+                    newDate.getUTCFullYear(),
+                    value,
+                    1,
+                    12, 0, 0, 0
+                )))
+                const newDay = Math.min(newDate.getUTCDate(), daysInNewMonth)
+                newDate = new Date(Date.UTC(
+                    newDate.getUTCFullYear(),
+                    value,
+                    newDay,
+                    12, 0, 0, 0
+                ))
                 break
             case 'year':
-                const daysInNewYear = getDaysInMonth(setYear(newDate, value))
-                const adjustedDay = Math.min(currentDay, daysInNewYear)
-                newDate = setDate(setYear(newDate, value), adjustedDay)
+                const daysInNewYear = getDaysInMonth(new Date(Date.UTC(
+                    value,
+                    newDate.getUTCMonth(),
+                    1,
+                    12, 0, 0, 0
+                )))
+                const adjustedDay = Math.min(newDate.getUTCDate(), daysInNewYear)
+                newDate = new Date(Date.UTC(
+                    value,
+                    newDate.getUTCMonth(),
+                    adjustedDay,
+                    12, 0, 0, 0
+                ))
                 break
             default:
-                return // Do nothing if type is invalid
+                return
         }
 
         setSelectedDate(newDate)
@@ -91,19 +114,34 @@ export function DateSelector({ field, optional }: DateSelectorProps) {
         field.onChange(undefined)
     }
 
+    const getDisplayDay = () => {
+        if (!selectedDate) return ""
+        return selectedDate.getUTCDate().toString()
+    }
+
+    const getDisplayMonth = () => {
+        if (!selectedDate) return ""
+        return selectedDate.getUTCMonth().toString()
+    }
+
+    const getDisplayYear = () => {
+        if (!selectedDate) return ""
+        return selectedDate.getUTCFullYear().toString()
+    }
+
     return (
         <FormControl>
             <div className="flex flex-col gap-2">
                 <div className="flex items-center space-x-2">
                     <Select
                         onValueChange={(value) => handleDateChange('day', parseInt(value))}
-                        value={selectedDate ? selectedDate.getDate().toString() : ""}
+                        value={getDisplayDay()}
                     >
                         <SelectTrigger
                             className={`w-[80px] ${!selectedDate ? 'text-muted-foreground' : ''}`}
                         >
                             <SelectValue placeholder="Day">
-                                {selectedDate ? selectedDate.getDate().toString() : "Day"}
+                                {selectedDate ? getDisplayDay() : "Day"}
                             </SelectValue>
                         </SelectTrigger>
                         <SelectContent className='bg-[#F1F2E9]'>
@@ -118,13 +156,17 @@ export function DateSelector({ field, optional }: DateSelectorProps) {
                     </Select>
                     <Select
                         onValueChange={(value) => handleDateChange('month', parseInt(value))}
-                        value={selectedDate ? selectedDate.getMonth().toString() : ""}
+                        value={getDisplayMonth()}
                     >
                         <SelectTrigger
                             className={`w-[110px] ${!selectedDate ? 'text-muted-foreground' : ''}`}
                         >
                             <SelectValue placeholder="Month">
-                                {selectedDate ? format(selectedDate, 'MMMM') : "Month"}
+                                {selectedDate ? format(new Date(
+                                    selectedDate.getUTCFullYear(),
+                                    selectedDate.getUTCMonth(),
+                                    1
+                                ), 'MMMM') : "Month"}
                             </SelectValue>
                         </SelectTrigger>
                         <SelectContent className='bg-[#F1F2E9]'>
@@ -139,13 +181,13 @@ export function DateSelector({ field, optional }: DateSelectorProps) {
                     </Select>
                     <Select
                         onValueChange={(value) => handleDateChange('year', parseInt(value))}
-                        value={selectedDate ? selectedDate.getFullYear().toString() : ""}
+                        value={getDisplayYear()}
                     >
                         <SelectTrigger
                             className={`w-[90px] ${!selectedDate ? 'text-muted-foreground' : ''}`}
                         >
                             <SelectValue placeholder="Year">
-                                {selectedDate ? selectedDate.getFullYear().toString() : "Year"}
+                                {selectedDate ? getDisplayYear() : "Year"}
                             </SelectValue>
                         </SelectTrigger>
                         <SelectContent className='bg-[#F1F2E9]'>
