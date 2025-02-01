@@ -97,7 +97,7 @@ const getCoachesAction = async (academicId: number) => {
             })),
             error: null
         }
-    }, [`coaches-${academicId.toString()}`], { tags: [`coaches-${academicId.toString()}`], revalidate: 3600 })(academicId)
+    }, [`coaches-${academicId.toString()}`], { tags: [`coaches-${academicId.toString()}`], revalidate: 1 })(academicId)
 }
 
 export async function getCoaches() {

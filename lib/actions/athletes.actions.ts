@@ -165,7 +165,7 @@ export const getAthletesAction = async (academicId: number) => {
         [`athletes-${academicId.toString()}`],
         {
             tags: [`athletes-${academicId.toString()}`],
-            revalidate: 3600
+            revalidate: 1
         }
     )(academicId)
 }
