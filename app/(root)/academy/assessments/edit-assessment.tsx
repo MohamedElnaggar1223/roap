@@ -401,9 +401,9 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                 />
             </Button>
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogContent className='bg-main-white min-w-[1280px] w-screen'>
+                <DialogContent className='bg-main-white max-lg:max-w-[100vw] lg:min-w-[1280px] w-screen'>
                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full'>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full max-lg:max-w-[90vw]'>
                             <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>
                                 <DialogTitle className='font-normal text-base'>Edit Assessment</DialogTitle>
                                 <div className='flex items-center gap-2'>

@@ -222,9 +222,9 @@ export default function EditCoach({ coachEdited, sports, languages, academySport
                 />
             </Button>
             <Dialog open={editOpen} onOpenChange={setEditOpen}>
-                <DialogContent className='bg-main-white min-w-[720px]'>
+                <DialogContent className='bg-main-white max-lg:max-w-[100vw] lg:min-w-[720px]'>
                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full z-10'>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full z-10 max-lg:max-w-[90vw]'>
                             <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>
                                 <DialogTitle className='font-normal text-base'>Edit Coach</DialogTitle>
                                 <div className='flex items-center gap-2'>
@@ -322,7 +322,7 @@ export default function EditCoach({ coachEdited, sports, languages, academySport
                                         />
                                     </div>
 
-                                    <div className='flex w-full gap-2 items-start justify-center'>
+                                    <div className='flex w-full gap-2 items-start justify-center max-lg:flex-col'>
                                         <FormField
                                             control={form.control}
                                             name='gender'

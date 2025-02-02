@@ -54,7 +54,7 @@ export default async function RootLayout({
 										<AcademySidebar onboarded={!!status.isOnboarded} />
 										<main className='flex flex-col flex-1 font-inter bg-[#E0E4D9]'>
 											<AcademyHeader academyId={status.academyId!}>
-												<section className='p-4 bg-[#E0E4D9] h-full'>
+												<section className='p-4 bg-[#E0E4D9] h-full max-w-[100vw]'>
 													{children}
 													<Toaster />
 												</section>

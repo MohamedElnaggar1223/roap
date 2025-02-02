@@ -1047,9 +1047,9 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                 </DialogContent>
             </Dialog>
             <Dialog open={editProgramOpen} onOpenChange={handleDialogClose}>
-                <DialogContent className='bg-main-white min-w-[1024px] max-w-[1024px] min-h-[360px]'>
+                <DialogContent className='bg-main-white max-lg:max-w-[100vw] lg:min-w-[1024px] lg:max-w-[1024px] min-h-[360px]'>
                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full h-full min-h-[360px]'>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full h-full min-h-[360px] max-lg:max-w-[90vw]'>
                             <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>
                                 <DialogTitle className='font-normal text-base'>New Program</DialogTitle>
                                 <div className='flex items-center gap-2'>
@@ -1061,7 +1061,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                             </DialogHeader>
                             <div className="w-full max-h-[80vh] overflow-y-auto">
                                 <div className="flex flex-col gap-6 w-full px-2">
-                                    <div className="flex w-full gap-4 items-start justify-between">
+                                    <div className="flex w-full gap-4 items-start justify-between max-lg:flex-col">
 
                                         <FormField
                                             control={form.control}
@@ -1091,7 +1091,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                         />
                                     </div>
 
-                                    <div className="space-y-4 mt-4 mb-4">
+                                    <div className="space-y-4 mt-4 mb-4 max-w-full">
                                         <FormField
                                             control={form.control}
                                             name="flexible"
@@ -1115,7 +1115,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                         />
                                     </div>
 
-                                    <div className="flex w-full gap-4 items-start justify-between">
+                                    <div className="flex w-full gap-4 items-start justify-between max-lg:flex-col">
 
                                         <FormField
                                             control={form.control}
@@ -1204,7 +1204,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
 
                                     </div>
 
-                                    <div className="flex w-full gap-4 items-start justify-between">
+                                    <div className="flex w-full gap-4 items-start justify-between max-lg:flex-col">
                                         <div className="flex flex-1 gap-2">
                                             <FormField
                                                 control={form.control}

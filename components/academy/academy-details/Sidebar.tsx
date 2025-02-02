@@ -49,7 +49,7 @@ export function AcadenyDetailsSidebar({ onboarded }: { onboarded: boolean }) {
 
     return (
         <>
-            <aside className='font-medium bg-[#E0E4D9] border-[#CDD1C7] h-full py-2'>
+            <aside className='font-medium bg-[#E0E4D9] border-[#CDD1C7] h-full py-2 max-lg:hidden'>
                 <div className="bg-[#E0E4D9] h-full">
                     <div className='flex items-start justify-start gap-2 flex-col h-full w-40'>
                         <Link href='/academy' className='h-9 rounded-[12px] overflow-hidden w-full'>

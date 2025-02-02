@@ -166,7 +166,7 @@ export default function EditLocation({ locationEdited, academySports }: Props) {
                 />
             </Button>
             <Dialog open={editOpen} onOpenChange={setEditOpen}>
-                <DialogContent className='bg-main-white min-w-[820px]'>
+                <DialogContent className='bg-main-white max-lg:max-w-[100vw] lg:min-w-[820px]'>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full'>
                             <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>

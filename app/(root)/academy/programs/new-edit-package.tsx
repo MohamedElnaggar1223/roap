@@ -786,9 +786,9 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className='bg-main-white min-w-[820px]'>
+            <DialogContent className='bg-main-white max-lg:max-w-[100vw] lg:min-w-[820px]'>
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full'>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full max-lg:max-w-[90vw]'>
                         <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>
                             <DialogTitle className='font-normal text-base'>Edit Package</DialogTitle>
                             <div onClick={handleToastValidation} className='flex items-center gap-2'>
@@ -931,7 +931,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                         </div>
                                     ) : (
                                         <div className="space-y-4">
-                                            <div className="flex gap-4">
+                                            <div className="flex gap-4 max-lg:flex-col">
                                                 <FormField
                                                     control={form.control}
                                                     name="capacity"

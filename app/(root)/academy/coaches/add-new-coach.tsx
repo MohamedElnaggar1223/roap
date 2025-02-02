@@ -227,9 +227,9 @@ export default function AddNewCoach({ sports, languages, academySports }: Props)
                 New Coach
             </button>
             <Dialog open={addNewCoachOpen} onOpenChange={setAddNewCoachOpen}>
-                <DialogContent className='bg-main-white min-w-[820px]'>
+                <DialogContent className='bg-main-white max-lg:max-w-[100vw] lg:min-w-[820px]'>
                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full'>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-6 w-full max-lg:max-w-[90vw]'>
                             <DialogHeader className='flex flex-row pr-6 text-center items-center justify-between gap-2'>
                                 <DialogTitle className='font-normal text-base'>New Coach</DialogTitle>
                                 <div className='flex items-center gap-2'>
@@ -331,7 +331,7 @@ export default function AddNewCoach({ sports, languages, academySports }: Props)
                                         />
                                     </div>
 
-                                    <div className='flex w-full gap-2 items-start justify-center'>
+                                    <div className='flex w-full gap-2 items-start justify-center max-lg:flex-col'>
                                         <FormField
                                             control={form.control}
                                             name='gender'
