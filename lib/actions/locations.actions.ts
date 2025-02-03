@@ -341,8 +341,8 @@ export async function updateLocation(id: number, data: {
 
     if (!academy) return { error: 'Academy not found' }
 
-    const ratesAndReviews = await fetchPlaceInformation(data.nameInGoogleMap)
-    const placeId = await getPlaceId(data.nameInGoogleMap)
+    // const ratesAndReviews = await fetchPlaceInformation(data.nameInGoogleMap)
+    // const placeId = await getPlaceId(data.nameInGoogleMap)
 
     try {
         await Promise.all([
@@ -362,41 +362,41 @@ export async function updateLocation(id: number, data: {
                     url: data.url,
                     isDefault: data.isDefault,
                     updatedAt: sql`now()`,
-                    latitude: ratesAndReviews?.latitude?.toString() ?? '',
-                    longitude: ratesAndReviews?.longitude?.toString() ?? '',
-                    rate: ratesAndReviews?.rating ?? null,
-                    reviews: ratesAndReviews?.reviews?.length ?? null,
-                    placeId: placeId ?? null,
+                    // latitude: ratesAndReviews?.latitude?.toString() ?? '',
+                    // longitude: ratesAndReviews?.longitude?.toString() ?? '',
+                    // rate: ratesAndReviews?.rating ?? null,
+                    // reviews: ratesAndReviews?.reviews?.length ?? null,
+                    // placeId: placeId ?? null,
                 })
                 .where(eq(branches.id, id)),
 
-            (async () => {
-                if (ratesAndReviews?.reviews && placeId) {
-                    // First, delete existing reviews for this branch
-                    await db.delete(reviews)
-                        .where(eq(reviews.branchId, id))
+            // (async () => {
+            //     if (ratesAndReviews?.reviews && placeId) {
+            //         // First, delete existing reviews for this branch
+            //         await db.delete(reviews)
+            //             .where(eq(reviews.branchId, id))
 
-                    // Then insert new reviews
-                    await db.insert(reviews).values(
-                        ratesAndReviews.reviews.map(review => ({
-                            branchId: id,
-                            placeId: placeId,
-                            authorName: review.author_name,
-                            authorUrl: review.author_url || null,
-                            language: review.language || 'en',
-                            originalLanguage: review.original_language || review.language || 'en',
-                            profilePhotoUrl: review.profile_photo_url || null,
-                            rating: review.rating,
-                            relativeTimeDescription: review.relative_time_description,
-                            text: review.text,
-                            time: review.time,
-                            translated: review.translated || false,
-                            createdAt: sql`now()`,
-                            updatedAt: sql`now()`
-                        }))
-                    )
-                }
-            })(),
+            //         // Then insert new reviews
+            //         await db.insert(reviews).values(
+            //             ratesAndReviews.reviews.map(review => ({
+            //                 branchId: id,
+            //                 placeId: placeId,
+            //                 authorName: review.author_name,
+            //                 authorUrl: review.author_url || null,
+            //                 language: review.language || 'en',
+            //                 originalLanguage: review.original_language || review.language || 'en',
+            //                 profilePhotoUrl: review.profile_photo_url || null,
+            //                 rating: review.rating,
+            //                 relativeTimeDescription: review.relative_time_description,
+            //                 text: review.text,
+            //                 time: review.time,
+            //                 translated: review.translated || false,
+            //                 createdAt: sql`now()`,
+            //                 updatedAt: sql`now()`
+            //             }))
+            //         )
+            //     }
+            // })(),
 
             db.update(branchTranslations)
                 .set({

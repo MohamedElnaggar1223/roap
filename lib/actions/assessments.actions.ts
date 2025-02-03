@@ -16,6 +16,7 @@ interface Schedule {
     startDateOfBirth: string | null | undefined
     endDateOfBirth: string | null | undefined
     gender: string | null | undefined
+    capacity: number | null | undefined
 }
 
 interface Package {
@@ -244,6 +245,7 @@ export async function updateAssessment(id: number, data: {
                                         startDateOfBirth: schedule.startDateOfBirth,
                                         endDateOfBirth: schedule.endDateOfBirth,
                                         gender: schedule.gender,
+                                        capacity: schedule.capacity ?? 9999,
                                         createdAt: sql`now()`,
                                         updatedAt: sql`now()`,
                                     }))
@@ -291,6 +293,7 @@ export async function updateAssessment(id: number, data: {
                                             startDateOfBirth: schedule.startDateOfBirth,
                                             endDateOfBirth: schedule.endDateOfBirth,
                                             gender: schedule.gender,
+                                            capacity: schedule.capacity ?? 9999,
                                             createdAt: sql`now()`,
                                             updatedAt: sql`now()`,
                                         }))

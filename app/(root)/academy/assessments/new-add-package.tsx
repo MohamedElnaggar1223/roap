@@ -32,6 +32,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useGendersStore, useProgramsStore } from '@/providers/store-provider';
 import { Badge } from '@/components/ui/badge';
 import ImportSchedulesDialog from './import-schedules-dialog';
+import { cn } from '@/lib/utils';
 
 const packageSchema = z.object({
     type: z.enum(["Term", "Monthly", "Full Season", "Assessment"]),
@@ -56,6 +57,8 @@ const packageSchema = z.object({
         to: z.string().min(1, "End time is required"),
         memo: z.string().optional().nullable(),
         id: z.number().optional(),
+        capacity: z.string(),
+        capacityType: z.enum(["normal", "unlimited"]).default("normal"),
         startAge: z.number().min(0, "Start age must be 0 or greater").max(100, "Start age must be 100 or less").multipleOf(0.5, "Start age must be in increments of 0.5").nullable(),
         startAgeUnit: z.enum(["months", "years"]),
         endAge: z.number().min(0, "End age must be 0.5 or greater").max(100, "End age must be 100 or less").multipleOf(0.5, "End age must be in increments of 0.5").optional().nullable(),
@@ -101,6 +104,7 @@ interface Schedule {
     to: string
     memo: string | undefined
     id?: number
+    capacity: number | null
     startDateOfBirth: Date | null
     endDateOfBirth: Date | null
     gender: string | null
@@ -240,7 +244,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
             memo: '',
             entryFees: '0',
             schedules: [{
-                day: '', from: '', to: '', memo: '', startAge: 0, startAgeUnit: 'years', endAge: undefined, endAgeUnit: 'unlimited', gender: null
+                day: '', from: '', to: '', memo: '', startAge: 0, startAgeUnit: 'years', endAge: undefined, endAgeUnit: 'unlimited', gender: null, capacity: '9999', capacityType: 'unlimited',
             }],
             entryFeesStartDate: undefined,
             entryFeesEndDate: undefined
@@ -314,7 +318,8 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                     return {
                         ...schedule,
                         startDateOfBirth: null,
-                        endDateOfBirth: null
+                        endDateOfBirth: null,
+                        capacity: parseInt(schedule.capacity),
                     };
                 };
 
@@ -330,7 +335,8 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                         return {
                             ...schedule,
                             startDateOfBirth: null,
-                            endDateOfBirth: null
+                            endDateOfBirth: null,
+                            capacity: parseInt(schedule.capacity),
                         };
                     }
                     endDate = calculateDateFromAge(schedule.endAge, schedule.endAgeUnit);
@@ -339,7 +345,8 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                 return {
                     ...schedule,
                     startDateOfBirth: startDate,
-                    endDateOfBirth: endDate
+                    endDateOfBirth: endDate,
+                    capacity: parseInt(schedule.capacity),
                 }
             })
 
@@ -385,7 +392,8 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                         memo: schedule.memo ?? '',
                         startDateOfBirth: schedule.startDateOfBirth ? format(schedule.startDateOfBirth, 'yyyy-MM-dd 00:00:00') : undefined,
                         endDateOfBirth: schedule.endDateOfBirth ? format(schedule.endDateOfBirth, 'yyyy-MM-dd 00:00:00') : undefined,
-                        gender: schedule.gender
+                        gender: schedule.gender,
+                        capacity: schedule.capacity,
                     })),
                     capacity: 99999,
                     type: values.type
@@ -420,7 +428,8 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                         memo: schedule.memo ?? '',
                         startDateOfBirth: schedule.startDateOfBirth ? new Date(schedule.startDateOfBirth) : null,
                         endDateOfBirth: schedule.endDateOfBirth ? new Date(schedule.endDateOfBirth) : null,
-                        gender: schedule.gender
+                        gender: schedule.gender,
+                        capacity: schedule.capacity,
                     })),
                     memo: values.memo ?? '',
                     entryFees: parseFloat(values.entryFees),
@@ -867,7 +876,9 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                                 startAgeUnit: 'years' as 'months' | 'years',
                                                 endAge: undefined,
                                                 endAgeUnit: 'unlimited' as 'months' | 'years' | 'unlimited',
-                                                gender: schedule.gender
+                                                gender: schedule.gender,
+                                                capacity: typeof schedule?.capacity === 'number' ? schedule?.capacity?.toString() : typeof schedule?.capacity === 'string' ? schedule?.capacity : '9999',
+                                                capacityType: (typeof schedule?.capacity === 'number' ? schedule?.capacity?.toString() === '9999' ? 'unlimited' : 'normal' : typeof schedule?.capacity === 'string' ? schedule?.capacity === '9999' ? 'unlimited' : 'normal' : 'unlimited') as 'unlimited' | 'normal',
                                             })));
                                         }}
                                     />
@@ -1253,6 +1264,58 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                                 )}
                                             />
 
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`schedules.${index}.capacity`}
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Session Capacity <span className='text-xs text-red-500'>*</span></FormLabel>
+                                                            <FormControl>
+                                                                <Input
+                                                                    {...field}
+                                                                    type="number"
+                                                                    min="1"
+                                                                    disabled={form.watch(`schedules.${index}.capacityType`) === "unlimited"}
+                                                                    className={cn("px-2 py-6 rounded-[10px] border border-gray-500 font-inter", form.watch(`schedules.${index}.capacityType`) === "unlimited" && 'text-transparent')}
+                                                                />
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`schedules.${index}.capacityType`}
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Capacity Type</FormLabel>
+                                                            <Select
+                                                                onValueChange={(value) => {
+                                                                    field.onChange(value);
+                                                                    if (value === "unlimited") {
+                                                                        form.setValue(`schedules.${index}.capacity`, "9999");
+                                                                    }
+                                                                }}
+                                                                value={field.value}
+                                                            >
+                                                                <FormControl>
+                                                                    <SelectTrigger className="px-2 py-6 rounded-[10px] border border-gray-500 font-inter">
+                                                                        <SelectValue placeholder="Select type" />
+                                                                    </SelectTrigger>
+                                                                </FormControl>
+                                                                <SelectContent className="!bg-[#F1F2E9]">
+                                                                    <SelectItem value="normal">Slots</SelectItem>
+                                                                    <SelectItem value="unlimited">Unlimited</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </div>
+
                                             <FormField
                                                 control={form.control}
                                                 name={`schedules.${index}.memo`}
@@ -1281,7 +1344,8 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                             day: '', from: '', to: '', memo: '', startAge: 0,
                                             startAgeUnit: 'years',
                                             endAge: undefined,
-                                            endAgeUnit: 'unlimited', gender: null
+                                            endAgeUnit: 'unlimited', gender: null,
+                                            capacity: '9999', capacityType: 'unlimited'
                                         })}
                                     >
                                         Add Session

@@ -137,6 +137,7 @@ interface Schedule {
     startDateOfBirth: Date | null
     endDateOfBirth: Date | null
     gender: string | null
+    capacity: number | null
 }
 
 interface Props {
@@ -189,7 +190,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
         }
     )
 
-    console.log(packagesData)
+    console.log("PACKAGE DATA DATA DATA", packagesData)
 
     const genders = useGendersStore((state) => state.genders).map((g) => g.name)
     const fetched = useGendersStore((state) => state.fetched)
@@ -230,7 +231,8 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                 ...schedule,
                 startDateOfBirth: schedule.startDateOfBirth ? new Date(schedule.startDateOfBirth) : null,
                 endDateOfBirth: schedule.endDateOfBirth ? new Date(schedule.endDateOfBirth) : null,
-                gender: schedule.gender ?? null
+                gender: schedule.gender ?? null,
+                capacity: schedule?.capacity ?? null,
             })) ?? []
         })) ?? [])
     }, [isLoading, isValidating, packagesData])
@@ -326,7 +328,8 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                         ...schedule,
                         startDateOfBirth: schedule.startDateOfBirth ? format(schedule.startDateOfBirth, 'yyyy-MM-dd 00:00:00') : undefined,
                         endDateOfBirth: schedule.endDateOfBirth ? format(schedule.endDateOfBirth, 'yyyy-MM-dd 00:00:00') : undefined,
-                        gender: schedule.gender
+                        gender: schedule.gender,
+                        capacity: schedule.capacity,
                     }))
                 })),
                 assessmentDeductedFromProgram: values.assessmentDeductedFromProgram ? values.assessmentDeductedFromProgram : false

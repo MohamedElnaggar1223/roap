@@ -16,7 +16,8 @@ interface Schedule {
     memo: string | undefined
     startDateOfBirth: string | null | undefined
     endDateOfBirth: string | null | undefined
-    gender: string | null | undefined
+    gender: string | null | undefined,
+    capacity: number | null | undefined
 }
 
 function getFirstAndLastDayOfMonths(months: string[]) {
@@ -222,6 +223,8 @@ export async function updatePackage(id: number, data: {
                     ))
             }
 
+            console.log("NEW SCHEDULES TO ADD", newSchedules)
+
             if (newSchedules.length > 0) {
                 await tx
                     .insert(schedules)
@@ -236,7 +239,8 @@ export async function updatePackage(id: number, data: {
                             updatedAt: sql`now()`,
                             startDateOfBirth: schedule.startDateOfBirth,
                             endDateOfBirth: schedule.endDateOfBirth,
-                            gender: schedule.gender
+                            gender: schedule.gender,
+                            capacity: schedule.capacity ?? 9999,
                         }))
                     )
             }
@@ -252,7 +256,8 @@ export async function updatePackage(id: number, data: {
                         updatedAt: sql`now()`,
                         startDateOfBirth: schedule.startDateOfBirth,
                         endDateOfBirth: schedule.endDateOfBirth,
-                        gender: schedule.gender
+                        gender: schedule.gender,
+                        capacity: schedule.capacity ?? 9999,
                     })
                     .where(eq(schedules.id, schedule.id!))
             }
@@ -312,7 +317,8 @@ export async function getProgramPackages(url: string | null, programId: number) 
                     'memo', ${schedules.memo},
                     'startDateOfBirth', ${schedules.startDateOfBirth},
                     'endDateOfBirth', ${schedules.endDateOfBirth},
-                    'gender', ${schedules.gender}
+                    'gender', ${schedules.gender},
+                    'capacity', ${schedules.capacity}
                 )
                 ORDER BY ${schedules.createdAt} ASC
             )`
