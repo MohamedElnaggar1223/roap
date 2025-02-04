@@ -76,7 +76,7 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
         if (!a.createdAt) return 1
         if (!b.createdAt) return -1
         // Sort in descending order (newest first)
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     }))
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedRows, setSelectedRows] = useState<number[]>([])
@@ -95,7 +95,7 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
                 if (!a.createdAt) return 1
                 if (!b.createdAt) return -1
                 // Sort in descending order (newest first)
-                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
             })
 
         setFilteredData(filtered)
@@ -113,7 +113,7 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
                     if (!a.createdAt) return 1
                     if (!b.createdAt) return -1
                     // Sort in descending order (newest first)
-                    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
                 })
             return filtered
         })
@@ -186,7 +186,7 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
                 if (!a.createdAt) return 1
                 if (!b.createdAt) return -1
                 // Sort in descending order (newest first)
-                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
             }))
         }
         else {
@@ -198,7 +198,7 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
                 if (!a.createdAt) return 1
                 if (!b.createdAt) return -1
                 // Sort in descending order (newest first)
-                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
             }))
         }
     }, 300)

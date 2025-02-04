@@ -164,7 +164,12 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
             if (data?.error) return
 
             set({
-                programs: data?.data,
+                programs: data?.data.sort((a, b) => {
+                    // Handle null cases
+                    if (!a.createdAt) return 1
+                    if (!b.createdAt) return -1
+                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                }),
                 fetched: true
             })
         },
@@ -188,7 +193,13 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
                             capacity: flexible ? schedule.capacity : (pkg.capacity ?? 0)
                         }))
                     }))
-                }) : p)
+                }) : p).sort((a, b) => {
+                    // Handle null cases
+                    if (!a.createdAt) return 1
+                    if (!b.createdAt) return -1
+                    // Sort in descending order (newest first)
+                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                })
             })
         },
         editProgram: async (program: Program, mutate?: () => void) => {
@@ -242,7 +253,13 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
             }
 
             set({
-                programs: get().programs.map(p => p.id === program.id ? updatedProgram : p),
+                programs: get().programs.map(p => p.id === program.id ? updatedProgram : p).sort((a, b) => {
+                    // Handle null cases
+                    if (!a.createdAt) return 1
+                    if (!b.createdAt) return -1
+                    // Sort in descending order (newest first)
+                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                }),
             })
 
             const result = await updateProgramStore({ ...program, coachPrograms: newCoachProgram }, oldProgram)
@@ -256,7 +273,13 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
             }
             else {
                 set({
-                    programs: get().programs.map(p => p.id === program.id ? ({ ...updatedProgram, pending: false }) : p)
+                    programs: get().programs.map(p => p.id === program.id ? ({ ...updatedProgram, pending: false }) : p).sort((a, b) => {
+                        // Handle null cases
+                        if (!a.createdAt) return 1
+                        if (!b.createdAt) return -1
+                        // Sort in descending order (newest first)
+                        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                    })
                 })
 
                 get().fetchPrograms()
@@ -267,7 +290,13 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
         },
         deletePrograms: async (ids: number[]) => {
             set({
-                programs: get().programs.filter(p => !ids.includes(p.id))
+                programs: get().programs.filter(p => !ids.includes(p.id)).sort((a, b) => {
+                    // Handle null cases
+                    if (!a.createdAt) return 1
+                    if (!b.createdAt) return -1
+                    // Sort in descending order (newest first)
+                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                })
             })
 
             await deletePrograms(ids)
@@ -290,19 +319,37 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
             }
 
             set({
-                programs: [...get().programs, programWithFlexiblePackages]
+                programs: [...get().programs, programWithFlexiblePackages].sort((a, b) => {
+                    // Handle null cases
+                    if (!a.createdAt) return 1
+                    if (!b.createdAt) return -1
+                    // Sort in descending order (newest first)
+                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                })
             })
 
             const result = await createProgramStore(program)
 
             if (result?.error) {
                 set({
-                    programs: get().programs.filter(p => p.id !== program.id)
+                    programs: get().programs.filter(p => p.id !== program.id).sort((a, b) => {
+                        // Handle null cases
+                        if (!a.createdAt) return 1
+                        if (!b.createdAt) return -1
+                        // Sort in descending order (newest first)
+                        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                    })
                 })
             }
             else if (result?.data?.id && typeof result?.data?.id === 'number') {
                 set({
-                    programs: get().programs.map(p => p.id === program.id ? ({ ...programWithFlexiblePackages, pending: false, id: result.data?.id as number }) : p)
+                    programs: get().programs.map(p => p.id === program.id ? ({ ...programWithFlexiblePackages, pending: false, id: result.data?.id as number }) : p).sort((a, b) => {
+                        // Handle null cases
+                        if (!a.createdAt) return 1
+                        if (!b.createdAt) return -1
+                        // Sort in descending order (newest first)
+                        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                    })
                 })
                 get().fetchPrograms()
                 if (mutate) mutate()
@@ -327,7 +374,13 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
                             capacity: program.flexible ? schedule.capacity : (packageData.capacity ?? 0)
                         }))
                     }]
-                }) : p)
+                }) : p).sort((a, b) => {
+                    // Handle null cases
+                    if (!a.createdAt) return 1
+                    if (!b.createdAt) return -1
+                    // Sort in descending order (newest first)
+                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                })
             })
         },
         editPackage: (packageData: Package) => {
@@ -361,6 +414,12 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
                             return pkg
                         })
                     }
+                }).sort((a, b) => {
+                    // Handle null cases
+                    if (!a.createdAt) return 1
+                    if (!b.createdAt) return -1
+                    // Sort in descending order (newest first)
+                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
                 })
             })
         },
@@ -379,7 +438,13 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
                                 : pk
                         )
                         : program.packages.filter(pk => pk.tempId !== packageData.tempId)
-                }) : p)
+                }) : p).sort((a, b) => {
+                    // Handle null cases
+                    if (!a.createdAt) return 1
+                    if (!b.createdAt) return -1
+                    // Sort in descending order (newest first)
+                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                })
             })
         },
         editDiscount: (discountData: Discount) => {
@@ -388,7 +453,13 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
             if (!program) return
 
             set({
-                programs: get().programs.map(p => p.id === program.id ? ({ ...program, discounts: program.discounts.map(d => d.id === discountData.id ? discountData : d) }) : p)
+                programs: get().programs.map(p => p.id === program.id ? ({ ...program, discounts: program.discounts.map(d => d.id === discountData.id ? discountData : d) }) : p).sort((a, b) => {
+                    // Handle null cases
+                    if (!a.createdAt) return 1
+                    if (!b.createdAt) return -1
+                    // Sort in descending order (newest first)
+                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                })
             })
         },
         addDiscount: (discountData: Discount) => {
@@ -397,7 +468,13 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
             if (!program) return
 
             set({
-                programs: get().programs.map(p => p.id === program.id ? ({ ...program, discounts: [...program.discounts, discountData] }) : p)
+                programs: get().programs.map(p => p.id === program.id ? ({ ...program, discounts: [...program.discounts, discountData] }) : p).sort((a, b) => {
+                    // Handle null cases
+                    if (!a.createdAt) return 1
+                    if (!b.createdAt) return -1
+                    // Sort in descending order (newest first)
+                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                })
             })
         },
         deleteDiscount: (discountData: Discount) => {
@@ -406,17 +483,35 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
             if (!program) return
 
             set({
-                programs: get().programs.map(p => p.id === program.id ? ({ ...program, discounts: program.discounts.filter(d => d.id !== discountData.id) }) : p)
+                programs: get().programs.map(p => p.id === program.id ? ({ ...program, discounts: program.discounts.filter(d => d.id !== discountData.id) }) : p).sort((a, b) => {
+                    // Handle null cases
+                    if (!a.createdAt) return 1
+                    if (!b.createdAt) return -1
+                    // Sort in descending order (newest first)
+                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                })
             })
         },
         addTempProgram: (program: Program) => {
             set({
-                programs: [...get().programs, ({ ...program, pending: true })]
+                programs: [...get().programs, ({ ...program, pending: true })].sort((a, b) => {
+                    // Handle null cases
+                    if (!a.createdAt) return 1
+                    if (!b.createdAt) return -1
+                    // Sort in descending order (newest first)
+                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                })
             })
         },
         removeTempPrograms: () => {
             set({
-                programs: get().programs.filter(p => p.tempId === undefined)
+                programs: get().programs.filter(p => p.tempId === undefined).sort((a, b) => {
+                    // Handle null cases
+                    if (!a.createdAt) return 1
+                    if (!b.createdAt) return -1
+                    // Sort in descending order (newest first)
+                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                })
             })
         },
         toggleProgramVisibility: async (programId: number) => {
@@ -429,7 +524,13 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
                     p.id === programId
                         ? { ...p, hidden: !p.hidden, pending: true }
                         : p
-                )
+                ).sort((a, b) => {
+                    // Handle null cases
+                    if (!a.createdAt) return 1
+                    if (!b.createdAt) return -1
+                    // Sort in descending order (newest first)
+                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                })
             });
 
             // Call server action (to be implemented)
@@ -445,7 +546,13 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
                         p.id === programId
                             ? program
                             : p
-                    )
+                    ).sort((a, b) => {
+                        // Handle null cases
+                        if (!a.createdAt) return 1
+                        if (!b.createdAt) return -1
+                        // Sort in descending order (newest first)
+                        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                    })
                 });
             } else {
                 // Update to remove pending state
@@ -454,7 +561,13 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
                         p.id === programId
                             ? { ...p, pending: false }
                             : p
-                    )
+                    ).sort((a, b) => {
+                        // Handle null cases
+                        if (!a.createdAt) return 1
+                        if (!b.createdAt) return -1
+                        // Sort in descending order (newest first)
+                        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                    })
                 });
             }
         },
@@ -480,7 +593,13 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
                             )
                         }
                         : p
-                )
+                ).sort((a, b) => {
+                    // Handle null cases
+                    if (!a.createdAt) return 1
+                    if (!b.createdAt) return -1
+                    // Sort in descending order (newest first)
+                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                })
             });
 
             // Call server action (to be implemented)
@@ -500,7 +619,13 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
                         p.id === programId
                             ? program
                             : p
-                    )
+                    ).sort((a, b) => {
+                        // Handle null cases
+                        if (!a.createdAt) return 1
+                        if (!b.createdAt) return -1
+                        // Sort in descending order (newest first)
+                        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                    })
                 });
             }
         },
