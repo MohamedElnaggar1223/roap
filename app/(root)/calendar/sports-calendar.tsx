@@ -198,12 +198,12 @@ export default function Calendar() {
 
 	const fetchEvents = useCallback(async () => {
 		console.log("fetching events")
-		startTransition(async () => {
-			const result = await getCalendarSlots(dateRange.start, dateRange.end)
-			if (result?.error) return
-			console.log(result.data)
-			setEvents(result.data)
-		})
+		// startTransition(async () => {
+		const result = await getCalendarSlots(dateRange.start, dateRange.end)
+		if (result?.error) return
+		console.log(result.data)
+		setEvents(result.data)
+		// })
 	}, [dateRange, refetch])
 
 	useEffect(() => {
