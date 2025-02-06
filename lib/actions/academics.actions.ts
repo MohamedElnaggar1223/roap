@@ -1,6 +1,6 @@
 'use server'
 
-import { SQL, and, asc, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm'
+import { SQL, and, asc, desc, eq, gte, inArray, lte, not, sql } from 'drizzle-orm'
 import { db } from '@/db'
 import { entryFeesHistory, academics, academicSport, academicTranslations, blockBranches, blockPrograms, blockPackages, blocks, blockSports, bookings, bookingSessions, branches, branchTranslations, coaches, media, packages, profiles, programs, sports, sportTranslations, users, coachSpokenLanguage, academicAthletic, branchFacility, branchSport, coachPackage, coachProgram, coachSport, promoCodes, schedules, wishlist } from '@/db/schema'
 // import { auth } from '../auth'
@@ -1160,30 +1160,42 @@ export async function updateAcademyDetails(data: UpdateAcademyDetailsInput) {
 				))
 
 			if (sportsToRemove.length > 0) {
-				const branchesWithoutSports = await tx
+				const academyBranches = await tx
 					.select({
-						branchId: branches.id,
-						remainingSports: sql<number>`count(DISTINCT CASE 
-                            WHEN ${branchSport.sportId} NOT IN (${sql.join(sportsToRemove)}) 
-                            THEN ${branchSport.sportId} 
-                            END)`
+						id: branches.id
 					})
 					.from(branches)
-					.leftJoin(branchSport, eq(branches.id, branchSport.branchId))
 					.where(eq(branches.academicId, academy.id))
-					.groupBy(branches.id);
 
-				const branchesWithZeroSports = branchesWithoutSports.filter(b => Number(b.remainingSports) === 0);
+				// Then for each branch, get their remaining sports after removal
+				const branchSportsQueries = academyBranches.map(branch =>
+					tx
+						.select({
+							sportId: branchSport.sportId
+						})
+						.from(branchSport)
+						.where(and(
+							eq(branchSport.branchId, branch.id),
+							not(inArray(branchSport.sportId, sportsToRemove))
+						))
+				)
 
-				if (branchesWithZeroSports.length > 0) {
-					throw new Error("BRANCHES_WITHOUT_SPORTS");
+				const branchesRemainingSports = await Promise.all(branchSportsQueries)
+
+				// Check if any branch would have zero sports
+				const branchesWithZeroSports = branchesRemainingSports.some(
+					sports => sports.length === 0
+				)
+
+				if (branchesWithZeroSports) {
+					throw new Error("BRANCHES_WITHOUT_SPORTS")
 				}
 
 				// First remove the sport from all branches
 				await tx.delete(branchSport)
 					.where(
 						and(
-							inArray(branchSport.sportId, sportsToRemove),
+							sql`${branchSport.sportId} IN (${sql.join(sportsToRemove, sql`, `)})`, // Fixed
 							inArray(
 								branchSport.branchId,
 								db.select({ id: branches.id })
@@ -1191,14 +1203,14 @@ export async function updateAcademyDetails(data: UpdateAcademyDetailsInput) {
 									.where(eq(branches.academicId, academy.id))
 							)
 						)
-					)
+					);
 
-				// Then remove all assessments for this sport
+				// In the programs delete:
 				await tx.delete(programs)
 					.where(and(
 						eq(programs.academicId, academy.id),
-						inArray(programs.sportId, sportsToRemove),
-					))
+						sql`${programs.sportId} IN (${sql.join(sportsToRemove, sql`, `)})` // Fixed
+					));
 
 				revalidateTag(`locations-${academy?.id}`)
 			}
