@@ -232,7 +232,17 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
                         branches={branches}
                         academicId={academicId}
                         sports={academySports}
-                        academySports={academySports}
+                        academySports={academySports.reduce((unique, sport) => {
+                            if (!unique.some(item => item.id === sport.id)) {
+                                unique.push(sport);
+                            }
+                            return unique;
+                        }, [] as {
+                            id: number;
+                            image: string | null;
+                            name: string;
+                            locale: string;
+                        }[])}
                         takenColors={data.map(program => program.color).filter(color => color !== null)}
                     />
                     <div className="flex items-center gap-2">
@@ -484,7 +494,17 @@ export function ProgramsDataTable({ branches, academicId }: ProgramsDataTablePro
                                                 programEdited={program}
                                                 branches={branches}
                                                 sports={academySports}
-                                                academySports={academySports}
+                                                academySports={academySports.reduce((unique, sport) => {
+                                                    if (!unique.some(item => item.id === sport.id)) {
+                                                        unique.push(sport);
+                                                    }
+                                                    return unique;
+                                                }, [] as {
+                                                    id: number;
+                                                    image: string | null;
+                                                    name: string;
+                                                    locale: string;
+                                                }[])}
                                                 takenColors={data.filter(p => program.id !== p.id).map(program => program.color).filter(color => color !== null)}
                                             />
                                             <Button

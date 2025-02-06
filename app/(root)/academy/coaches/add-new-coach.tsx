@@ -437,7 +437,14 @@ export default function AddNewCoach({ sports, languages, academySports }: Props)
                                                         }}
                                                     >
                                                         <div className="p-2">
-                                                            {academySports?.map(sport => (
+                                                            {academySports?.reduce((unique, sport) => {
+                                                                if (!unique.some(item => item.id === sport.id)) {
+                                                                    unique.push(sport);
+                                                                }
+                                                                return unique;
+                                                            }, [] as {
+                                                                id: number;
+                                                            }[]).map(sport => (
                                                                 <p
                                                                     key={sport.id}
                                                                     onClick={() => handleSelectSport(sport.id)}
