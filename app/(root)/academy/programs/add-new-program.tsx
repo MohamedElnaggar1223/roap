@@ -297,6 +297,7 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
     const [discountsOpen, setDiscountsOpen] = useState(false);
     const [editDiscountOpen, setEditDiscountOpen] = useState(false);
     const [editedDiscount, setEditedDiscount] = useState<{ editedDiscount: Discount, index?: number } | null>(null);
+    const [filteredSports, setFilteredSports] = useState<{ id: number }[]>(academySports || []);
 
     const program = useProgramsStore((state) => state.programs.find(p => p.id === programId))
     const addProgram = useProgramsStore((state) => state.addProgram)
@@ -330,6 +331,32 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
             flexible: false,
         },
     })
+
+    const selectedBranchId = form.watch('branchId');
+
+    // Update filtered sports when branch selection changes
+    useEffect(() => {
+        if (selectedBranchId) {
+            const selectedBranch = branches.find(branch => branch.id.toString() === selectedBranchId);
+            if (selectedBranch) {
+                // Filter academySports to only include sports that are in the selected branch
+                const sportsInBranch = academySports?.filter(sport =>
+                    selectedBranch.sports.includes(
+                        sports.find(s => s.id.toString() === sport.id.toString())?.id.toString() || ''
+                    )
+                ) || [];
+                setFilteredSports(sportsInBranch);
+
+                // Clear sport selection if current selection is not in filtered list
+                const currentSportId = form.getValues('sportId');
+                if (currentSportId && !sportsInBranch.some(s => s.id.toString() === currentSportId)) {
+                    form.setValue('sportId', '');
+                }
+            }
+        } else {
+            setFilteredSports(academySports || []);
+        }
+    }, [selectedBranchId, branches, sports, academySports]);
 
     useEffect(() => {
         if (addNewProgramOpen) {
@@ -832,7 +859,7 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                                                             </SelectTrigger>
                                                         </FormControl>
                                                         <SelectContent className='!bg-[#F1F2E9]'>
-                                                            {academySports?.map((sport) => (
+                                                            {filteredSports?.map((sport) => (
                                                                 <SelectItem key={sport.id} value={sport.id.toString()}>
                                                                     {sports?.find(s => s.id === sport.id)?.name}
                                                                 </SelectItem>

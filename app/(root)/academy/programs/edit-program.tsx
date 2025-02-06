@@ -372,6 +372,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
     const [editedDiscount, setEditedDiscount] = useState<{ editedDiscount: Discount, index?: number } | null>(null);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
+    const [filteredSports, setFilteredSports] = useState<{ id: number }[]>(academySports || []);
     const [originalPackages, setOriginalPackages] = useState(() => {
         // Create a deep copy without deleted packages and without undefined ids
         return JSON.parse(JSON.stringify(
@@ -455,6 +456,36 @@ export default function EditProgram({ branches, sports, programEdited, academySp
             flexible: programEdited.flexible ?? false,
         }
     })
+
+    const selectedBranchId = form.watch('branchId');
+
+    // Update filtered sports when branch selection changes
+    useEffect(() => {
+        if (selectedBranchId) {
+            const selectedBranch = branches.find(branch => branch.id.toString() === selectedBranchId);
+            if (selectedBranch) {
+                // Filter academySports to only include sports that are in the selected branch
+                const sportsInBranch = academySports?.filter(sport =>
+                    selectedBranch.sports.includes(
+                        sports.find(s => s.id.toString() === sport.id.toString())?.id.toString() || ''
+                    )
+                ) || [];
+
+                console.log("branch", selectedBranch)
+                console.log("Sports in branch", sportsInBranch)
+                console.log("Sports", sports)
+                setFilteredSports(sportsInBranch);
+
+                // Clear sport selection if current selection is not in filtered list
+                const currentSportId = form.getValues('sportId');
+                if (currentSportId && !sportsInBranch.some(s => s.id.toString() === currentSportId)) {
+                    form.setValue('sportId', '');
+                }
+            }
+        } else {
+            setFilteredSports(academySports || []);
+        }
+    }, [selectedBranchId, branches, sports, academySports]);
 
     console.log(form.getValues('startAge'))
     console.log(form.getValues('endAge'))
@@ -1378,7 +1409,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                             </SelectTrigger>
                                                         </FormControl>
                                                         <SelectContent className='!bg-[#F1F2E9]'>
-                                                            {academySports?.map((sport) => (
+                                                            {filteredSports?.map((sport) => (
                                                                 <SelectItem key={sport.id} value={sport.id.toString()}>
                                                                     {sports?.find(s => s.id === sport.id)?.name}
                                                                 </SelectItem>
