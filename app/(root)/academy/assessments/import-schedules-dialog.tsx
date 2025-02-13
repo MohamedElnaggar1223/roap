@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useProgramsStore } from '@/providers/store-provider';
+import useSWR from 'swr';
+import { getAssessmentsData } from '@/lib/actions/assessments.actions';
 
 interface Props {
     open: boolean;
@@ -10,22 +12,49 @@ interface Props {
 }
 
 export default function ImportSchedulesDialog({ open, onOpenChange, onScheduleImport, branchId }: Props) {
+    const { data, isLoading } = useSWR('assessments', () => getAssessmentsData(), {
+        revalidateOnFocus: true,
+        revalidateOnReconnect: true,
+        refreshInterval: 60000,
+    })
     const programs = useProgramsStore((state) => state.programs);
 
-    const availablePackages = programs
-        .filter(program => !program.packages.some(pkg => pkg.name.toLowerCase().includes('assessment')))
-        .filter(program => program.branchId === branchId)
-        .reduce<Array<typeof programs[0]['packages'][0] & { programName: string }>>((acc, program) => {
-            const firstValidPackage = program.packages.find(pkg => !pkg.deleted);
+    const availablePackages = useMemo(() => {
+        const allPrograms = [...programs, ...(data?.data ?? [])];
 
-            if (firstValidPackage) {
-                acc.push({
-                    ...firstValidPackage,
-                    programName: program.name ?? ''
-                });
-            }
-            return acc;
-        }, []);
+        const finalPrograms = allPrograms
+            // .filter(program => !program.packages.some(pkg => pkg.name.toLowerCase().includes('assessment')))
+            .filter(program => program.branchId === branchId)
+            .reduce<Array<typeof programs[0]['packages'][0] & { programName: string }>>((acc, program) => {
+                const firstValidPackage = program.packages.find(pkg => !pkg?.deleted);
+
+                if (firstValidPackage) {
+                    acc.push({
+                        ...firstValidPackage,
+                        programName: program.name ?? ''
+                    });
+                }
+                return acc;
+            }, []);
+
+        return finalPrograms;
+    }, [data, isLoading, programs, branchId]);
+
+    if (isLoading) {
+        return (
+            <Dialog open={open} onOpenChange={onOpenChange}>
+                <DialogContent className="bg-main-white max-w-2xl">
+                    <DialogHeader className="flex flex-row pr-6 text-center items-center justify-between gap-2">
+                        <DialogTitle className="font-normal text-base">Import Schedules</DialogTitle>
+                    </DialogHeader>
+
+                    <div className="grid grid-cols-1 gap-4 py-4">
+                        <p className="text-sm text-gray-600">Loading...</p>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        );
+    }
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
