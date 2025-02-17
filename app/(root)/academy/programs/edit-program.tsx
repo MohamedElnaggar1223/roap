@@ -883,7 +883,6 @@ export default function EditProgram({ branches, sports, programEdited, academySp
         };
     };
 
-    // Add this function to check for changes
     const checkForChanges = () => {
         const formValues = form.getValues();
         const initialFormValues = {
@@ -921,7 +920,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
         const originalCoaches = programEdited.coachPrograms.map(coach => coach.coach.id);
         const originalGenders = programEdited.gender?.split(',') ?? [];
 
-        const { hasChanges, changedFields } = compareChanges(  // Use renamed function
+        const { hasChanges, changedFields } = compareChanges(
             formValues,
             initialFormValues,
             selectedCoaches,
@@ -1411,7 +1410,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                         <SelectContent className='!bg-[#F1F2E9]'>
                                                             {filteredSports?.map((sport) => (
                                                                 <SelectItem key={sport.id} value={sport.id.toString()}>
-                                                                    {sports?.find(s => s.id === sport.id)?.name}
+                                                                    {sports?.find(s => s.id.toString() === sport.id.toString())?.name}
                                                                 </SelectItem>
                                                             ))}
                                                         </SelectContent>
