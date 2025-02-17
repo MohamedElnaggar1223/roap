@@ -1153,9 +1153,9 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                             <FormItem>
                                                 <FormLabel>Entry Fees Applied For <span className='text-xs text-red-500'>*</span></FormLabel>
                                                 <div className="grid grid-cols-3 gap-4 border rounded-[10px] p-4">
-                                                    {form.getValues('months')?.map((month) => (
+                                                    {form.getValues('months')?.map((month, index) => (
                                                         <label
-                                                            key={month}
+                                                            key={index}
                                                             className="flex items-center space-x-2 cursor-pointer"
                                                         >
                                                             <Checkbox

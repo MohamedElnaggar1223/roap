@@ -7,6 +7,7 @@ import { and, eq, sql, asc, inArray } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { formatDateForDB } from '../utils'
 import { cookies } from 'next/headers'
+import { Program } from '@/stores/programs-store'
 
 interface Schedule {
     day: string
@@ -29,6 +30,82 @@ interface Package {
     schedules: Schedule[]
     memo: string | null
     id?: number
+}
+
+export const getAssessmentsData = async (): Promise<{
+    error: string | null;
+    field: string | null;
+    data: Program[];
+}> => {
+    const session = await auth()
+
+    if (!session?.user) {
+        return { error: 'You are not authorized to perform this action', field: null, data: [] }
+    }
+
+    const cookieStore = await cookies()
+    const impersonatedId = session.user.role === 'admin'
+        ? cookieStore.get('impersonatedAcademyId')?.value
+        : null
+
+    // Build the where condition based on user role and impersonation
+    const academicId = session.user.role === 'admin' && impersonatedId
+        ? parseInt(impersonatedId)
+        : parseInt(session.user.id)
+
+    // If not admin and not academic, return error
+    if (session.user.role !== 'admin' && session.user.role !== 'academic') {
+        return { error: 'You are not authorized to perform this action', field: null, data: [] }
+    }
+
+    const academy = await db.query.academics.findFirst({
+        where: (academics, { eq }) => eq(academics.userId, academicId),
+        columns: {
+            id: true,
+        }
+    })
+
+    if (!academy) {
+        return { error: 'Academy not found', data: [], field: null }
+    }
+
+    const programsData = await db.query.programs.findMany({
+        where: and(
+            eq(programs.academicId, academy.id),
+            eq(programs.name, 'Assessment')
+        ),
+        with: {
+            packages: {
+                with: {
+                    schedules: true
+                }
+            },
+            coachPrograms: {
+                columns: {
+                    id: true,
+                },
+                with: {
+                    coach: {
+                        columns: {
+                            id: true,
+                        }
+                    }
+                }
+            },
+            discounts: {
+                with: {
+                    packageDiscounts: {
+                        columns: {
+                            packageId: true
+                        }
+                    }
+                }
+            }
+        },
+        orderBy: asc(programs.createdAt)
+    })
+
+    return { data: programsData, error: null, field: null }
 }
 
 export async function getAssessments() {
