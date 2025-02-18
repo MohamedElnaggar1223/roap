@@ -378,12 +378,13 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                 initialGenders[index] = schedule.gender ? schedule.gender.split(',') : [];
             });
             setScheduleGenders(initialGenders);
+            setRan(true)
         }
     }, [packageEdited]);
 
-    useEffect(() => {
-        setRan(true)
-    }, [])
+    // useEffect(() => {
+    //     setRan(true)
+    // }, [])
 
     useEffect(() => {
         if (fields.length > 0) {
@@ -414,7 +415,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                 });
             }
         }
-    }, [unifyGender]);
+    }, [unifyGender, ran]);
 
     useEffect(() => {
         if (packageEdited.schedules) {
@@ -435,6 +436,8 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
     const onSubmit = async (values: z.infer<typeof packageSchema>) => {
         try {
             const missingFields: string[] = handleToastValidation();
+
+            console.log("SUBMIT VALUES SCHEDULES: ", values.schedules)
 
             const transformedSchedules = values.schedules.map((schedule, index) => {
                 if (!schedule.startAge) {
@@ -762,7 +765,8 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
             //         endDateOfBirth: endDate
             //     }
             // })
-            values.schedules.forEach((schedule, index) => {
+            fields.forEach((schedule, index) => {
+                console.log("MISSING SCHEDULE: ", schedule)
                 if (!schedule.day) missingFields.push(`Session ${index + 1} Day`);
                 if (!schedule.from) missingFields.push(`Session ${index + 1} Start Time`);
                 if (!schedule.to) missingFields.push(`Session ${index + 1} End Time`);
