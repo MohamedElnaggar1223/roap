@@ -283,7 +283,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
     const program = useProgramsStore((state) => state.programs.find(p => p.id === programId))
     const editPackage = useProgramsStore((state) => state.editPackage)
 
-    console.log(program?.packages)
+    console.log("All Packages: ", program?.packages)
 
     const packageData = program?.packages.find(p => {
         if (packageEdited.id) {

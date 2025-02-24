@@ -972,6 +972,8 @@ export default function EditProgram({ branches, sports, programEdited, academySp
         setEditProgramOpen(open);
     }
 
+    console.log("editedPackage", editedPackage)
+
     return (
         <>
             <Button variant="ghost" size="icon" onClick={() => setEditProgramOpen(true)}>

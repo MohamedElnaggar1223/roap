@@ -496,6 +496,7 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                         createdAt: new Date().toISOString(),
                         updatedAt: new Date().toISOString(),
                         programId,
+                        tempId: parseInt(uuid().split('-')[0], 16),
                     };
 
                     addPackage(addedPackage);
