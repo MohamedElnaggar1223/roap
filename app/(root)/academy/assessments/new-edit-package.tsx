@@ -765,8 +765,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
             //         endDateOfBirth: endDate
             //     }
             // })
-            fields.forEach((schedule, index) => {
-                console.log("MISSING SCHEDULE: ", schedule)
+            values.schedules.forEach((schedule, index) => {
                 if (!schedule.day) missingFields.push(`Session ${index + 1} Day`);
                 if (!schedule.from) missingFields.push(`Session ${index + 1} Start Time`);
                 if (!schedule.to) missingFields.push(`Session ${index + 1} End Time`);
@@ -1130,7 +1129,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                                 startAgeUnit: 'years' as 'months' | 'years',
                                                 endAge: undefined,
                                                 endAgeUnit: 'unlimited' as 'months' | 'years' | 'unlimited',
-                                                gender: null,
+                                                gender: schedule.gender,
                                                 capacity: typeof schedule?.capacity === 'number' ? schedule?.capacity?.toString() : typeof schedule?.capacity === 'string' ? schedule?.capacity : '9999',
                                                 capacityType: (typeof schedule?.capacity === 'number' ? schedule?.capacity?.toString() === '9999' ? 'unlimited' : 'normal' : typeof schedule?.capacity === 'string' ? schedule?.capacity === '9999' ? 'unlimited' : 'normal' : 'unlimited') as 'unlimited' | 'normal',
                                             })));
