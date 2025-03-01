@@ -18,6 +18,7 @@ interface Schedule {
     endDateOfBirth: string | null | undefined
     gender: string | null | undefined,
     capacity: number | null | undefined
+    hidden?: boolean
 }
 
 function getFirstAndLastDayOfMonths(months: string[]) {
@@ -124,7 +125,8 @@ export async function createPackage(data: {
                             updatedAt: sql`now()`,
                             startDateOfBirth: schedule.startDateOfBirth,
                             endDateOfBirth: schedule.endDateOfBirth,
-                            gender: schedule.gender
+                            gender: schedule.gender,
+                            hidden: schedule.hidden ?? false,
                         }))
                     )
             }
@@ -241,6 +243,7 @@ export async function updatePackage(id: number, data: {
                             endDateOfBirth: schedule.endDateOfBirth,
                             gender: schedule.gender,
                             capacity: schedule.capacity ?? 9999,
+                            hidden: schedule.hidden ?? false,
                         }))
                     )
             }
@@ -318,7 +321,8 @@ export async function getProgramPackages(url: string | null, programId: number) 
                     'startDateOfBirth', ${schedules.startDateOfBirth},
                     'endDateOfBirth', ${schedules.endDateOfBirth},
                     'gender', ${schedules.gender},
-                    'capacity', ${schedules.capacity}
+                    'capacity', ${schedules.capacity},
+                    'hidden', ${schedules.hidden}
                 )
                 ORDER BY ${schedules.createdAt} ASC
             )`

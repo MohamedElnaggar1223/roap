@@ -35,6 +35,7 @@ export type Package = {
         from: string;
         to: string;
         capacity: number;
+        hidden?: boolean
     }[];
 }
 
@@ -138,6 +139,7 @@ export type ProgramsActions = {
     removeTempPrograms: () => void
     toggleProgramVisibility: (programId: number) => void
     togglePackageVisibility: (programId: number, packageId: number) => void
+    toggleScheduleVisibility: (programId: number, packageId: number, scheduleId: number) => void
 }
 
 export type ProgramsStore = ProgramsState & ProgramsActions
@@ -613,6 +615,127 @@ export const createProgramsStore = (initialState: ProgramsState = defaultInitSta
             }, program);
 
             if (result?.error) {
+                // Revert on error
+                set({
+                    programs: get().programs.map(p =>
+                        p.id === programId
+                            ? program
+                            : p
+                    ).sort((a, b) => {
+                        // Handle null cases
+                        if (!a.createdAt) return 1
+                        if (!b.createdAt) return -1
+                        // Sort in descending order (newest first)
+                        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                    })
+                });
+            }
+        },
+        toggleScheduleVisibility: async (programId: number, packageId: number, scheduleId: number) => {
+            const program = get().programs.find(p => p.id === programId);
+            if (!program) return;
+
+            const packageData = program.packages.find(pkg => pkg.id === packageId);
+            if (!packageData) return;
+
+            const schedule = packageData.schedules.find(s => s.id === scheduleId);
+            if (!schedule) return;
+
+            // Update local state immediately
+            set({
+                programs: get().programs.map(p => {
+                    if (p.id !== programId) return p;
+
+                    return {
+                        ...p,
+                        packages: p.packages.map(pkg => {
+                            if (pkg.id !== packageId) return pkg;
+
+                            return {
+                                ...pkg,
+                                schedules: pkg.schedules.map(s =>
+                                    s.id === scheduleId
+                                        ? { ...s, hidden: !s.hidden, pending: true }
+                                        : s
+                                )
+                            };
+                        })
+                    };
+                }).sort((a, b) => {
+                    // Handle null cases
+                    if (!a.createdAt) return 1
+                    if (!b.createdAt) return -1
+                    // Sort in descending order (newest first)
+                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                })
+            });
+
+            // Call server action
+            try {
+                // This would need a corresponding server action that updates a single schedule
+                const result = await updateProgramStore({
+                    ...program,
+                    packages: program.packages.map(pkg =>
+                        pkg.id === packageId
+                            ? {
+                                ...pkg,
+                                schedules: pkg.schedules.map(s =>
+                                    s.id === scheduleId
+                                        ? { ...s, hidden: !s.hidden }
+                                        : s
+                                )
+                            }
+                            : pkg
+                    )
+                }, program);
+
+                if (result?.error) {
+                    // Revert on error
+                    set({
+                        programs: get().programs.map(p =>
+                            p.id === programId
+                                ? program
+                                : p
+                        ).sort((a, b) => {
+                            // Handle null cases
+                            if (!a.createdAt) return 1
+                            if (!b.createdAt) return -1
+                            // Sort in descending order (newest first)
+                            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                        })
+                    });
+                } else {
+                    // Update to remove pending state
+                    set({
+                        programs: get().programs.map(p => {
+                            if (p.id !== programId) return p;
+
+                            return {
+                                ...p,
+                                packages: p.packages.map(pkg => {
+                                    if (pkg.id !== packageId) return pkg;
+
+                                    return {
+                                        ...pkg,
+                                        schedules: pkg.schedules.map(s =>
+                                            s.id === scheduleId
+                                                ? { ...s, pending: false }
+                                                : s
+                                        )
+                                    };
+                                })
+                            };
+                        }).sort((a, b) => {
+                            // Handle null cases
+                            if (!a.createdAt) return 1
+                            if (!b.createdAt) return -1
+                            // Sort in descending order (newest first)
+                            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                        })
+                    });
+                }
+            } catch (error) {
+                console.error("Error toggling schedule visibility:", error);
                 // Revert on error
                 set({
                     programs: get().programs.map(p =>

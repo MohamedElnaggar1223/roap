@@ -30,6 +30,7 @@ import { useProgramsStore } from '@/providers/store-provider';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { Eye, EyeOff } from 'lucide-react';
 
 const formatTimeValue = (value: string) => {
     if (!value) return '';
@@ -65,7 +66,8 @@ const packageSchema = z.object({
         memo: z.string().optional(),
         id: z.number().optional(),
         capacity: z.string(),
-        capacityType: z.enum(["normal", "unlimited"]).default("normal")
+        capacityType: z.enum(["normal", "unlimited"]).default("normal"),
+        hidden: z.boolean().default(false),
     })),
     capacity: z.string(),
     capacityType: z.enum(["normal", "unlimited"]).default("normal"),
@@ -333,9 +335,10 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                     from: s.from.split(':').length >= 3 ? s.from.split(':')[0] + ':' + s.from.split(':')[1] : s.from,
                     to: s.to.split(':').length >= 3 ? s.to.split(':')[0] + ':' + s.to.split(':')[1] : s.to,
                     capacity: s.capacity?.toString() ?? '0',
-                    capacityType: s.capacity === 9999 ? 'unlimited' : 'normal'
+                    capacityType: s.capacity === 9999 ? 'unlimited' : 'normal',
+                    hidden: s.hidden ?? false,
                 })) :
-                [{ day: '', from: '', to: '', memo: '', capacity: '0', capacityType: 'normal' }],
+                [{ day: '', from: '', to: '', memo: '', capacity: '0', capacityType: 'normal', hidden: false }],
             memo: packageData?.memo ?? '',
             entryFees: (packageData?.entryFees ?? 0).toString(),
             entryFeesExplanation: packageData?.entryFeesExplanation ?? undefined,
@@ -610,7 +613,8 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                             updatedAt: new Date().toISOString(),
                             memo: s.memo ?? '',
                             id: undefined,
-                            packageId: undefined
+                            packageId: undefined,
+                            hidden: s.hidden ?? false
                         };
                     });
                     console.log("Schedules processed");
@@ -672,7 +676,8 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                             updatedAt: new Date().toISOString(),
                             memo: s.memo ?? '',
                             id: undefined,
-                            packageId: undefined
+                            packageId: undefined,
+                            hidden: s.hidden ?? false
                         })),
                         memo: values.memo ?? '',
                         entryFees: parseFloat(values.entryFees),
@@ -1214,17 +1219,41 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                     {fields.map((field, index) => (
                                         <div key={field.id} className="space-y-4 p-4 border rounded-lg relative pt-8 bg-[#E0E4D9] overflow-hidden">
                                             <p className='text-xs'>Session {index + 1}</p>
-                                            {fields.length > 1 && (
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="absolute right-2 top-2"
-                                                    onClick={() => remove(index)}
-                                                >
-                                                    <TrashIcon className="h-4 w-4" />
-                                                </Button>
-                                            )}
+                                            <div className="absolute right-2 top-2 flex items-center gap-2">
+                                                {/* Add visibility toggle button */}
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`schedules.${index}.hidden`}
+                                                    render={({ field }) => (
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => field.onChange(!field.value)}
+                                                            className="p-1"
+                                                            title={field.value ? "Show schedule" : "Hide schedule"}
+                                                        >
+                                                            {field.value ? (
+                                                                <EyeOff className="h-4 w-4" />
+                                                            ) : (
+                                                                <Eye className="h-4 w-4" />
+                                                            )}
+                                                        </Button>
+                                                    )}
+                                                />
+
+                                                {/* Existing delete button */}
+                                                {fields.length > 1 && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => remove(index)}
+                                                    >
+                                                        <TrashIcon className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                            </div>
 
                                             <FormField
                                                 control={form.control}
@@ -1392,7 +1421,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                         variant="outline"
                                         size="sm"
                                         className="rounded-3xl text-main-yellow bg-main-green px-4 py-5 hover:bg-main-green hover:text-main-yellow w-full text-sm"
-                                        onClick={() => append({ day: '', from: '', to: '', memo: '', capacity: '', capacityType: 'normal' })}
+                                        onClick={() => append({ day: '', from: '', to: '', memo: '', capacity: '', capacityType: 'normal', hidden: false })}
                                     >
                                         Add Session
                                     </Button>

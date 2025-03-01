@@ -3,7 +3,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { createPackage } from '@/lib/actions/packages.actions';
-import { Download, Loader2, TrashIcon, X } from 'lucide-react';
+import { Download, Eye, EyeOff, Loader2, TrashIcon, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
@@ -64,6 +64,7 @@ const packageSchema = z.object({
         endAge: z.number().min(0, "End age must be 0.5 or greater").max(100, "End age must be 100 or less").multipleOf(0.5, "End age must be in increments of 0.5").optional().nullable(),
         endAgeUnit: z.enum(["months", "years", "unlimited"]),
         gender: z.string().min(1, "Gender is required").nullable(),
+        hidden: z.boolean().default(false),
     }))
 }).refine((data) => {
     if (parseFloat(data.entryFees) > 0 && !data.entryFeesExplanation) {
@@ -108,6 +109,7 @@ interface Schedule {
     startDateOfBirth: Date | null
     endDateOfBirth: Date | null
     gender: string | null
+    hidden?: boolean // Add this field
 }
 
 interface Props {
@@ -244,7 +246,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
             memo: '',
             entryFees: '0',
             schedules: [{
-                day: '', from: '', to: '', memo: '', startAge: 0, startAgeUnit: 'years', endAge: undefined, endAgeUnit: 'unlimited', gender: null, capacity: '9999', capacityType: 'unlimited',
+                day: '', from: '', to: '', memo: '', startAge: 0, startAgeUnit: 'years', endAge: undefined, endAgeUnit: 'unlimited', gender: null, capacity: '9999', capacityType: 'unlimited', hidden: false,
             }],
             entryFeesStartDate: undefined,
             entryFeesEndDate: undefined
@@ -320,6 +322,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                         startDateOfBirth: null,
                         endDateOfBirth: null,
                         capacity: parseInt(schedule.capacity),
+                        hidden: schedule.hidden
                     };
                 };
 
@@ -337,6 +340,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                             startDateOfBirth: null,
                             endDateOfBirth: null,
                             capacity: parseInt(schedule.capacity),
+                            hidden: schedule.hidden
                         };
                     }
                     endDate = calculateDateFromAge(schedule.endAge, schedule.endAgeUnit);
@@ -347,6 +351,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                     startDateOfBirth: startDate,
                     endDateOfBirth: endDate,
                     capacity: parseInt(schedule.capacity),
+                    hidden: schedule.hidden
                 }
             })
 
@@ -394,6 +399,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                         endDateOfBirth: schedule.endDateOfBirth ? format(schedule.endDateOfBirth, 'yyyy-MM-dd 00:00:00') : undefined,
                         gender: schedule.gender,
                         capacity: schedule.capacity,
+                        hidden: schedule.hidden
                     })),
                     capacity: 99999,
                     type: values.type
@@ -430,6 +436,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                         endDateOfBirth: schedule.endDateOfBirth ? new Date(schedule.endDateOfBirth) : null,
                         gender: schedule.gender,
                         capacity: schedule.capacity,
+                        hidden: schedule.hidden
                     })),
                     memo: values.memo ?? '',
                     entryFees: parseFloat(values.entryFees),
@@ -879,6 +886,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                                 gender: schedule.gender,
                                                 capacity: typeof schedule?.capacity === 'number' ? schedule?.capacity?.toString() : typeof schedule?.capacity === 'string' ? schedule?.capacity : '9999',
                                                 capacityType: (typeof schedule?.capacity === 'number' ? schedule?.capacity?.toString() === '9999' ? 'unlimited' : 'normal' : typeof schedule?.capacity === 'string' ? schedule?.capacity === '9999' ? 'unlimited' : 'normal' : 'unlimited') as 'unlimited' | 'normal',
+                                                hidden: schedule.hidden ?? false
                                             })));
                                         }}
                                     />
@@ -929,15 +937,41 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                     {fields.map((field, index) => (
                                         <div key={field.id} className="space-y-4 p-4 border rounded-lg relative pt-8 bg-[#E0E4D9] overflow-hidden">
                                             <p className='text-xs'>Session {index + 1}</p>
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="sm"
-                                                className="absolute right-2 top-2"
-                                                onClick={() => remove(index)}
-                                            >
-                                                <TrashIcon className="h-4 w-4" />
-                                            </Button>
+                                            <div className="absolute right-2 top-2 flex items-center gap-2">
+                                                {/* Add visibility toggle button */}
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`schedules.${index}.hidden`}
+                                                    render={({ field }) => (
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => field.onChange(!field.value)}
+                                                            className="p-1"
+                                                            title={field.value ? "Show schedule" : "Hide schedule"}
+                                                        >
+                                                            {field.value ? (
+                                                                <EyeOff className="h-4 w-4" />
+                                                            ) : (
+                                                                <Eye className="h-4 w-4" />
+                                                            )}
+                                                        </Button>
+                                                    )}
+                                                />
+
+                                                {/* Existing delete button */}
+                                                {fields.length > 1 && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => remove(index)}
+                                                    >
+                                                        <TrashIcon className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                            </div>
 
                                             <FormField
                                                 control={form.control}
@@ -1345,7 +1379,8 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                             startAgeUnit: 'years',
                                             endAge: undefined,
                                             endAgeUnit: 'unlimited', gender: null,
-                                            capacity: '9999', capacityType: 'unlimited'
+                                            capacity: '9999', capacityType: 'unlimited',
+                                            hidden: false
                                         })}
                                     >
                                         Add Session

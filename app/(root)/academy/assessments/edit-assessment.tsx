@@ -138,6 +138,7 @@ interface Schedule {
     endDateOfBirth: Date | null
     gender: string | null
     capacity: number | null
+    hidden?: boolean
 }
 
 interface Props {
@@ -233,6 +234,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                 endDateOfBirth: schedule.endDateOfBirth ? new Date(schedule.endDateOfBirth) : null,
                 gender: schedule.gender ?? null,
                 capacity: schedule?.capacity ?? null,
+                hidden: schedule.hidden ?? false
             })) ?? []
         })) ?? [])
     }, [isLoading, isValidating, packagesData])
@@ -330,6 +332,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                         endDateOfBirth: schedule.endDateOfBirth ? format(schedule.endDateOfBirth, 'yyyy-MM-dd 00:00:00') : undefined,
                         gender: schedule.gender,
                         capacity: schedule.capacity,
+                        hidden: schedule.hidden
                     }))
                 })),
                 assessmentDeductedFromProgram: values.assessmentDeductedFromProgram ? values.assessmentDeductedFromProgram : false

@@ -521,6 +521,7 @@ export async function createProgramStore(program: Program): Promise<{
                                         to: schedule.to,
                                         memo: schedule.memo,
                                         capacity: schedule.capacity ?? 0,
+                                        hidden: schedule.hidden ?? false,
                                         createdAt: sql`now()`,
                                         updatedAt: sql`now()`,
                                     }))
@@ -872,6 +873,7 @@ export async function updateProgramStore(program: Program, oldProgram: Program) 
                                         from: schedule.from,
                                         to: schedule.to,
                                         memo: schedule.memo,
+                                        hidden: schedule.hidden ?? false,
                                         capacity: schedule.capacity ?? 0,
                                         createdAt: sql`now()`,
                                         updatedAt: sql`now()`,
@@ -947,6 +949,7 @@ export async function updateProgramStore(program: Program, oldProgram: Program) 
                                             capacity: schedule.capacity ?? 0,
                                             createdAt: sql`now()`,
                                             updatedAt: sql`now()`,
+                                            hidden: schedule.hidden ?? false,
                                         }))
                                     )
                             }

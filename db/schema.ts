@@ -1008,6 +1008,7 @@ export const schedules = pgTable("schedules", {
     startDateOfBirth: date("start_date_of_birth").default(sql`NULL`),
     endDateOfBirth: date("end_date_of_birth").default(sql`NULL`),
     gender: varchar({ length: 255 }).default(sql`NULL`),
+    hidden: boolean("hidden").default(false).notNull(),
 }, (table) => {
     return {
         schedulesPackageIdForeign: foreignKey({

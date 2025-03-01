@@ -35,6 +35,7 @@ import { v4 as uuid } from 'uuid';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { Eye, EyeOff } from 'lucide-react';
 
 const formatTimeValue = (value: string) => {
     if (!value) return '';
@@ -132,7 +133,8 @@ const packageSchema = z.object({
         memo: z.string().optional(),
         id: z.number().optional(),
         capacity: z.string().default("0"),
-        capacityType: z.enum(["normal", "unlimited"]).default("normal")
+        capacityType: z.enum(["normal", "unlimited"]).default("normal"),
+        hidden: z.boolean().default(false),
     })),
     capacity: z.string().default("0"),
     capacityType: z.enum(["normal", "unlimited"]).default("normal"),
@@ -469,7 +471,8 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                             updatedAt: new Date().toISOString(),
                             memo: s.memo ?? '',
                             id: undefined,
-                            packageId: undefined
+                            packageId: undefined,
+                            hidden: s.hidden ?? false,
                         };
                     });
                     const withSchedules = {
@@ -1046,15 +1049,41 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                                     {fields.map((field, index) => (
                                         <div key={field.id} className="space-y-4 p-4 border rounded-lg relative pt-8 bg-[#E0E4D9] overflow-hidden">
                                             <p className='text-xs'>Session {index + 1}</p>
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="sm"
-                                                className="absolute right-2 top-2"
-                                                onClick={() => remove(index)}
-                                            >
-                                                <TrashIcon className="h-4 w-4" />
-                                            </Button>
+                                            <div className="absolute right-2 top-2 flex items-center gap-2">
+                                                {/* Add visibility toggle button */}
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`schedules.${index}.hidden`}
+                                                    render={({ field }) => (
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => field.onChange(!field.value)}
+                                                            className="p-1"
+                                                            title={field.value ? "Show schedule" : "Hide schedule"}
+                                                        >
+                                                            {field.value ? (
+                                                                <EyeOff className="h-4 w-4" />
+                                                            ) : (
+                                                                <Eye className="h-4 w-4" />
+                                                            )}
+                                                        </Button>
+                                                    )}
+                                                />
+
+                                                {/* Existing delete button */}
+                                                {fields.length > 1 && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => remove(index)}
+                                                    >
+                                                        <TrashIcon className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                            </div>
 
                                             <FormField
                                                 control={form.control}
@@ -1222,7 +1251,7 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                                         variant="outline"
                                         size="sm"
                                         className="rounded-3xl text-main-yellow bg-main-green px-4 py-5 hover:bg-main-green hover:text-main-yellow w-full text-sm"
-                                        onClick={() => append({ day: '', from: '', to: '', memo: '', capacity: '', capacityType: 'normal' })}
+                                        onClick={() => append({ day: '', from: '', to: '', memo: '', capacity: '', capacityType: 'normal', hidden: false })}
                                     >
                                         Add Session
                                     </Button>
