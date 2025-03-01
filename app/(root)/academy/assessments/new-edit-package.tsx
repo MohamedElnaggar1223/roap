@@ -1123,15 +1123,8 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                         branchId={branchId}
                                         onScheduleImport={(importedSchedules) => {
 
-                                            const newScheduleGenders: Record<number, string[]> = {};
-                                            importedSchedules.forEach((schedule, index) => {
-                                                if (schedule.gender) {
-                                                    newScheduleGenders[index] = schedule.gender.split(',');
-                                                }
-                                            });
-                                            setScheduleGenders(newScheduleGenders);
 
-                                            form.setValue('schedules', importedSchedules.map(schedule => ({
+                                            const processedSchedules = importedSchedules.map(schedule => ({
                                                 day: schedule.day,
                                                 from: schedule.from,
                                                 to: schedule.to,
@@ -1144,7 +1137,50 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                                 capacity: typeof schedule?.capacity === 'number' ? schedule?.capacity?.toString() : typeof schedule?.capacity === 'string' ? schedule?.capacity : '9999',
                                                 capacityType: (typeof schedule?.capacity === 'number' ? schedule?.capacity?.toString() === '9999' ? 'unlimited' : 'normal' : typeof schedule?.capacity === 'string' ? schedule?.capacity === '9999' ? 'unlimited' : 'normal' : 'unlimited') as 'unlimited' | 'normal',
                                                 hidden: schedule.hidden ?? false
-                                            })));
+                                            }));
+
+                                            // Create initial genders tracking
+                                            const newScheduleGenders: Record<number, string[]> = {};
+                                            importedSchedules.forEach((schedule, index) => {
+                                                if (schedule.gender) {
+                                                    newScheduleGenders[index] = schedule.gender.split(',');
+                                                } else {
+                                                    newScheduleGenders[index] = [];
+                                                }
+                                            });
+
+                                            // Apply unification if needed
+                                            if (unifyGender) {
+                                                // Find the first non-empty gender to use as reference
+                                                const referenceGenders = Object.values(newScheduleGenders).find(g => g.length > 0) || [];
+
+                                                // Apply to all schedules
+                                                importedSchedules.forEach((_, index) => {
+                                                    newScheduleGenders[index] = [...referenceGenders];
+                                                    processedSchedules[index].gender = referenceGenders.join(',');
+                                                });
+                                            }
+
+                                            if (unifyAges) {
+                                                // Use the first schedule's ages as reference
+                                                const referenceStartAge = processedSchedules[0].startAge;
+                                                const referenceStartAgeUnit = processedSchedules[0].startAgeUnit;
+                                                const referenceEndAge = processedSchedules[0].endAge;
+                                                const referenceEndAgeUnit = processedSchedules[0].endAgeUnit;
+
+                                                // Apply to all schedules
+                                                processedSchedules.forEach((schedule, index) => {
+                                                    if (index !== 0) { // Skip the first one as it's our reference
+                                                        schedule.startAge = referenceStartAge;
+                                                        schedule.startAgeUnit = referenceStartAgeUnit;
+                                                        schedule.endAge = referenceEndAge;
+                                                        schedule.endAgeUnit = referenceEndAgeUnit;
+                                                    }
+                                                });
+                                            }
+
+                                            setScheduleGenders(newScheduleGenders);
+                                            form.setValue('schedules', processedSchedules);
 
                                         }}
                                     />
@@ -1635,14 +1671,53 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                         variant="outline"
                                         size="sm"
                                         className="rounded-3xl text-main-yellow bg-main-green px-4 py-5 hover:bg-main-green hover:text-main-yellow w-full text-sm"
-                                        onClick={() => append({
-                                            day: '', from: '', to: '', memo: '', startAge: 0,
-                                            startAgeUnit: 'years',
-                                            endAge: undefined,
-                                            endAgeUnit: 'unlimited', gender: null,
-                                            capacity: '9999', capacityType: 'unlimited',
-                                            hidden: false
-                                        })}
+                                        onClick={() => {
+                                            const newSchedule = {
+                                                day: '',
+                                                from: '',
+                                                to: '',
+                                                memo: '',
+                                                startAge: 0 as number | null,
+                                                startAgeUnit: 'years' as 'months' | 'years',
+                                                endAge: undefined as number | null | undefined,
+                                                endAgeUnit: 'unlimited' as 'months' | 'years' | 'unlimited',
+                                                gender: null as string | null,
+                                                capacity: '9999',
+                                                capacityType: 'unlimited' as 'unlimited' | 'normal',
+                                                hidden: false
+                                            };
+
+                                            // If unification is enabled, apply the unified values from the first schedule
+                                            if (fields.length > 0) {
+                                                if (unifyGender) {
+                                                    // Get the gender from the first schedule with a non-empty gender
+                                                    const referenceIndex = Object.entries(scheduleGenders)
+                                                        .find(([_, genders]) => genders.length > 0)?.[0] || '0';
+                                                    const referenceGenders = scheduleGenders[parseInt(referenceIndex)] || [];
+                                                    newSchedule.gender = referenceGenders.join(',');
+
+                                                    // Update the scheduleGenders state after appending
+                                                    setTimeout(() => {
+                                                        const newIndex = fields.length; // This will be the index of the newly added schedule
+                                                        setScheduleGenders(prev => ({
+                                                            ...prev,
+                                                            [newIndex]: referenceGenders
+                                                        }));
+                                                    }, 0);
+                                                }
+
+                                                if (unifyAges) {
+                                                    // Apply ages from the first schedule
+                                                    const firstSchedule = form.getValues('schedules.0');
+                                                    newSchedule.startAge = firstSchedule.startAge;
+                                                    newSchedule.startAgeUnit = firstSchedule.startAgeUnit;
+                                                    newSchedule.endAge = firstSchedule.endAge;
+                                                    newSchedule.endAgeUnit = firstSchedule.endAgeUnit;
+                                                }
+                                            }
+
+                                            append(newSchedule);
+                                        }}
                                     >
                                         Add Session
                                     </Button>
