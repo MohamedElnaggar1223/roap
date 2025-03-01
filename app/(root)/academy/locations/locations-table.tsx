@@ -32,7 +32,7 @@ interface Location {
     amenities: string[]
     locale: string
     hidden: boolean
-    createdAt: string // Added createdAt field
+    createdAt: string | null // Added createdAt field
 }
 
 interface Sport {
@@ -70,7 +70,7 @@ export function LocationsDataTable({ data, sports, academySports }: LocationsDat
 
     const sortByCreatedAt = (locations: Location[]) => {
         return [...locations].sort((a, b) => {
-            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            return new Date(a?.createdAt ?? '').getTime() - new Date(b?.createdAt ?? '').getTime()
         })
     }
 

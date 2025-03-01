@@ -32,7 +32,7 @@ interface Coach {
     sports: number[]
     languages: number[]
     packages: number[]
-    createdAt: string // Added createdAt field
+    createdAt: string | null // Added createdAt field
 }
 
 interface Sport {
@@ -72,7 +72,7 @@ export function CoachesDataTable({ data, sports, languages, academySports }: Coa
         if (!lowercasedValue) {
             // Sort by createdAt when resetting search
             const sortedData = [...data].sort((a, b) => {
-                return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                return new Date(a?.createdAt ?? '').getTime() - new Date(b?.createdAt ?? '').getTime()
             })
             setFilteredData(sortedData)
         }
@@ -82,7 +82,7 @@ export function CoachesDataTable({ data, sports, languages, academySports }: Coa
             )
             // Sort the filtered results
             const sortedFiltered = [...filtered].sort((a, b) => {
-                return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                return new Date(a?.createdAt ?? '').getTime() - new Date(b?.createdAt ?? '').getTime()
             })
             setFilteredData(sortedFiltered)
         }
@@ -134,7 +134,7 @@ export function CoachesDataTable({ data, sports, languages, academySports }: Coa
 
         // Sort the filtered coaches by createdAt, oldest first (newest at end)
         filtered = filtered.sort((a, b) => {
-            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            return new Date(a?.createdAt ?? '').getTime() - new Date(b?.createdAt ?? '').getTime()
         })
 
         setFilteredData(filtered)

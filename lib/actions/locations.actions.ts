@@ -20,6 +20,7 @@ const getLocationsAction = async (academicId: number) => {
                 isDefault: branches.isDefault,
                 rate: branches.rate,
                 hidden: branches.hidden,
+                createdAt: branches.createdAt,
                 sports: sql<string[]>`(
                 SELECT COALESCE(array_agg(sport_id), ARRAY[]::integer[])
                 FROM ${branchSport}

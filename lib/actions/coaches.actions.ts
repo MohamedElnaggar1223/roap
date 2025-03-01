@@ -68,6 +68,7 @@ const getCoachesAction = async (academicId: number) => {
                 bio: coaches.bio,
                 gender: coaches.gender,
                 dateOfBirth: coaches.dateOfBirth,
+                createdAt: coaches.createdAt,
                 privateSessionPercentage: coaches.privateSessionPercentage,
                 sports: sql<number[]>`(
                 SELECT COALESCE(array_agg(sport_id::integer), ARRAY[]::integer[])
