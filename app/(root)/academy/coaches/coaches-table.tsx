@@ -32,6 +32,7 @@ interface Coach {
     sports: number[]
     languages: number[]
     packages: number[]
+    createdAt: string // Added createdAt field
 }
 
 interface Sport {
@@ -60,7 +61,7 @@ export function CoachesDataTable({ data, sports, languages, academySports }: Coa
     const { mutate } = useOnboarding()
 
     const [selectedSport, setSelectedSport] = useState<string | null>(null)
-    const [filteredData, setFilteredData] = useState<Coach[]>(data)
+    const [filteredData, setFilteredData] = useState<Coach[]>([])
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedRows, setSelectedRows] = useState<number[]>([])
     const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false)
@@ -69,13 +70,21 @@ export function CoachesDataTable({ data, sports, languages, academySports }: Coa
     const debouncedSearch = useDebouncedCallback((value: string) => {
         const lowercasedValue = value.toLowerCase()
         if (!lowercasedValue) {
-            setFilteredData(data)
+            // Sort by createdAt when resetting search
+            const sortedData = [...data].sort((a, b) => {
+                return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            })
+            setFilteredData(sortedData)
         }
         else {
             const filtered = data.filter(coach =>
                 coach.name?.toLowerCase().includes(lowercasedValue)
             )
-            setFilteredData(filtered)
+            // Sort the filtered results
+            const sortedFiltered = [...filtered].sort((a, b) => {
+                return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            })
+            setFilteredData(sortedFiltered)
         }
     }, 300)
 
@@ -119,12 +128,16 @@ export function CoachesDataTable({ data, sports, languages, academySports }: Coa
     }
 
     useEffect(() => {
-        setFilteredData(() => {
-            const filtered = data.slice()
-                .filter((coach) => selectedSport ? coach.sports?.includes(parseInt(selectedSport)) : true)
+        // Sort and filter data whenever data or selectedSport changes
+        let filtered = data.slice()
+            .filter((coach) => selectedSport ? coach.sports?.includes(parseInt(selectedSport)) : true)
 
-            return filtered
+        // Sort the filtered coaches by createdAt, oldest first (newest at end)
+        filtered = filtered.sort((a, b) => {
+            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         })
+
+        setFilteredData(filtered)
     }, [data, selectedSport])
 
     return (
@@ -206,53 +219,51 @@ export function CoachesDataTable({ data, sports, languages, academySports }: Coa
                     </div>
 
                     {/* Rows */}
-                    {filteredData
-                        // .filter((coach) => selectedSport ? coach.sports?.includes(parseInt(selectedSport)) : true)
-                        .map((coach) => (
-                            <Fragment key={coach.id}>
-                                <div className="py-4 px-4 bg-main-white rounded-l-[20px] flex items-center justify-center">
-                                    <Checkbox
-                                        checked={selectedRows.includes(coach.id)}
-                                        onCheckedChange={() => handleRowSelect(coach.id)}
-                                        aria-label={`Select ${coach.name}`}
+                    {filteredData.map((coach) => (
+                        <Fragment key={coach.id}>
+                            <div className="py-4 px-4 bg-main-white rounded-l-[20px] flex items-center justify-center">
+                                <Checkbox
+                                    checked={selectedRows.includes(coach.id)}
+                                    onCheckedChange={() => handleRowSelect(coach.id)}
+                                    aria-label={`Select ${coach.name}`}
+                                />
+                            </div>
+                            <div className="py-4 px-4 bg-main-white flex items-center justify-start">
+                                <div className="flex items-center justify-center w-[3.75rem] h-[3.75rem] overflow-hidden rounded-full">
+                                    <img
+                                        src={coach.image ?? '/images/placeholder.svg'}
+                                        alt={coach.name}
+                                        width={60}
+                                        height={60}
+                                        className="rounded-full object-cover"
                                     />
                                 </div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start">
-                                    <div className="flex items-center justify-center w-[3.75rem] h-[3.75rem] overflow-hidden rounded-full">
-                                        <img
-                                            src={coach.image ?? '/images/placeholder.svg'}
-                                            alt={coach.name}
-                                            width={60}
-                                            height={60}
-                                            className="rounded-full object-cover"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                    {coach.name}
-                                </div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                    {coach.dateOfBirth ? calculateAge(new Date(coach.dateOfBirth!)) : 'N/A'}
-                                </div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                    {(coach.gender?.slice(0, 1).toUpperCase() ?? '') + coach.gender?.slice(1)}
-                                </div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                    {coach.sports?.length ?? 0}
-                                </div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                    {coach.languages?.length ?? 0}
-                                </div>
-                                <div className="py-4 px-4 bg-main-white rounded-r-[20px] flex items-center justify-end">
-                                    <EditCoach
-                                        coachEdited={coach}
-                                        sports={sports}
-                                        languages={languages}
-                                        academySports={academySports}
-                                    />
-                                </div>
-                            </Fragment>
-                        ))}
+                            </div>
+                            <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                {coach.name}
+                            </div>
+                            <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                {coach.dateOfBirth ? calculateAge(new Date(coach.dateOfBirth!)) : 'N/A'}
+                            </div>
+                            <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                {(coach.gender?.slice(0, 1).toUpperCase() ?? '') + coach.gender?.slice(1)}
+                            </div>
+                            <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                {coach.sports?.length ?? 0}
+                            </div>
+                            <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                {coach.languages?.length ?? 0}
+                            </div>
+                            <div className="py-4 px-4 bg-main-white rounded-r-[20px] flex items-center justify-end">
+                                <EditCoach
+                                    coachEdited={coach}
+                                    sports={sports}
+                                    languages={languages}
+                                    academySports={academySports}
+                                />
+                            </div>
+                        </Fragment>
+                    ))}
                 </div>
             </div>
 

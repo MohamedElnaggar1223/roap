@@ -32,6 +32,7 @@ interface Location {
     amenities: string[]
     locale: string
     hidden: boolean
+    createdAt: string // Added createdAt field
 }
 
 interface Sport {
@@ -52,7 +53,7 @@ export function LocationsDataTable({ data, sports, academySports }: LocationsDat
 
     const [selectedLocations, setSelectedLocations] = useState<number[]>([])
     const [selectedSport, setSelectedSport] = useState<string | null>(null)
-    const [filteredData, setFilteredData] = useState<Location[]>(data)
+    const [filteredData, setFilteredData] = useState<Location[]>([])
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedRows, setSelectedRows] = useState<number[]>([])
     const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false)
@@ -67,16 +68,24 @@ export function LocationsDataTable({ data, sports, academySports }: LocationsDat
         )
     }
 
+    const sortByCreatedAt = (locations: Location[]) => {
+        return [...locations].sort((a, b) => {
+            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        })
+    }
+
     const debouncedSearch = useDebouncedCallback((value: string) => {
         const lowercasedValue = value.toLowerCase()
         if (!lowercasedValue) {
-            setFilteredData(data)
+            // Sort by createdAt when resetting search
+            setFilteredData(sortByCreatedAt(data))
         }
         else {
             const filtered = data.filter(location =>
                 location.name?.toLowerCase().includes(lowercasedValue)
             )
-            setFilteredData(filtered)
+            // Sort the filtered results
+            setFilteredData(sortByCreatedAt(filtered))
         }
     }, 300)
 
@@ -133,14 +142,17 @@ export function LocationsDataTable({ data, sports, academySports }: LocationsDat
             setPendingVisibilityToggles(prev => prev.filter(id => id !== locationId))
             router.refresh()
         }
-    }, [router])
+    }, [router, toast])
 
     useEffect(() => {
-        setFilteredData(() => {
-            const filtered = data
-                .filter((location) => selectedSport ? location.sports?.includes(selectedSport) : true)
-            return filtered
-        })
+        // Filter and sort data whenever data or selectedSport changes
+        const filtered = data
+            .filter((location) => selectedSport ? location.sports?.includes(selectedSport) : true)
+
+        // Sort the filtered locations by createdAt, oldest first (newest at end)
+        const sortedLocations = sortByCreatedAt(filtered)
+
+        setFilteredData(sortedLocations)
     }, [selectedSport, data])
 
     return (
@@ -181,7 +193,6 @@ export function LocationsDataTable({ data, sports, academySports }: LocationsDat
                     {selectedRows.length > 0 && (
                         <Button
                             variant="destructive"
-
                             onClick={() => setBulkDeleteOpen(true)}
                             className="flex items-center gap-2"
                         >
@@ -223,47 +234,46 @@ export function LocationsDataTable({ data, sports, academySports }: LocationsDat
                     </div>
 
                     {/* Rows */}
-                    {filteredData
-                        .map((location) => (
-                            <Fragment key={location.id}>
-                                <div className="py-4 px-4 bg-main-white rounded-l-[20px] flex items-center justify-center font-bold font-inter">
-                                    <Checkbox
-                                        checked={selectedRows.includes(location.id)}
-                                        onCheckedChange={() => handleRowSelect(location.id)}
-                                        aria-label={`Select ${location.name}`}
-                                    />
-                                </div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{location.name}</div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{location.amenities?.length ?? 0}</div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{location.sports?.length}</div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{location.rate}</div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                    <span className={location.isDefault ? "text-main-green" : "text-red-600"}>
-                                        {location.isDefault ? "Yes" : "No"}
-                                    </span>
-                                </div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="hover:bg-transparent"
-                                        disabled={pendingVisibilityToggles.includes(location.id)}
-                                        onClick={(e) => handleVisibilityToggle(location.id, e)}
-                                    >
-                                        {pendingVisibilityToggles.includes(location.id) ? (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : location.hidden ? (
-                                            <EyeOff className="h-4 w-4" />
-                                        ) : (
-                                            <Eye className="h-4 w-4" />
-                                        )}
-                                    </Button>
-                                </div>
-                                <div className="py-4 px-4 bg-main-white rounded-r-[20px] flex items-center justify-end font-bold font-inter">
-                                    <EditLocation locationEdited={location} academySports={academySports} />
-                                </div>
-                            </Fragment>
-                        ))}
+                    {filteredData.map((location) => (
+                        <Fragment key={location.id}>
+                            <div className="py-4 px-4 bg-main-white rounded-l-[20px] flex items-center justify-center font-bold font-inter">
+                                <Checkbox
+                                    checked={selectedRows.includes(location.id)}
+                                    onCheckedChange={() => handleRowSelect(location.id)}
+                                    aria-label={`Select ${location.name}`}
+                                />
+                            </div>
+                            <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{location.name}</div>
+                            <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{location.amenities?.length ?? 0}</div>
+                            <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{location.sports?.length}</div>
+                            <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{location.rate}</div>
+                            <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                <span className={location.isDefault ? "text-main-green" : "text-red-600"}>
+                                    {location.isDefault ? "Yes" : "No"}
+                                </span>
+                            </div>
+                            <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="hover:bg-transparent"
+                                    disabled={pendingVisibilityToggles.includes(location.id)}
+                                    onClick={(e) => handleVisibilityToggle(location.id, e)}
+                                >
+                                    {pendingVisibilityToggles.includes(location.id) ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : location.hidden ? (
+                                        <EyeOff className="h-4 w-4" />
+                                    ) : (
+                                        <Eye className="h-4 w-4" />
+                                    )}
+                                </Button>
+                            </div>
+                            <div className="py-4 px-4 bg-main-white rounded-r-[20px] flex items-center justify-end font-bold font-inter">
+                                <EditLocation locationEdited={location} academySports={academySports} />
+                            </div>
+                        </Fragment>
+                    ))}
                 </div>
             </div>
             <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
