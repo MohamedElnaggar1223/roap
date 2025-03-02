@@ -2,7 +2,7 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { updateAssessment } from '@/lib/actions/assessments.actions'
-import { Loader2, X } from 'lucide-react'
+import { Loader2, X, Eye, EyeOff } from 'lucide-react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -103,10 +103,6 @@ const calculateDateFromAge = (age: number, unit: string): Date => {
 
 const editAssessmentSchema = z.object({
     description: z.string().min(1, "Description is required"),
-    // startAge: z.number().min(0, "Start age must be 0 or greater").max(100, "Start age must be 100 or less").multipleOf(0.5, "Start age must be in increments of 0.5"),
-    // startAgeUnit: z.enum(["months", "years"]),
-    // endAge: z.number().min(0, "End age must be 0.5 or greater").max(100, "End age must be 100 or less").multipleOf(0.5, "End age must be in increments of 0.5").optional(),
-    // endAgeUnit: z.enum(["months", "years", "unlimited"]),
     numberOfSeats: z.string().optional(),
     assessmentDeductedFromProgram: z.boolean().default(false).optional(),
 })
@@ -126,6 +122,7 @@ interface Package {
     entryFeesAppliedUntil?: string[]
     entryFeesStartDate?: Date
     entryFeesEndDate?: Date
+    hidden?: boolean // Add hidden property to match EditProgram
 }
 
 interface Schedule {
@@ -228,6 +225,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
             entryFeesAppliedUntil: packageData.entryFeesAppliedUntil || undefined,
             entryFeesStartDate: packageData.entryFeesStartDate ? new Date(packageData.entryFeesStartDate) : undefined,
             entryFeesEndDate: packageData.entryFeesEndDate ? new Date(packageData.entryFeesEndDate) : undefined,
+            hidden: packageData.hidden ?? false, // Ensure hidden property exists
             schedules: packageData.schedules?.map(schedule => ({
                 ...schedule,
                 startDateOfBirth: schedule.startDateOfBirth ? new Date(schedule.startDateOfBirth) : null,
@@ -244,27 +242,6 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
         defaultValues: {
             description: assessment.description ?? '',
             numberOfSeats: assessment.numberOfSeats?.toString() ?? '',
-            // startAge: (() => {
-            //     if (!assessment.startDateOfBirth) return 0;
-            //     const { age, unit } = calculateAgeFromDate(assessment.startDateOfBirth);
-            //     return age;
-            // })(),
-            // startAgeUnit: (() => {
-            //     if (!assessment.startDateOfBirth) return 'years';
-            //     return calculateAgeFromDate(assessment.startDateOfBirth).unit as 'months' | 'years' | undefined;
-            // })(),
-            // endAge: (() => {
-            //     if (!assessment.endDateOfBirth) return undefined;
-            //     const { age, unit } = calculateAgeFromDate(assessment.endDateOfBirth);
-            //     if (age >= 100) return undefined; // For unlimited
-            //     return age;
-            // })(),
-            // endAgeUnit: (() => {
-            //     if (!assessment.endDateOfBirth) return 'unlimited';
-            //     const { age } = calculateAgeFromDate(assessment.endDateOfBirth);
-            //     if (age >= 100) return 'unlimited';
-            //     return calculateAgeFromDate(assessment.endDateOfBirth).unit as "months" | "years" | undefined;
-            // })(),
             assessmentDeductedFromProgram: assessment.assessmentDeductedFromProgram
         }
     })
@@ -283,41 +260,26 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
         )
     }
 
+    // Function to toggle hidden state for a package
+    const togglePackageHidden = (index: number) => {
+        setCreatedPackages(prev => {
+            const updated = [...prev];
+            updated[index] = {
+                ...updated[index],
+                hidden: !updated[index].hidden
+            };
+            return updated;
+        });
+    };
+
     const onSubmit = async (values: z.infer<typeof editAssessmentSchema>) => {
         try {
             setLoading(true)
-
-            // if (!selectedGenders.length) {
-            //     form.setError('root', {
-            //         type: 'custom',
-            //         message: 'Please select at least one gender'
-            //     })
-            //     return
-            // }
-
-            // const startDate = calculateDateFromAge(values.startAge, values.startAgeUnit);
-
-            // let endDate;
-            // if (values.endAgeUnit === 'unlimited') {
-            //     endDate = new Date();
-            //     endDate.setFullYear(endDate.getFullYear() - 100); // Set to 100 years ago for unlimited
-            // } else {
-            //     if (!values.endAge) {
-            //         return form.setError('endAge', {
-            //             type: 'custom',
-            //             message: 'End age is required for limited duration'
-            //         });
-            //     }
-            //     endDate = calculateDateFromAge(values.endAge, values.endAgeUnit);
-            // }
 
             const result = await updateAssessment(assessment.id, {
                 description: values.description,
                 branchId: assessment.branchId!,
                 sportId: assessment.sportId!,
-                // gender: selectedGenders.join(','),
-                // startDateOfBirth: startDate,
-                // endDateOfBirth: endDate,
                 numberOfSeats: 0,
                 coaches: selectedCoaches,
                 packagesData: createdPackages.map((p) => ({
@@ -326,6 +288,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                     endDate: format(p.endDate, 'yyyy-MM-dd 00:00:00'),
                     entryFeesStartDate: p.entryFeesStartDate ? format(p.entryFeesStartDate, 'yyyy-MM-dd 00:00:00') : undefined,
                     entryFeesEndDate: p.entryFeesEndDate ? format(p.entryFeesEndDate, 'yyyy-MM-dd 00:00:00') : undefined,
+                    hidden: p.hidden, // Include hidden property in API call
                     schedules: p.schedules.map(schedule => ({
                         ...schedule,
                         startDateOfBirth: schedule.startDateOfBirth ? format(schedule.startDateOfBirth, 'yyyy-MM-dd 00:00:00') : undefined,
@@ -367,9 +330,6 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
         }
     }
 
-    // const startAgeUnitChange = form.watch('startAgeUnit')
-    // const endAgeUnitChange = form.watch('endAgeUnit')
-
     useEffect(() => {
         if (!editPackageOpen) {
             setEditedPackage(null)
@@ -381,11 +341,6 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
         const missingFields: string[] = [];
 
         if (!values.description) missingFields.push('Description');
-        // if (!selectedGenders.length) missingFields.push('Gender');
-        // if (values.startAge === undefined || values.startAge === null) missingFields.push('Start Age');
-        // if (values.endAgeUnit !== 'unlimited' && (!values.endAge || values.endAge === undefined)) {
-        //     missingFields.push('End Age');
-        // }
 
         if (missingFields.length > 0) {
             toast({
@@ -457,57 +412,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                                         )}
                                     />
 
-                                    {/* <div className="flex flex-col gap-4 flex-1">
-                                        <p className='text-xs'>For</p>
-                                        <div className="flex w-full flex-col gap-4 border border-gray-500 p-3 rounded-lg">
-                                            <div className="flex flex-wrap gap-2">
-                                                {selectedGenders.map((gender) => (
-                                                    <Badge
-                                                        key={gender}
-                                                        variant="default"
-                                                        className="flex items-center gap-1 hover:bg-[#E0E4D9] pr-0.5 bg-[#E0E4D9] rounded-3xl text-main-green font-semibold font-inter text-sm"
-                                                    >
-                                                        <span className="text-xs">{gender}</span>
-                                                        <button
-                                                            disabled={loading}
-                                                            onClick={() => handleSelectGender(gender)}
-                                                            className="ml-1 rounded-full p-0.5 hover:bg-secondary-foreground/20"
-                                                        >
-                                                            <X className="size-3" fill='#1f441f' />
-                                                            <span className="sr-only">Remove {gender}</span>
-                                                        </button>
-                                                    </Badge>
-                                                ))}
-                                            </div>
-                                            <Popover open={gendersOpen} onOpenChange={setGendersOpen}>
-                                                <PopoverTrigger asChild>
-                                                    <Button
-                                                        variant="default"
-                                                        disabled={loading}
-                                                        className="gap-2 hover:bg-transparent text-left flex items-center bg-transparent text-black border border-gray-500 justify-start"
-                                                    >
-                                                        Select genders
-                                                    </Button>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-56 p-0" align="start">
-                                                    <div className="p-2">
-                                                        {genders.map(gender => (
-                                                            <p
-                                                                key={gender}
-                                                                onClick={() => handleSelectGender(gender)}
-                                                                className="p-2 flex items-center justify-start gap-2 text-left cursor-pointer hover:bg-[#fafafa] rounded-lg"
-                                                            >
-                                                                {selectedGenders.includes(gender) && <X className="size-3" fill='#1f441f' />}
-                                                                {gender}
-                                                            </p>
-                                                        ))}
-                                                    </div>
-                                                </PopoverContent>
-                                            </Popover>
-                                        </div>
-                                    </div> */}
-
-                                    <div className="absolute hidden flex-col gap-4 w-full">
+                                    <div className="flex flex-col gap-4 flex-1 hidden absolute">
                                         <p className='text-xs'>Coaches</p>
                                         <div className="flex w-full flex-col gap-4 border border-gray-500 p-3 rounded-lg">
                                             <div className="flex flex-wrap gap-2">
@@ -567,121 +472,6 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                                         </div>
                                     </div>
 
-                                    <div className="flex w-full gap-4 items-start justify-between">
-                                        <div className="flex flex-1 gap-2">
-                                            {/* <FormField
-                                                control={form.control}
-                                                name='startAge'
-                                                render={({ field }) => (
-                                                    <FormItem className="flex flex-col flex-1">
-                                                        <FormLabel>Start Age</FormLabel>
-                                                        <FormControl>
-                                                            <Input
-                                                                type="number"
-                                                                {...field}
-                                                                onChange={e => field.onChange(Number(e.target.value))}
-                                                                step={startAgeUnitChange === 'months' ? 1 : 0.5}
-                                                                min={0}
-                                                                max={100}
-                                                                disabled={isLoading || isValidating || loading}
-                                                                className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
-                                                            />
-                                                        </FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            /> */}
-                                            {/* <FormField
-                                                control={form.control}
-                                                name="startAgeUnit"
-                                                render={({ field }) => (
-                                                    <FormItem className="flex flex-col flex-1">
-                                                        <FormLabel>Unit</FormLabel>
-                                                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading || isValidating || loading}>
-                                                            <FormControl>
-                                                                <SelectTrigger className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'>
-                                                                    <SelectValue placeholder="Select unit" />
-                                                                </SelectTrigger>
-                                                            </FormControl>
-                                                            <SelectContent className='!bg-[#F1F2E9]'>
-                                                                <SelectItem value="months">Months</SelectItem>
-                                                                <SelectItem value="years">Years</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            /> */}
-                                        </div>
-
-                                        <div className="flex flex-1 gap-2">
-                                            {/* <FormField
-                                                control={form.control}
-                                                name='endAge'
-                                                render={({ field }) => (
-                                                    <FormItem className="flex flex-col flex-1">
-                                                        <FormLabel>End Age</FormLabel>
-                                                        <FormControl>
-                                                            <Input
-                                                                type="number"
-                                                                {...field}
-                                                                onChange={e => field.onChange(Number(e.target.value))}
-                                                                step={endAgeUnitChange === 'months' ? 1 : 0.5}
-                                                                min={0.5}
-                                                                max={100}
-                                                                disabled={isLoading || isValidating || loading || form.watch('endAgeUnit') === 'unlimited'}
-                                                                className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
-                                                            />
-                                                        </FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            /> */}
-                                            {/* <FormField
-                                                control={form.control}
-                                                name="endAgeUnit"
-                                                render={({ field }) => (
-                                                    <FormItem className="flex flex-col flex-1">
-                                                        <FormLabel>Unit</FormLabel>
-                                                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading || isValidating || loading}>
-                                                            <FormControl>
-                                                                <SelectTrigger className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'>
-                                                                    <SelectValue placeholder="Select unit" />
-                                                                </SelectTrigger>
-                                                            </FormControl>
-                                                            <SelectContent className='!bg-[#F1F2E9]'>
-                                                                <SelectItem value="months">Months</SelectItem>
-                                                                <SelectItem value="years">Years</SelectItem>
-                                                                <SelectItem value="unlimited">Unlimited</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            /> */}
-                                        </div>
-                                    </div>
-
-                                    {/* <FormField
-                                        control={form.control}
-                                        name='numberOfSeats'
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Number of Slots</FormLabel>
-                                                <FormControl>
-                                                    <Input
-                                                        disabled={loading}
-                                                        {...field}
-                                                        type="number"
-                                                        min="1"
-                                                        className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
-                                                    />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    /> */}
-
                                     <div className="w-full max-w-screen-2xl overflow-x-auto">
                                         <div className="min-w-full grid grid-cols-[0.75fr,auto,auto,auto,auto,auto] gap-y-2 text-nowrap">
                                             <div className="contents">
@@ -729,6 +519,20 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                                                         {packageData.schedules.length}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white gap-4 rounded-r-[20px] flex items-center justify-end font-bold font-inter">
+                                                        {/* Add Eye/EyeOff toggle button for hiding packages */}
+                                                        <Button
+                                                            type='button'
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            disabled={loading}
+                                                            onClick={() => togglePackageHidden(index)}
+                                                        >
+                                                            {packageData.hidden ? (
+                                                                <EyeOff className="h-4 w-4" />
+                                                            ) : (
+                                                                <Eye className="h-4 w-4" />
+                                                            )}
+                                                        </Button>
                                                         <Button
                                                             type="button"
                                                             variant="ghost"

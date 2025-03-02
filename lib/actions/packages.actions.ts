@@ -311,6 +311,7 @@ export async function getProgramPackages(url: string | null, programId: number) 
             entryFeesStartDate: packages.entryFeesStartDate,
             entryFeesEndDate: packages.entryFeesEndDate,
             capacity: packages.capacity,
+            hidden: packages.hidden,
             schedules: sql<Schedule[]>`json_agg(
                 json_build_object(
                     'id', ${schedules.id},

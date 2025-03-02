@@ -30,6 +30,7 @@ interface Package {
     endDate: string
     schedules: Schedule[]
     memo: string | null
+    hidden?: boolean
     id?: number
 }
 
@@ -304,6 +305,7 @@ export async function updateAssessment(id: number, data: {
                                 endDate: packageData.endDate,
                                 sessionPerWeek: packageData.schedules.length,
                                 memo: packageData.memo,
+                                hidden: packageData.hidden,
                                 createdAt: sql`now()`,
                                 updatedAt: sql`now()`,
                             })
@@ -351,6 +353,7 @@ export async function updateAssessment(id: number, data: {
                                     endDate: packageData.endDate,
                                     sessionPerWeek: packageData.schedules.length,
                                     memo: packageData.memo,
+                                    hidden: packageData.hidden,
                                     updatedAt: sql`now()`,
                                 })
                                 .where(eq(packages.id, packageData.id!))
