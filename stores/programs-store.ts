@@ -75,45 +75,16 @@ export type Program = {
     discounts: Discount[];
     flexible: boolean;
     hidden?: boolean;
-    // sport: {
-    // id: number;
-    // createdAt: string | null;
-    // updatedAt: string | null;
-    // image: string | null;
-    // slug: string | null;
-    // sportTranslations: {
-    // name: string;
-    // }[];
-    // } | null;
-    // branch: {
-    // id: number;
-    // createdAt: string | null;
-    // updatedAt: string | null;
-    // academicId: number | null;
-    // slug: string;
-    // latitude: string | null;
-    // longitude: string | null;
-    // isDefault: boolean;
-    // rate: number | null;
-    // reviews: number | null;
-    // url: string | null;
-    // placeId: string | null;
-    // nameInGoogleMap: string | null;
-    // branchTranslations: {
-    // name: string;
-    // }[];
-    // } | null;
+
+    startAgeMonths?: number | null;
+    endAgeMonths?: number | null;
+    isEndAgeUnlimited?: boolean;
+
     coachPrograms: {
         id: number | undefined;
         deleted?: boolean;
-        // createdAt: string | null;
-        // updatedAt: string | null;
-        // programId: number;
-        // coachId: number;
         coach: {
-            // name: string;
             id: number;
-            // image: string | null;
         };
     }[];
 }

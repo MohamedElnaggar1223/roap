@@ -680,6 +680,10 @@ export const programs = pgTable("programs", {
     assessmentDeductedFromProgram: boolean("assessment_deducted_from_program").default(false).notNull(),
     flexible: boolean("flexible").default(false).notNull(),
     hidden: boolean("hidden").default(false).notNull(),
+    // New columns for absolute age storage
+    startAgeMonths: integer("start_age_months"),
+    endAgeMonths: integer("end_age_months"),
+    isEndAgeUnlimited: boolean("is_end_age_unlimited").default(false).notNull(),
 }, (table) => {
     return {
         programsAcademicIdForeign: foreignKey({
@@ -1009,6 +1013,10 @@ export const schedules = pgTable("schedules", {
     endDateOfBirth: date("end_date_of_birth").default(sql`NULL`),
     gender: varchar({ length: 255 }).default(sql`NULL`),
     hidden: boolean("hidden").default(false).notNull(),
+    // New fields for absolute age storage
+    startAgeMonths: integer("start_age_months"),
+    endAgeMonths: integer("end_age_months"),
+    isEndAgeUnlimited: boolean("is_end_age_unlimited").default(false).notNull(),
 }, (table) => {
     return {
         schedulesPackageIdForeign: foreignKey({

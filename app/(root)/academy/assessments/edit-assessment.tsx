@@ -40,6 +40,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
 import { useGendersStore } from '@/providers/store-provider'
+import { ageToMonths, monthsToAge } from '@/lib/utils/age-calculations';
 
 const calculateAgeFromDate = (birthDate: string) => {
     const today = new Date();
@@ -154,6 +155,9 @@ interface Props {
         branchName: string;
         sportName: string;
         assessmentDeductedFromProgram: boolean;
+        startAgeMonths?: number | null;
+        endAgeMonths?: number | null;
+        isEndAgeUnlimited?: boolean;
     }
     branches: {
         id: number;

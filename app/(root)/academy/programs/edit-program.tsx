@@ -46,6 +46,7 @@ import { Discount, Package, Program } from '@/stores/programs-store';
 import { useGendersStore, useProgramsStore } from '@/providers/store-provider';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
+import { ageToMonths, monthsToAge } from '@/lib/utils/age-calculations';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -432,30 +433,64 @@ export default function EditProgram({ branches, sports, programEdited, academySp
             numberOfSeats: programEdited.numberOfSeats?.toString() ?? '',
             type: programEdited.type as 'TEAM' | 'PRIVATE' ?? 'TEAM',
             startAge: (() => {
+                // Prioritize using startAgeMonths if available
+                if (programEdited.startAgeMonths !== null && programEdited.startAgeMonths !== undefined) {
+                    const { age } = monthsToAge(programEdited.startAgeMonths);
+                    return age;
+                }
+
+                // Fall back to date-based calculation for backward compatibility
                 if (!programEdited.startDateOfBirth) return 0;
-                const { age, unit } = calculateAgeFromDate(programEdited.startDateOfBirth);
+                const { age } = calculateAgeFromDate(programEdited.startDateOfBirth);
                 return age;
             })(),
             startAgeUnit: (() => {
+                // Prioritize using startAgeMonths if available
+                if (programEdited.startAgeMonths !== null && programEdited.startAgeMonths !== undefined) {
+                    const { unit } = monthsToAge(programEdited.startAgeMonths);
+                    return unit as 'months' | 'years';
+                }
+
+                // Fall back to date-based calculation
                 if (!programEdited.startDateOfBirth) return 'years';
-                return calculateAgeFromDate(programEdited.startDateOfBirth).unit as 'months' | 'years' | undefined;
+                return calculateAgeFromDate(programEdited.startDateOfBirth).unit as 'months' | 'years';
             })(),
             endAge: (() => {
+                // Check if unlimited is set first
+                if (programEdited.isEndAgeUnlimited) return undefined;
+
+                // Use endAgeMonths if available
+                if (programEdited.endAgeMonths !== null && programEdited.endAgeMonths !== undefined) {
+                    const { age } = monthsToAge(programEdited.endAgeMonths);
+                    return age;
+                }
+
+                // Fall back to date-based calculation
                 if (!programEdited.endDateOfBirth) return undefined;
-                const { age, unit } = calculateAgeFromDate(programEdited.endDateOfBirth);
+                const { age } = calculateAgeFromDate(programEdited.endDateOfBirth);
                 if (age >= 100) return undefined; // For unlimited
                 return age;
             })(),
             endAgeUnit: (() => {
+                // Check if unlimited is set first
+                if (programEdited.isEndAgeUnlimited) return 'unlimited';
+
+                // Use endAgeMonths if available
+                if (programEdited.endAgeMonths !== null && programEdited.endAgeMonths !== undefined) {
+                    const { unit } = monthsToAge(programEdited.endAgeMonths);
+                    return unit as 'months' | 'years';
+                }
+
+                // Fall back to date-based calculation
                 if (!programEdited.endDateOfBirth) return 'unlimited';
                 const { age } = calculateAgeFromDate(programEdited.endDateOfBirth);
                 if (age >= 100) return 'unlimited';
-                return calculateAgeFromDate(programEdited.endDateOfBirth).unit as "months" | "years" | undefined;
+                return calculateAgeFromDate(programEdited.endDateOfBirth).unit as "months" | "years";
             })(),
             color: programEdited.color ?? '',
             flexible: programEdited.flexible ?? false,
         }
-    })
+    });
 
     const selectedBranchId = form.watch('branchId');
 
@@ -515,10 +550,15 @@ export default function EditProgram({ branches, sports, programEdited, academySp
 
             const startDate = calculateDateFromAge(values.startAge, values.startAgeUnit);
 
+            const startAgeMonths = ageToMonths(values.startAge, values.startAgeUnit);
+
             let endDate;
-            if (values.endAgeUnit === 'unlimited') {
+            let endAgeMonths = null;
+            const isEndAgeUnlimited = values.endAgeUnit === 'unlimited';
+
+            if (isEndAgeUnlimited) {
                 endDate = new Date();
-                endDate.setFullYear(endDate.getFullYear() - 100); // Set to 100 years ago for unlimited
+                endDate.setFullYear(endDate.getFullYear() - 100);
             } else {
                 if (!values.endAge) {
                     return form.setError('endAge', {
@@ -527,23 +567,8 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                     });
                 }
                 endDate = calculateDateFromAge(values.endAge, values.endAgeUnit);
+                endAgeMonths = ageToMonths(values.endAge, values.endAgeUnit);
             }
-
-            // const result = await updateProgram(programEdited.id, {
-            //     name: values.name,
-            //     description: values.description,
-            //     branchId: parseInt(values.branchId),
-            //     sportId: parseInt(values.sportId),
-            //     gender: selectedGenders.join(','),
-            //     startDateOfBirth: startDate,
-            //     endDateOfBirth: endDate,
-            //     numberOfSeats: 0,
-            //     type: values.type,
-            //     coaches: selectedCoaches,
-            //     packagesData: createdPackages,
-            //     color: values.color,
-            //     discountsData: createdDiscounts
-            // })
 
             const newCoachPrograms = selectedCoaches.reduce((acc: any, coachId: number) => {
                 const existingCoach = programEdited.coachPrograms.find(cp => cp.coach.id === coachId);
@@ -575,32 +600,18 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                 gender: selectedGenders.join(','),
                 startDateOfBirth: startDate.toISOString(),
                 endDateOfBirth: endDate.toISOString(),
+                startAgeMonths: startAgeMonths,
+                endAgeMonths: endAgeMonths,
+                isEndAgeUnlimited: isEndAgeUnlimited
             }, mutateProgram)
 
             const updatedPackages = program?.packages.filter(p => !p.deleted) ?? [];
             setOriginalPackages(updatedPackages);
 
-            // if (result.error) {
-            //     console.error('Error creating program:', result.error)
-            //     if (result?.field) {
-            //         form.setError(result.field as any, {
-            //             type: 'custom',
-            //             message: result.error
-            //         })
-            //         return
-            //     }
-            //     form.setError('root', {
-            //         type: 'custom',
-            //         message: result.error
-            //     })
-            //     return
-            // }
-
             setEditProgramOpen(false)
-            // mutateProgram()
             router.refresh()
         } catch (error) {
-            console.error('Error creating program:', error)
+            console.error('Error updating program:', error)
             form.setError('root', {
                 type: 'custom',
                 message: 'An unexpected error occurred'

@@ -19,6 +19,9 @@ interface Schedule {
     gender: string | null | undefined
     capacity: number | null | undefined
     hidden?: boolean
+    startAgeMonths?: number | null
+    endAgeMonths?: number | null
+    isEndAgeUnlimited?: boolean
 }
 
 interface Package {
@@ -325,6 +328,9 @@ export async function updateAssessment(id: number, data: {
                                         hidden: schedule.hidden ?? false,
                                         startDateOfBirth: schedule.startDateOfBirth,
                                         endDateOfBirth: schedule.endDateOfBirth,
+                                        startAgeMonths: schedule.startAgeMonths,
+                                        endAgeMonths: schedule.endAgeMonths,
+                                        isEndAgeUnlimited: schedule.isEndAgeUnlimited,
                                         gender: schedule.gender,
                                         capacity: schedule.capacity ?? 9999,
                                         createdAt: sql`now()`,
@@ -375,6 +381,9 @@ export async function updateAssessment(id: number, data: {
                                             hidden: schedule.hidden ?? false,
                                             startDateOfBirth: schedule.startDateOfBirth,
                                             endDateOfBirth: schedule.endDateOfBirth,
+                                            startAgeMonths: schedule.startAgeMonths,
+                                            endAgeMonths: schedule.endAgeMonths,
+                                            isEndAgeUnlimited: schedule.isEndAgeUnlimited,
                                             gender: schedule.gender,
                                             capacity: schedule.capacity ?? 9999,
                                             createdAt: sql`now()`,

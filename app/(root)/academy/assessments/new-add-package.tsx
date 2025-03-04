@@ -33,6 +33,7 @@ import { useGendersStore, useProgramsStore } from '@/providers/store-provider';
 import { Badge } from '@/components/ui/badge';
 import ImportSchedulesDialog from './import-schedules-dialog';
 import { cn } from '@/lib/utils';
+import { monthsToAge, ageToMonths } from '@/lib/utils/age-calculations';
 
 const packageSchema = z.object({
     type: z.enum(["Term", "Monthly", "Full Season", "Assessment"]),
@@ -65,6 +66,9 @@ const packageSchema = z.object({
         endAgeUnit: z.enum(["months", "years", "unlimited"]),
         gender: z.string().min(1, "Gender is required").nullable(),
         hidden: z.boolean().default(false),
+        startAgeMonths: z.number().optional().nullable(),
+        endAgeMonths: z.number().optional().nullable(),
+        isEndAgeUnlimited: z.boolean().optional()
     }))
 }).refine((data) => {
     if (parseFloat(data.entryFees) > 0 && !data.entryFeesExplanation) {
@@ -110,6 +114,9 @@ interface Schedule {
     endDateOfBirth: Date | null
     gender: string | null
     hidden?: boolean // Add this field
+    startAgeMonths?: number | null
+    endAgeMonths?: number | null
+    isEndAgeUnlimited?: boolean
 }
 
 interface Props {
@@ -246,7 +253,11 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
             memo: '',
             entryFees: '0',
             schedules: [{
-                day: '', from: '', to: '', memo: '', startAge: 0, startAgeUnit: 'years', endAge: undefined, endAgeUnit: 'unlimited', gender: null, capacity: '9999', capacityType: 'unlimited', hidden: false,
+                day: '', from: '', to: '', memo: '',
+                startAge: 0, startAgeUnit: 'years',
+                endAge: undefined, endAgeUnit: 'unlimited',
+                gender: null, capacity: '9999', capacityType: 'unlimited', hidden: false,
+                startAgeMonths: 0, endAgeMonths: null, isEndAgeUnlimited: true
             }],
             entryFeesStartDate: undefined,
             entryFeesEndDate: undefined
@@ -322,16 +333,29 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                         startDateOfBirth: null,
                         endDateOfBirth: null,
                         capacity: parseInt(schedule.capacity),
-                        hidden: schedule.hidden
+                        hidden: schedule.hidden,
+                        // Add default values for age months fields
+                        startAgeMonths: null,
+                        endAgeMonths: null,
+                        isEndAgeUnlimited: true
                     };
                 };
 
+                // Calculate date-based values (for backward compatibility)
                 const startDate = calculateDateFromAge(schedule.startAge, schedule.startAgeUnit);
 
+                // Calculate month-based values (new approach)
+                const startAgeMonths = ageToMonths(schedule.startAge, schedule.startAgeUnit);
+
                 let endDate;
-                if (schedule.endAgeUnit === 'unlimited') {
+                let endAgeMonths = null;
+                const isEndAgeUnlimited = schedule.endAgeUnit === 'unlimited';
+
+                if (isEndAgeUnlimited) {
+                    // For unlimited, use a very old date (100 years)
                     endDate = new Date();
-                    endDate.setFullYear(endDate.getFullYear() - 100); // Set to 100 years ago for unlimited
+                    endDate.setFullYear(endDate.getFullYear() - 100);
+                    // No need to set endAgeMonths for unlimited
                 } else {
                     if (!schedule.endAge) {
                         missingFields.push('End Age ' + (index + 1));
@@ -340,10 +364,15 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                             startDateOfBirth: null,
                             endDateOfBirth: null,
                             capacity: parseInt(schedule.capacity),
-                            hidden: schedule.hidden
+                            hidden: schedule.hidden,
+                            // Add default values for age months fields
+                            startAgeMonths: null,
+                            endAgeMonths: null,
+                            isEndAgeUnlimited: true
                         };
                     }
                     endDate = calculateDateFromAge(schedule.endAge, schedule.endAgeUnit);
+                    endAgeMonths = ageToMonths(schedule.endAge, schedule.endAgeUnit);
                 }
 
                 return {
@@ -351,7 +380,11 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                     startDateOfBirth: startDate,
                     endDateOfBirth: endDate,
                     capacity: parseInt(schedule.capacity),
-                    hidden: schedule.hidden
+                    hidden: schedule.hidden,
+                    // Add the new fields
+                    startAgeMonths: startAgeMonths,
+                    endAgeMonths: endAgeMonths,
+                    isEndAgeUnlimited: isEndAgeUnlimited
                 }
             })
 
@@ -399,7 +432,10 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                         endDateOfBirth: schedule.endDateOfBirth ? format(schedule.endDateOfBirth, 'yyyy-MM-dd 00:00:00') : undefined,
                         gender: schedule.gender,
                         capacity: schedule.capacity,
-                        hidden: schedule.hidden
+                        hidden: schedule.hidden,
+                        startAgeMonths: schedule.startAgeMonths,
+                        endAgeMonths: schedule.endAgeMonths,
+                        isEndAgeUnlimited: schedule.isEndAgeUnlimited
                     })),
                     capacity: 99999,
                     type: values.type
@@ -436,7 +472,10 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                         endDateOfBirth: schedule.endDateOfBirth ? new Date(schedule.endDateOfBirth) : null,
                         gender: schedule.gender,
                         capacity: schedule.capacity,
-                        hidden: schedule.hidden
+                        hidden: schedule.hidden,
+                        startAgeMonths: schedule.startAgeMonths,
+                        endAgeMonths: schedule.endAgeMonths,
+                        isEndAgeUnlimited: schedule.isEndAgeUnlimited
                     })),
                     memo: values.memo ?? '',
                     entryFees: parseFloat(values.entryFees),

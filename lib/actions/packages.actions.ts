@@ -9,16 +9,20 @@ import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
 
 interface Schedule {
-    id?: number
     day: string
     from: string
     to: string
     memo: string | undefined
     startDateOfBirth: string | null | undefined
     endDateOfBirth: string | null | undefined
-    gender: string | null | undefined,
+    gender: string | null | undefined
     capacity: number | null | undefined
     hidden?: boolean
+    id?: number
+    // Add new age fields
+    startAgeMonths?: number | null
+    endAgeMonths?: number | null
+    isEndAgeUnlimited?: boolean
 }
 
 function getFirstAndLastDayOfMonths(months: string[]) {
@@ -123,6 +127,9 @@ export async function createPackage(data: {
                             memo: schedule.memo,
                             createdAt: sql`now()`,
                             updatedAt: sql`now()`,
+                            startAgeMonths: schedule.startAgeMonths,
+                            endAgeMonths: schedule.endAgeMonths,
+                            isEndAgeUnlimited: schedule.isEndAgeUnlimited,
                             startDateOfBirth: schedule.startDateOfBirth,
                             endDateOfBirth: schedule.endDateOfBirth,
                             gender: schedule.gender,
@@ -242,6 +249,9 @@ export async function updatePackage(id: number, data: {
                             startDateOfBirth: schedule.startDateOfBirth,
                             endDateOfBirth: schedule.endDateOfBirth,
                             gender: schedule.gender,
+                            startAgeMonths: schedule.startAgeMonths,
+                            endAgeMonths: schedule.endAgeMonths,
+                            isEndAgeUnlimited: schedule.isEndAgeUnlimited,
                             capacity: schedule.capacity ?? 9999,
                             hidden: schedule.hidden ?? false,
                         }))
@@ -257,6 +267,9 @@ export async function updatePackage(id: number, data: {
                         to: schedule.to,
                         memo: schedule.memo,
                         updatedAt: sql`now()`,
+                        startAgeMonths: schedule.startAgeMonths,
+                        endAgeMonths: schedule.endAgeMonths,
+                        isEndAgeUnlimited: schedule.isEndAgeUnlimited,
                         startDateOfBirth: schedule.startDateOfBirth,
                         endDateOfBirth: schedule.endDateOfBirth,
                         gender: schedule.gender,

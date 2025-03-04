@@ -47,6 +47,7 @@ import { v4 as uuid } from 'uuid';
 import { Discount, Package } from '@/stores/programs-store';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
+import { ageToMonths } from '@/lib/utils/age-calculations';
 
 const addProgramSchema = z.object({
     name: z.string().min(1, "Name is required"),
@@ -381,6 +382,9 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                 updatedAt: new Date().toISOString(),
                 assessmentDeductedFromProgram: false,
                 academicId: 0,
+                startAgeMonths: 0,
+                endAgeMonths: null,
+                isEndAgeUnlimited: true
             })
         }
         else {
@@ -394,7 +398,6 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
 
     const onSubmit = async (values: z.infer<typeof addProgramSchema>) => {
         try {
-
             if (!selectedGenders.length) return form.setError('root', {
                 type: 'custom',
                 message: 'Please select at least one gender'
@@ -402,10 +405,15 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
 
             const startDate = calculateDateFromAge(values.startAge, values.startAgeUnit);
 
+            const startAgeMonths = ageToMonths(values.startAge, values.startAgeUnit);
+
             let endDate;
-            if (values.endAgeUnit === 'unlimited') {
+            let endAgeMonths = null;
+            const isEndAgeUnlimited = values.endAgeUnit === 'unlimited';
+
+            if (isEndAgeUnlimited) {
                 endDate = new Date();
-                endDate.setFullYear(endDate.getFullYear() - 100); // Set to 100 years ago for unlimited
+                endDate.setFullYear(endDate.getFullYear() - 100);
             } else {
                 if (!values.endAge) {
                     return form.setError('endAge', {
@@ -414,6 +422,7 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                     });
                 }
                 endDate = calculateDateFromAge(values.endAge, values.endAgeUnit);
+                endAgeMonths = ageToMonths(values.endAge, values.endAgeUnit);
             }
 
             addProgram({
@@ -427,7 +436,10 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                 numberOfSeats: 0,
                 type: values.type,
                 flexible: values.flexible,
-                coachPrograms: selectedCoaches.map(coachId => ({ coach: { id: coachId }, id: parseInt(uuid().replace(/-/g, '')) })),
+                coachPrograms: selectedCoaches.map(coachId => ({
+                    coach: { id: coachId },
+                    id: parseInt(uuid().replace(/-/g, ''))
+                })),
                 packages: program?.packages || [],
                 color: values.color,
                 discounts: program?.discounts || [],
@@ -435,26 +447,13 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 assessmentDeductedFromProgram: false,
-                academicId
+                academicId,
+                startAgeMonths: startAgeMonths,
+                endAgeMonths: endAgeMonths,
+                isEndAgeUnlimited: isEndAgeUnlimited
             }, mutate)
 
-            // if (result.error) {
-            //     if (result?.field) {
-            //         form.setError(result.field as any, {
-            //             type: 'custom',
-            //             message: result.error
-            //         })
-            //         return
-            //     }
-            //     form.setError('root', {
-            //         type: 'custom',
-            //         message: result.error
-            //     })
-            //     return
-            // }
-
             setAddNewProgramOpen(false)
-            // mutate()
             router.refresh()
         } catch (error) {
             console.error('Error creating program:', error)

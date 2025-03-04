@@ -324,8 +324,9 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
                 !!program.description &&
                 !!program.branchId &&
                 !!program.sportId &&
-                !!program.startDateOfBirth &&
-                !!program.endDateOfBirth &&
+                ((!!program.startDateOfBirth && !!program.endDateOfBirth) ||
+                    (program.startAgeMonths !== null &&
+                        (program.isEndAgeUnlimited || program.endAgeMonths !== null))) &&
                 !!program.type &&
                 (program.packages?.length > 0) &&
                 !!program.gender &&
@@ -336,8 +337,10 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
                 !!program.description &&
                 !!program.branchId &&
                 !!program.sportId &&
-                !!program.startDateOfBirth &&
-                !!program.endDateOfBirth &&
+                // Check for either date-based or month-based age data
+                ((!!program.startDateOfBirth && !!program.endDateOfBirth) ||
+                    (program.startAgeMonths !== null &&
+                        (program.isEndAgeUnlimited || program.endAgeMonths !== null))) &&
                 !!program.type &&
                 (program.packages?.length > 0) &&
                 !!program.gender &&
@@ -348,8 +351,10 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
                 !!program.description &&
                 !!program.branchId &&
                 !!program.sportId &&
-                !!program.startDateOfBirth &&
-                !!program.endDateOfBirth &&
+                // Check for either date-based or month-based age data
+                ((!!program.startDateOfBirth && !!program.endDateOfBirth) ||
+                    (program.startAgeMonths !== null &&
+                        (program.isEndAgeUnlimited || program.endAgeMonths !== null))) &&
                 !!program.type &&
                 (program.packages?.length > 0) &&
                 !!program.gender &&
@@ -360,8 +365,10 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
                 !!program.description &&
                 !!program.branchId &&
                 !!program.sportId &&
-                !!program.startDateOfBirth &&
-                !!program.endDateOfBirth &&
+                // Check for either date-based or month-based age data
+                ((!!program.startDateOfBirth && !!program.endDateOfBirth) ||
+                    (program.startAgeMonths !== null &&
+                        (program.isEndAgeUnlimited || program.endAgeMonths !== null))) &&
                 !!program.type &&
                 (program.packages?.length > 0) &&
                 !!program.gender &&
@@ -372,8 +379,10 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
                 !!program.description &&
                 !!program.branchId &&
                 !!program.sportId &&
-                !!program.startDateOfBirth &&
-                !!program.endDateOfBirth &&
+                // Check for either date-based or month-based age data
+                ((!!program.startDateOfBirth && !!program.endDateOfBirth) ||
+                    (program.startAgeMonths !== null &&
+                        (program.isEndAgeUnlimited || program.endAgeMonths !== null))) &&
                 !!program.type &&
                 (program.packages?.length > 0) &&
                 !!program.gender &&
@@ -384,8 +393,10 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
                 !!program.description &&
                 !!program.branchId &&
                 !!program.sportId &&
-                !!program.startDateOfBirth &&
-                !!program.endDateOfBirth &&
+                // Check for either date-based or month-based age data
+                ((!!program.startDateOfBirth && !!program.endDateOfBirth) ||
+                    (program.startAgeMonths !== null &&
+                        (program.isEndAgeUnlimited || program.endAgeMonths !== null))) &&
                 !!program.type &&
                 (program.packages?.length > 0) &&
                 !!program.gender &&
@@ -396,8 +407,10 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
                 !!program.description &&
                 !!program.branchId &&
                 !!program.sportId &&
-                !!program.startDateOfBirth &&
-                !!program.endDateOfBirth &&
+                // Check for either date-based or month-based age data
+                ((!!program.startDateOfBirth && !!program.endDateOfBirth) ||
+                    (program.startAgeMonths !== null &&
+                        (program.isEndAgeUnlimited || program.endAgeMonths !== null))) &&
                 !!program.type &&
                 (program.packages?.length > 0) &&
                 !!program.gender &&
@@ -408,8 +421,10 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
                 !!program.description &&
                 !!program.branchId &&
                 !!program.sportId &&
-                !!program.startDateOfBirth &&
-                !!program.endDateOfBirth &&
+                // Check for either date-based or month-based age data
+                ((!!program.startDateOfBirth && !!program.endDateOfBirth) ||
+                    (program.startAgeMonths !== null &&
+                        (program.isEndAgeUnlimited || program.endAgeMonths !== null))) &&
                 !!program.type &&
                 (program.packages?.length > 0) &&
                 !!program.gender &&
@@ -420,8 +435,10 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
                 !!program.description &&
                 !!program.branchId &&
                 !!program.sportId &&
-                !!program.startDateOfBirth &&
-                !!program.endDateOfBirth &&
+                // Check for either date-based or month-based age data
+                ((!!program.startDateOfBirth && !!program.endDateOfBirth) ||
+                    (program.startAgeMonths !== null &&
+                        (program.isEndAgeUnlimited || program.endAgeMonths !== null))) &&
                 !!program.type &&
                 (program.packages?.length > 0) &&
                 !!program.gender &&
@@ -432,8 +449,10 @@ export function OnboardingProvider({ children, onboarded, isAdmin, academyName }
                 !!program.description &&
                 !!program.branchId &&
                 !!program.sportId &&
-                !!program.startDateOfBirth &&
-                !!program.endDateOfBirth &&
+                // Check for either date-based or month-based age data
+                ((!!program.startDateOfBirth && !!program.endDateOfBirth) ||
+                    (program.startAgeMonths !== null &&
+                        (program.isEndAgeUnlimited || program.endAgeMonths !== null))) &&
                 !!program.type &&
                 (program.packages?.length > 0) &&
                 !!program.gender &&
