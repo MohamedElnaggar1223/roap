@@ -506,14 +506,14 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                     )
                 ) || [];
 
-                console.log("branch", selectedBranch)
-                console.log("Sports in branch", sportsInBranch)
-                console.log("Sports", sports)
                 setFilteredSports(sportsInBranch);
 
                 // Clear sport selection if current selection is not in filtered list
                 const currentSportId = form.getValues('sportId');
-                if (currentSportId && !sportsInBranch.some(s => s.id.toString() === currentSportId)) {
+                // Don't clear if the current sport is the original program's sport
+                const isOriginalProgramSport = currentSportId === programEdited.sportId?.toString();
+
+                if (currentSportId && !sportsInBranch.some(s => s.id.toString() === currentSportId) && !isOriginalProgramSport) {
                     form.setValue('sportId', '');
                 }
             }
@@ -584,6 +584,10 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                 }]
             }, [] as { coach: { id: number }, id: number | undefined }[])
 
+            // Make sure sportId is properly passed as a number, this is important
+            // to ensure sport data is saved correctly
+            const sportId = parseInt(values.sportId);
+
             editProgram({
                 ...values,
                 ...programEdited,
@@ -594,7 +598,7 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                 branchId: parseInt(values.branchId),
                 color: values.color,
                 flexible: values.flexible,
-                sportId: parseInt(values.sportId),
+                sportId, // Ensure sportId is included as a number
                 createdAt: programEdited.createdAt,
                 updatedAt: programEdited.updatedAt,
                 gender: selectedGenders.join(','),
