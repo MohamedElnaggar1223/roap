@@ -336,12 +336,35 @@ export async function invalidateLocationCache(locationId: number, academyId?: nu
 }
 
 export async function invalidateAllSportRelatedData() {
-    await Promise.all([
-        invalidateSportsCache(),
-        deleteCachedPattern('academy:*:sports'),
-        deleteCachedPattern('academy:*:programs'),
-        deleteCachedPattern('program:*'),
-    ])
+    console.log('Invalidating and refreshing all sport-related cache data...')
+
+    try {
+        // Import the sports actions to get fresh data
+        const { getAllSports } = await import('@/lib/actions/sports.actions')
+
+        // Use smart invalidation that refreshes cache with fresh data
+        await smartInvalidateSports(await getAllSports())
+
+        // Also delete complex caches that are harder to refresh
+        await Promise.all([
+            deleteCachedPattern(CACHE_PATTERNS.PAGINATED_SPORTS),
+            deleteCachedPattern('academy:*:sports'), // All academy sports lists
+            deleteCachedPattern('academy:*:programs'), // All academy programs (since they reference sports)
+        ])
+
+        console.log('Sports cache invalidation and refresh completed successfully')
+    } catch (error) {
+        console.error('Error in invalidateAllSportRelatedData:', error)
+
+        // Fallback to traditional deletion if refresh fails
+        await Promise.all([
+            deleteCachedPattern(CACHE_PATTERNS.ALL_SPORTS),
+            deleteCachedPattern(CACHE_PATTERNS.SPORT_TRANSLATIONS),
+            deleteCachedPattern(CACHE_PATTERNS.PAGINATED_SPORTS),
+            deleteCachedPattern('academy:*:sports'),
+            deleteCachedPattern('academy:*:programs'),
+        ])
+    }
 }
 
 export async function invalidateAllFacilityRelatedData() {

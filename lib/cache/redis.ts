@@ -1,4 +1,5 @@
 import { Redis } from '@upstash/redis'
+import { CACHE_KEYS } from './keys'
 
 // Redis client instance
 let redis: Redis | null = null
@@ -101,13 +102,154 @@ export async function deleteCachedData(key: string): Promise<void> {
 export async function deleteCachedPattern(pattern: string): Promise<void> {
     try {
         const client = getRedisClient()
-        // Note: Upstash doesn't support SCAN/KEYS for pattern deletion
-        // For now, we'll just delete the exact key if provided
-        // In production, you might want to track keys separately
-        await client.del(pattern)
+
+        // Upstash doesn't support SCAN/KEYS, so we need to delete specific known keys
+        // Instead of using patterns, we'll delete all the known cache keys for that pattern
+        const keysToDelete: string[] = []
+
+        if (pattern === 'sports:*') {
+            keysToDelete.push(
+                CACHE_KEYS.ALL_SPORTS,
+                // Add pattern for paginated sports - we'll delete a reasonable range
+                ...generatePaginatedKeys('paginated:sports:', 1, 10), // Covers most common pagination
+                // Add pattern for translations
+                ...generateTranslationKeys('translations:sports:')
+            )
+        } else if (pattern === 'facilities:*') {
+            keysToDelete.push(
+                CACHE_KEYS.ALL_FACILITIES,
+                ...generatePaginatedKeys('paginated:facilities:', 1, 10),
+                ...generateTranslationKeys('translations:facilities:')
+            )
+        } else if (pattern === 'countries:*') {
+            keysToDelete.push(
+                CACHE_KEYS.ALL_COUNTRIES,
+                ...generatePaginatedKeys('paginated:countries:', 1, 10),
+                ...generateTranslationKeys('translations:countries:')
+            )
+        } else if (pattern === 'states:*') {
+            keysToDelete.push(
+                CACHE_KEYS.ALL_STATES,
+                ...generatePaginatedKeys('paginated:states:', 1, 10),
+                ...generateTranslationKeys('translations:states:')
+            )
+        } else if (pattern === 'cities:*') {
+            keysToDelete.push(
+                CACHE_KEYS.ALL_CITIES,
+                ...generatePaginatedKeys('paginated:cities:', 1, 10),
+                ...generateTranslationKeys('translations:cities:')
+            )
+        } else if (pattern === 'genders:*') {
+            keysToDelete.push(
+                CACHE_KEYS.ALL_GENDERS,
+                ...generatePaginatedKeys('paginated:genders:', 1, 10),
+                ...generateTranslationKeys('translations:genders:')
+            )
+        } else if (pattern === 'spoken_languages:*') {
+            keysToDelete.push(
+                CACHE_KEYS.ALL_SPOKEN_LANGUAGES,
+                ...generateTranslationKeys('translations:spoken_languages:')
+            )
+        } else if (pattern === 'paginated:sports:*') {
+            keysToDelete.push(...generatePaginatedKeys('paginated:sports:', 1, 50))
+        } else if (pattern === 'paginated:facilities:*') {
+            keysToDelete.push(...generatePaginatedKeys('paginated:facilities:', 1, 50))
+        } else if (pattern === 'paginated:countries:*') {
+            keysToDelete.push(...generatePaginatedKeys('paginated:countries:', 1, 50))
+        } else if (pattern === 'paginated:states:*') {
+            keysToDelete.push(...generatePaginatedKeys('paginated:states:', 1, 50))
+        } else if (pattern === 'paginated:cities:*') {
+            keysToDelete.push(...generatePaginatedKeys('paginated:cities:', 1, 50))
+        } else if (pattern === 'paginated:genders:*') {
+            keysToDelete.push(...generatePaginatedKeys('paginated:genders:', 1, 50))
+        } else if (pattern === 'translations:sports:*') {
+            keysToDelete.push(...generateTranslationKeys('translations:sports:'))
+        } else if (pattern === 'translations:facilities:*') {
+            keysToDelete.push(...generateTranslationKeys('translations:facilities:'))
+        } else if (pattern === 'translations:countries:*') {
+            keysToDelete.push(...generateTranslationKeys('translations:countries:'))
+        } else if (pattern === 'translations:states:*') {
+            keysToDelete.push(...generateTranslationKeys('translations:states:'))
+        } else if (pattern === 'translations:cities:*') {
+            keysToDelete.push(...generateTranslationKeys('translations:cities:'))
+        } else if (pattern === 'translations:genders:*') {
+            keysToDelete.push(...generateTranslationKeys('translations:genders:'))
+        } else if (pattern === 'translations:spoken_languages:*') {
+            keysToDelete.push(...generateTranslationKeys('translations:spoken_languages:'))
+        } else if (pattern.startsWith('academy:') && pattern.endsWith(':*')) {
+            // Handle academy patterns like 'academy:123:*'
+            const academyId = pattern.match(/academy:(\d+):\*/)?.[1]
+            if (academyId) {
+                keysToDelete.push(
+                    CACHE_KEYS.ACADEMY_DETAILS(parseInt(academyId)),
+                    CACHE_KEYS.ACADEMY_SPORTS(parseInt(academyId)),
+                    CACHE_KEYS.ACADEMY_FACILITIES(parseInt(academyId)),
+                    CACHE_KEYS.ACADEMY_PROGRAMS(parseInt(academyId)),
+                    CACHE_KEYS.ACADEMY_COACHES(parseInt(academyId)),
+                    CACHE_KEYS.ACADEMY_LOCATIONS(parseInt(academyId))
+                )
+            }
+        } else if (pattern.startsWith('program:') && pattern.endsWith(':*')) {
+            // Handle program patterns like 'program:123:*'
+            const programId = pattern.match(/program:(\d+):\*/)?.[1]
+            if (programId) {
+                keysToDelete.push(
+                    CACHE_KEYS.PROGRAM_DETAILS(parseInt(programId)),
+                    CACHE_KEYS.PROGRAM_PACKAGES(parseInt(programId)),
+                    CACHE_KEYS.PROGRAM_DISCOUNTS(parseInt(programId))
+                )
+            }
+        } else {
+            // For unknown patterns, try to delete the pattern as-is (won't work but won't crash)
+            console.warn(`Unknown cache pattern: ${pattern}. Cannot delete pattern with Upstash.`)
+            return
+        }
+
+        // Delete all keys in batches to avoid overwhelming the server
+        if (keysToDelete.length > 0) {
+            const batches = chunkArray(keysToDelete, 100) // Process in batches of 100
+            for (const batch of batches) {
+                await Promise.all(batch.map(key => client.del(key)))
+            }
+            console.log(`Deleted ${keysToDelete.length} cache keys for pattern: ${pattern}`)
+        }
     } catch (error) {
         console.error('Error deleting cached pattern:', error)
     }
+}
+
+// Helper function to generate common pagination keys
+function generatePaginatedKeys(prefix: string, maxPages: number, maxPageSizes: number): string[] {
+    const keys: string[] = []
+    const pageSizes = [10, 20, 50, 100] // Common page sizes
+    const orderBys = ['asc', 'desc'] // Common order by values
+
+    for (let page = 1; page <= maxPages; page++) {
+        for (const pageSize of pageSizes) {
+            if (pageSize <= maxPageSizes * 10) { // Reasonable limit
+                for (const orderBy of orderBys) {
+                    keys.push(`${prefix}${page}:${pageSize}:${orderBy}`)
+                    keys.push(`${prefix}${page}:${pageSize}:${orderBy}(*)`) // Some order bys might have function syntax
+                }
+            }
+        }
+    }
+    return keys
+}
+
+// Helper function to generate translation keys
+function generateTranslationKeys(prefix: string): string[] {
+    const locales = ['en', 'ar', 'fr', 'es', 'de', 'zh', 'ja'] // Common locales
+    return locales.map(locale => `${prefix}${locale}`)
+}
+
+// Helper function to chunk arrays
+function chunkArray<T>(array: T[], chunkSize: number): T[][] {
+    const chunks: T[][] = []
+    for (let i = 0; i < array.length; i += chunkSize) {
+        chunks.push(array.slice(i, i + chunkSize))
+    }
+    return chunks
 }
 
 // Invalidate and refresh cache (hybrid approach)
