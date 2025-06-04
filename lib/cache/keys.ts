@@ -9,6 +9,10 @@ export const CACHE_KEYS = {
     ALL_GENDERS: 'genders:all',
     ALL_SPOKEN_LANGUAGES: 'spoken_languages:all',
 
+    // Individual entity details
+    SPORT_DETAILS: (sportId: number) => `sport:${sportId}:details`,
+    FACILITY_DETAILS: (facilityId: number) => `facility:${facilityId}:details`,
+
     // Translation data (Phase 1)
     SPORT_TRANSLATIONS: (locale: string) => `translations:sports:${locale}`,
     FACILITY_TRANSLATIONS: (locale: string) => `translations:facilities:${locale}`,

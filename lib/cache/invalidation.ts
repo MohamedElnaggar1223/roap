@@ -1,9 +1,231 @@
-import { deleteCachedData, deleteCachedPattern } from './redis'
-import { CACHE_PATTERNS, CACHE_KEYS } from './keys'
+import { deleteCachedData, deleteCachedPattern, updateCachedData, updateMultipleCachedData, invalidateAndRefresh } from './redis'
+import { CACHE_PATTERNS, CACHE_KEYS, CACHE_TTL } from './keys'
 
-// Invalidation functions for different entity types
+// Import database query functions for cache updates
+// Note: You'll need to import the actual database query functions here
+// import { getAllSports, getSport, etc. } from '../actions/sports.actions'
 
-// Sports invalidation (affects many entities)
+// Smart invalidation functions that update cache instead of deleting
+
+// Sports invalidation with cache refresh
+export async function invalidateAndRefreshSport(sportId: number, fetcher?: () => Promise<any>) {
+    if (fetcher) {
+        // Update specific sport cache with fresh data
+        await updateCachedData(
+            CACHE_KEYS.SPORT_DETAILS(sportId),
+            fetcher,
+            CACHE_TTL.DYNAMIC_DATA
+        )
+    } else {
+        // Fallback to deletion if no fetcher provided
+        await deleteCachedData(CACHE_KEYS.SPORT_DETAILS(sportId))
+    }
+}
+
+export async function invalidateAndRefreshAllSports(fetcher?: () => Promise<any>) {
+    if (fetcher) {
+        // Update all sports cache with fresh data
+        await updateCachedData(
+            CACHE_KEYS.ALL_SPORTS,
+            fetcher,
+            CACHE_TTL.STATIC_DATA
+        )
+    } else {
+        // Fallback to deletion
+        await deleteCachedData(CACHE_KEYS.ALL_SPORTS)
+    }
+
+    // Also invalidate paginated sports (these need to be deleted as we can't easily refresh all variations)
+    await deleteCachedPattern(CACHE_PATTERNS.PAGINATED_SPORTS)
+}
+
+export async function invalidateAndRefreshSportsTranslations(locale: string, fetcher?: () => Promise<any>) {
+    if (fetcher) {
+        await updateCachedData(
+            CACHE_KEYS.SPORT_TRANSLATIONS(locale),
+            fetcher,
+            CACHE_TTL.STATIC_DATA
+        )
+    } else {
+        await deleteCachedData(CACHE_KEYS.SPORT_TRANSLATIONS(locale))
+    }
+}
+
+// Facilities invalidation with cache refresh
+export async function invalidateAndRefreshAllFacilities(fetcher?: () => Promise<any>) {
+    if (fetcher) {
+        await updateCachedData(
+            CACHE_KEYS.ALL_FACILITIES,
+            fetcher,
+            CACHE_TTL.STATIC_DATA
+        )
+    } else {
+        await deleteCachedData(CACHE_KEYS.ALL_FACILITIES)
+    }
+
+    await deleteCachedPattern(CACHE_PATTERNS.PAGINATED_FACILITIES)
+}
+
+// Academy-specific invalidation with smart refresh
+export async function invalidateAndRefreshAcademyData(
+    academyId: number,
+    updates: {
+        details?: () => Promise<any>
+        sports?: () => Promise<any>
+        facilities?: () => Promise<any>
+        programs?: () => Promise<any>
+        coaches?: () => Promise<any>
+        locations?: () => Promise<any>
+    }
+) {
+    const cacheUpdates = []
+
+    if (updates.details) {
+        cacheUpdates.push({
+            key: CACHE_KEYS.ACADEMY_DETAILS(academyId),
+            fetcher: updates.details,
+            ttl: CACHE_TTL.ACADEMY_DATA
+        })
+    }
+
+    if (updates.sports) {
+        cacheUpdates.push({
+            key: CACHE_KEYS.ACADEMY_SPORTS(academyId),
+            fetcher: updates.sports,
+            ttl: CACHE_TTL.ACADEMY_DATA
+        })
+    }
+
+    if (updates.facilities) {
+        cacheUpdates.push({
+            key: CACHE_KEYS.ACADEMY_FACILITIES(academyId),
+            fetcher: updates.facilities,
+            ttl: CACHE_TTL.ACADEMY_DATA
+        })
+    }
+
+    if (updates.programs) {
+        cacheUpdates.push({
+            key: CACHE_KEYS.ACADEMY_PROGRAMS(academyId),
+            fetcher: updates.programs,
+            ttl: CACHE_TTL.DYNAMIC_DATA
+        })
+    }
+
+    if (updates.coaches) {
+        cacheUpdates.push({
+            key: CACHE_KEYS.ACADEMY_COACHES(academyId),
+            fetcher: updates.coaches,
+            ttl: CACHE_TTL.DYNAMIC_DATA
+        })
+    }
+
+    if (updates.locations) {
+        cacheUpdates.push({
+            key: CACHE_KEYS.ACADEMY_LOCATIONS(academyId),
+            fetcher: updates.locations,
+            ttl: CACHE_TTL.ACADEMY_DATA
+        })
+    }
+
+    // Update all specified caches in parallel
+    if (cacheUpdates.length > 0) {
+        await updateMultipleCachedData(cacheUpdates)
+    }
+}
+
+// Program-specific invalidation with smart refresh
+export async function invalidateAndRefreshProgram(
+    programId: number,
+    academyId: number,
+    updates: {
+        details?: () => Promise<any>
+        packages?: () => Promise<any>
+        discounts?: () => Promise<any>
+    }
+) {
+    const cacheUpdates = []
+
+    if (updates.details && CACHE_KEYS.PROGRAM_DETAILS) {
+        cacheUpdates.push({
+            key: CACHE_KEYS.PROGRAM_DETAILS(programId),
+            fetcher: updates.details,
+            ttl: CACHE_TTL.DYNAMIC_DATA
+        })
+    }
+
+    if (updates.packages) {
+        cacheUpdates.push({
+            key: CACHE_KEYS.PROGRAM_PACKAGES(programId),
+            fetcher: updates.packages,
+            ttl: CACHE_TTL.DYNAMIC_DATA
+        })
+    }
+
+    if (updates.discounts) {
+        cacheUpdates.push({
+            key: CACHE_KEYS.PROGRAM_DISCOUNTS(programId),
+            fetcher: updates.discounts,
+            ttl: CACHE_TTL.DYNAMIC_DATA
+        })
+    }
+
+    // Also refresh academy programs list (since it includes this program)
+    if (updates.details) {
+        cacheUpdates.push({
+            key: CACHE_KEYS.ACADEMY_PROGRAMS(academyId),
+            fetcher: updates.details, // You'd need to pass academy programs fetcher here
+            ttl: CACHE_TTL.DYNAMIC_DATA
+        })
+    }
+
+    if (cacheUpdates.length > 0) {
+        await updateMultipleCachedData(cacheUpdates)
+    }
+}
+
+// Hybrid approach: Delete complex caches, update simple ones
+export async function smartInvalidateSports(
+    sportData?: any,
+    translationData?: { [locale: string]: any }
+) {
+    const updates = []
+
+    // Update simple caches with fresh data
+    if (sportData) {
+        updates.push({
+            key: CACHE_KEYS.ALL_SPORTS,
+            fetcher: async () => sportData,
+            ttl: CACHE_TTL.STATIC_DATA
+        })
+    }
+
+    // Update translation caches
+    if (translationData) {
+        Object.entries(translationData).forEach(([locale, data]) => {
+            updates.push({
+                key: CACHE_KEYS.SPORT_TRANSLATIONS(locale),
+                fetcher: async () => data,
+                ttl: CACHE_TTL.STATIC_DATA
+            })
+        })
+    }
+
+    // Update caches in parallel
+    if (updates.length > 0) {
+        await updateMultipleCachedData(updates)
+    }
+
+    // Delete complex caches that are hard to refresh
+    await Promise.all([
+        deleteCachedPattern(CACHE_PATTERNS.PAGINATED_SPORTS),
+        deleteCachedPattern('academy:*:sports'), // All academy sports lists
+        deleteCachedPattern('academy:*:programs'), // All academy programs (since they reference sports)
+    ])
+}
+
+// Legacy functions (kept for backward compatibility)
+// These still use the old delete-only approach
 export async function invalidateSportsCache() {
     await Promise.all([
         deleteCachedPattern(CACHE_PATTERNS.ALL_SPORTS),
@@ -12,7 +234,6 @@ export async function invalidateSportsCache() {
     ])
 }
 
-// Facilities invalidation
 export async function invalidateFacilitiesCache() {
     await Promise.all([
         deleteCachedPattern(CACHE_PATTERNS.ALL_FACILITIES),
@@ -21,13 +242,11 @@ export async function invalidateFacilitiesCache() {
     ])
 }
 
-// Countries invalidation (affects states and cities)
 export async function invalidateCountriesCache() {
     await Promise.all([
         deleteCachedPattern(CACHE_PATTERNS.ALL_COUNTRIES),
         deleteCachedPattern(CACHE_PATTERNS.COUNTRY_TRANSLATIONS),
         deleteCachedPattern(CACHE_PATTERNS.PAGINATED_COUNTRIES),
-        // Also invalidate states and cities since they depend on countries
         deleteCachedPattern(CACHE_PATTERNS.ALL_STATES),
         deleteCachedPattern(CACHE_PATTERNS.STATE_TRANSLATIONS),
         deleteCachedPattern(CACHE_PATTERNS.PAGINATED_STATES),
@@ -37,20 +256,17 @@ export async function invalidateCountriesCache() {
     ])
 }
 
-// States invalidation (affects cities)
 export async function invalidateStatesCache() {
     await Promise.all([
         deleteCachedPattern(CACHE_PATTERNS.ALL_STATES),
         deleteCachedPattern(CACHE_PATTERNS.STATE_TRANSLATIONS),
         deleteCachedPattern(CACHE_PATTERNS.PAGINATED_STATES),
-        // Also invalidate cities since they depend on states
         deleteCachedPattern(CACHE_PATTERNS.ALL_CITIES),
         deleteCachedPattern(CACHE_PATTERNS.CITY_TRANSLATIONS),
         deleteCachedPattern(CACHE_PATTERNS.PAGINATED_CITIES),
     ])
 }
 
-// Cities invalidation
 export async function invalidateCitiesCache() {
     await Promise.all([
         deleteCachedPattern(CACHE_PATTERNS.ALL_CITIES),
@@ -59,7 +275,6 @@ export async function invalidateCitiesCache() {
     ])
 }
 
-// Genders invalidation
 export async function invalidateGendersCache() {
     await Promise.all([
         deleteCachedPattern(CACHE_PATTERNS.ALL_GENDERS),
@@ -68,7 +283,6 @@ export async function invalidateGendersCache() {
     ])
 }
 
-// Spoken languages invalidation
 export async function invalidateSpokenLanguagesCache() {
     await Promise.all([
         deleteCachedPattern(CACHE_PATTERNS.ALL_SPOKEN_LANGUAGES),
@@ -76,7 +290,6 @@ export async function invalidateSpokenLanguagesCache() {
     ])
 }
 
-// Academy-specific invalidation
 export async function invalidateAcademyCache(academyId: number) {
     await deleteCachedPattern(CACHE_PATTERNS.ACADEMY_ALL(academyId))
 }
@@ -93,11 +306,9 @@ export async function invalidateAcademyFacilities(academyId: number) {
     await deleteCachedData(CACHE_KEYS.ACADEMY_FACILITIES(academyId))
 }
 
-// Program-specific invalidation
 export async function invalidateProgramCache(programId: number, academyId?: number) {
     await Promise.all([
         deleteCachedPattern(CACHE_PATTERNS.PROGRAM_ALL(programId)),
-        // Also invalidate academy programs list if academyId provided
         academyId ? deleteCachedData(CACHE_KEYS.ACADEMY_PROGRAMS(academyId)) : Promise.resolve(),
     ])
 }
@@ -110,65 +321,49 @@ export async function invalidateProgramDiscounts(programId: number) {
     await deleteCachedData(CACHE_KEYS.PROGRAM_DISCOUNTS(programId))
 }
 
-// Coach-specific invalidation
 export async function invalidateCoachCache(coachId: number, academyId?: number) {
     await Promise.all([
         deleteCachedPattern(CACHE_PATTERNS.COACH_ALL(coachId)),
-        // Also invalidate academy coaches list if academyId provided
         academyId ? deleteCachedData(CACHE_KEYS.ACADEMY_COACHES(academyId)) : Promise.resolve(),
     ])
 }
 
-// Location-specific invalidation
 export async function invalidateLocationCache(locationId: number, academyId?: number) {
     await Promise.all([
         deleteCachedPattern(CACHE_PATTERNS.LOCATION_ALL(locationId)),
-        // Also invalidate academy locations list if academyId provided
         academyId ? deleteCachedData(CACHE_KEYS.ACADEMY_LOCATIONS(academyId)) : Promise.resolve(),
     ])
 }
 
-// Complex invalidation scenarios
-
-// When a sport is updated, invalidate all related data
 export async function invalidateAllSportRelatedData() {
     await Promise.all([
         invalidateSportsCache(),
-        // Invalidate all academy sports (since sports list changed)
         deleteCachedPattern('academy:*:sports'),
-        // Programs are sport-specific, so invalidate academy programs
         deleteCachedPattern('academy:*:programs'),
         deleteCachedPattern('program:*'),
     ])
 }
 
-// When a facility is updated, invalidate all related data
 export async function invalidateAllFacilityRelatedData() {
     await Promise.all([
         invalidateFacilitiesCache(),
-        // Invalidate all academy facilities
         deleteCachedPattern('academy:*:facilities'),
-        // Locations have facilities, so invalidate academy locations
         deleteCachedPattern('academy:*:locations'),
         deleteCachedPattern('location:*'),
     ])
 }
 
-// When an academy is updated, invalidate all its related data
 export async function invalidateAllAcademyRelatedData(academyId: number) {
     await Promise.all([
         invalidateAcademyCache(academyId),
-        // Also invalidate programs, coaches, locations for this academy
-        deleteCachedPattern(`program:*`), // We'll need to be more specific in real implementation
-        deleteCachedPattern(`coach:*`),   // We'll need to be more specific in real implementation
-        deleteCachedPattern(`location:*`), // We'll need to be more specific in real implementation
+        deleteCachedPattern(`program:*`),
+        deleteCachedPattern(`coach:*`),
+        deleteCachedPattern(`location:*`),
     ])
 }
 
-// Translation-specific invalidation
 export async function invalidateTranslationsCache(entityType: string, locale?: string) {
     if (locale) {
-        // Invalidate specific locale translations
         switch (entityType.toLowerCase()) {
             case 'sport':
                 await deleteCachedData(CACHE_KEYS.SPORT_TRANSLATIONS(locale))
@@ -193,7 +388,6 @@ export async function invalidateTranslationsCache(entityType: string, locale?: s
                 break
         }
     } else {
-        // Invalidate all translations for this entity type
         switch (entityType.toLowerCase()) {
             case 'sport':
                 await deleteCachedPattern(CACHE_PATTERNS.SPORT_TRANSLATIONS)

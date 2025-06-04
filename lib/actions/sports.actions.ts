@@ -9,7 +9,12 @@ import { revalidatePath } from 'next/cache'
 import { slugify } from '../utils'
 import { withCache, withPaginatedCache } from '@/lib/cache/wrapper'
 import { CACHE_KEYS, CACHE_TTL } from '@/lib/cache/keys'
-import { invalidateAllSportRelatedData } from '@/lib/cache/invalidation'
+import {
+    invalidateAllSportRelatedData,
+    invalidateAndRefreshAllSports,
+    invalidateAndRefreshSport,
+    smartInvalidateSports
+} from '@/lib/cache/invalidation'
 
 export async function getPaginatedSports(
     page: number = 1,
@@ -19,75 +24,66 @@ export async function getPaginatedSports(
     const isAdminRes = await isAdmin()
 
     if (!isAdminRes) return {
-        data: [],
-        meta: {
-            page: 1,
-            pageSize: 10,
-            totalItems: 0,
-            totalPages: 0,
-        },
+        error: 'You are not authorized to perform this action',
     }
 
-    const cacheKey = CACHE_KEYS.PAGINATED_SPORTS(page, pageSize, orderBy.toString())
+    return withPaginatedCache(
+        CACHE_KEYS.PAGINATED_SPORTS(page, pageSize, orderBy.toString()),
+        async () => {
+            const offset = (page - 1) * pageSize
 
-    return withPaginatedCache(cacheKey, async () => {
-        const offset = (page - 1) * pageSize
-
-        const data = await db
-            .select({
-                id: sports.id,
-                name: sql<string>`t.name`,
-                locale: sql<string>`t.locale`,
-                image: sports.image,
-            })
-            .from(sports)
-            .innerJoin(
-                sql`(
-                    SELECT ct.sport_id, ct.name, ct.locale
-                    FROM ${sportTranslations} ct
-                    WHERE ct.locale = 'en'
-                    UNION
-                    SELECT ct2.sport_id, ct2.name, ct2.locale
-                    FROM ${sportTranslations} ct2
-                    INNER JOIN (
-                        SELECT sport_id, MIN(locale) as first_locale
-                        FROM ${sportTranslations}
-                        WHERE sport_id NOT IN (
-                            SELECT sport_id 
-                            FROM ${sportTranslations} 
-                            WHERE locale = 'en'
+            const [data, countResult] = await Promise.all([
+                db
+                    .select({
+                        id: sports.id,
+                        name: sportTranslations.name,
+                        slug: sports.slug,
+                        image: sports.image,
+                        createdAt: sports.createdAt,
+                        updatedAt: sports.updatedAt,
+                    })
+                    .from(sports)
+                    .innerJoin(
+                        sportTranslations,
+                        and(
+                            eq(sportTranslations.sportId, sports.id),
+                            eq(sportTranslations.locale, 'en')
                         )
-                        GROUP BY sport_id
-                    ) first_trans ON ct2.sport_id = first_trans.sport_id 
-                    AND ct2.locale = first_trans.first_locale
-                ) t`,
-                sql`t.sport_id = ${sports.id}`
-            )
-            .orderBy(orderBy)
-            .limit(pageSize)
-            .offset(offset)
+                    )
+                    .limit(pageSize)
+                    .offset(offset)
+                    .orderBy(orderBy),
 
-        const [{ count }] = await db
-            .select({ count: sql`count(*)`.mapWith(Number) })
-            .from(sports)
+                db
+                    .select({ count: sql<number>`count(*)` })
+                    .from(sports)
+                    .then(result => result[0]?.count || 0),
+            ])
 
-        const dataWithImages = await Promise.all(
-            data.map(async (sport) => {
-                const image = await getImageUrl(sport.image)
-                return { ...sport, image }
-            })
-        )
+            const formattedData = data.map((sport: {
+                id: number;
+                name: string;
+                slug: string | null;
+                image: string | null;
+                createdAt: string | null;
+                updatedAt: string | null;
+            }) => ({
+                ...sport,
+                image: getImageUrl(sport.image),
+            }))
 
-        return {
-            data: dataWithImages,
-            meta: {
-                page,
-                pageSize,
-                totalItems: count,
-                totalPages: Math.ceil(count / pageSize),
-            },
-        }
-    })
+            return {
+                data: formattedData,
+                pagination: {
+                    page,
+                    pageSize,
+                    total: countResult,
+                    totalPages: Math.ceil(countResult / pageSize),
+                },
+            }
+        },
+        CACHE_TTL.PAGINATED_DATA
+    )
 }
 
 export async function getSport(id: string) {
@@ -252,41 +248,29 @@ export async function getAllSports() {
         const data = await db
             .select({
                 id: sports.id,
-                name: sql<string>`t.name`,
+                name: sportTranslations.name,
                 slug: sports.slug,
                 image: sports.image,
             })
             .from(sports)
             .innerJoin(
-                sql`(
-                    SELECT ct.sport_id, ct.name
-                    FROM ${sportTranslations} ct
-                    WHERE ct.locale = 'en'
-                    UNION
-                    SELECT ct2.sport_id, ct2.name
-                    FROM ${sportTranslations} ct2
-                    INNER JOIN (
-                        SELECT sport_id, MIN(locale) as first_locale
-                        FROM ${sportTranslations}
-                        WHERE sport_id NOT IN (
-                            SELECT sport_id 
-                            FROM ${sportTranslations} 
-                            WHERE locale = 'en'
-                        )
-                        GROUP BY sport_id
-                    ) first_trans ON ct2.sport_id = first_trans.sport_id 
-                    AND ct2.locale = first_trans.first_locale
-                ) t`,
-                sql`t.sport_id = ${sports.id}`
+                sportTranslations,
+                and(
+                    eq(sportTranslations.sportId, sports.id),
+                    eq(sportTranslations.locale, 'en')
+                )
             )
-            .orderBy(asc(sql`t.name`))
+            .orderBy(asc(sportTranslations.name))
 
-        const dataWithImages = await Promise.all(
-            data.map(async (sport) => {
-                const image = await getImageUrl(sport.image)
-                return { ...sport, image }
-            })
-        )
+        const dataWithImages = data.map((sport: {
+            id: number;
+            name: string;
+            slug: string | null;
+            image: string | null;
+        }) => ({
+            ...sport,
+            image: getImageUrl(sport.image),
+        }))
 
         return dataWithImages
     }, CACHE_TTL.STATIC_DATA)
