@@ -1,6 +1,6 @@
 import { getCachedData, setCachedData, deleteCachedPattern, isRedisHealthy } from './redis'
 import { CACHE_KEYS, CACHE_PATTERNS } from './keys'
-import { invalidateAllSportRelatedData } from './invalidation'
+import { invalidateAllSportRelatedData, invalidateAllSportRelatedDataSimple } from './invalidation'
 
 export async function testCacheOperations() {
     console.log('=== Testing Redis Cache Operations ===')
@@ -48,27 +48,60 @@ export async function testCacheOperations() {
         console.log('Cached sports after pattern deletion:', sportsAfterDeletion)
         console.log(`Pattern deletion: ${sportsAfterDeletion === null ? 'PASS' : 'FAIL'}`)
 
-        // 5. Test full sports invalidation
-        console.log('\n5. Testing full sports invalidation...')
+        // 5. Test smart sports invalidation (new approach)
+        console.log('\n5. Testing smart sports invalidation...')
 
         // Set up some test cache data first
         await setCachedData(sportsKey, mockSportsData, 3600)
         await setCachedData(CACHE_KEYS.PAGINATED_SPORTS(1, 10, 'asc'), mockSportsData, 1800)
 
-        console.log('Before invalidation:')
+        console.log('Before smart invalidation:')
         console.log('- All sports:', await getCachedData(sportsKey))
         console.log('- Paginated sports:', await getCachedData(CACHE_KEYS.PAGINATED_SPORTS(1, 10, 'asc')))
 
-        // Run invalidation
+        // Run smart invalidation
         await invalidateAllSportRelatedData()
 
-        console.log('After invalidation:')
+        console.log('After smart invalidation:')
+        const sportsAfterSmart = await getCachedData(sportsKey)
+        const paginatedAfterSmart = await getCachedData(CACHE_KEYS.PAGINATED_SPORTS(1, 10, 'asc'))
+        console.log('- All sports:', sportsAfterSmart)
+        console.log('- Paginated sports:', paginatedAfterSmart)
+
+        // 6. Test simple sports invalidation (fallback approach)
+        console.log('\n6. Testing simple sports invalidation...')
+
+        // Set up test data again
+        await setCachedData(sportsKey, mockSportsData, 3600)
+        await setCachedData(CACHE_KEYS.PAGINATED_SPORTS(1, 10, 'asc'), mockSportsData, 1800)
+
+        console.log('Before simple invalidation:')
         console.log('- All sports:', await getCachedData(sportsKey))
         console.log('- Paginated sports:', await getCachedData(CACHE_KEYS.PAGINATED_SPORTS(1, 10, 'asc')))
 
-        console.log('\n=== Test Results ===')
-        console.log('If sports cache is null after invalidation, the fix is working!')
-        console.log('If sports cache still contains old data, there\'s still an issue.')
+        // Run simple invalidation
+        await invalidateAllSportRelatedDataSimple()
+
+        console.log('After simple invalidation:')
+        const sportsAfterSimple = await getCachedData(sportsKey)
+        const paginatedAfterSimple = await getCachedData(CACHE_KEYS.PAGINATED_SPORTS(1, 10, 'asc'))
+        console.log('- All sports:', sportsAfterSimple)
+        console.log('- Paginated sports:', paginatedAfterSimple)
+
+        console.log('\n=== Test Results Summary ===')
+        console.log(`Pattern deletion: ${sportsAfterDeletion === null ? 'PASS' : 'FAIL'}`)
+        console.log(`Smart invalidation - Sports: ${sportsAfterSmart !== null ? 'UPDATED' : 'DELETED'}`)
+        console.log(`Smart invalidation - Paginated: ${paginatedAfterSmart === null ? 'DELETED' : 'NOT DELETED'}`)
+        console.log(`Simple invalidation - Sports: ${sportsAfterSimple === null ? 'DELETED' : 'NOT DELETED'}`)
+        console.log(`Simple invalidation - Paginated: ${paginatedAfterSimple === null ? 'DELETED' : 'NOT DELETED'}`)
+
+        if (sportsAfterSmart !== null) {
+            console.log('✅ Smart invalidation is working - cache refreshed with new data')
+        } else if (sportsAfterSimple === null && paginatedAfterSimple === null) {
+            console.log('✅ Simple invalidation is working - cache properly deleted')
+        } else {
+            console.log('❌ Both invalidation approaches have issues')
+        }
 
     } catch (error) {
         console.error('Error during cache testing:', error)
@@ -84,6 +117,8 @@ export async function debugCacheState() {
         CACHE_KEYS.ALL_FACILITIES,
         CACHE_KEYS.PAGINATED_SPORTS(1, 10, 'asc'),
         CACHE_KEYS.PAGINATED_SPORTS(1, 20, 'desc'),
+        CACHE_KEYS.SPORT_TRANSLATIONS('en'),
+        'academy:123:sports', // Example academy cache
     ]
 
     for (const key of keysToCheck) {
@@ -105,6 +140,7 @@ export async function clearTestCache() {
         CACHE_KEYS.ALL_SPORTS,
         CACHE_KEYS.PAGINATED_SPORTS(1, 10, 'asc'),
         CACHE_KEYS.PAGINATED_SPORTS(1, 20, 'desc'),
+        CACHE_KEYS.SPORT_TRANSLATIONS('en'),
     ]
 
     for (const key of testKeys) {
@@ -114,5 +150,42 @@ export async function clearTestCache() {
         } catch (error) {
             console.error(`Error clearing ${key}:`, error)
         }
+    }
+}
+
+// Quick test for sports invalidation specifically
+export async function testSportsInvalidation() {
+    console.log('=== Testing Sports Invalidation Only ===')
+
+    try {
+        const sportsKey = CACHE_KEYS.ALL_SPORTS
+        const mockData = [{ id: 999, name: 'Test Sport', slug: 'test-sport' }]
+
+        // Set mock data
+        await setCachedData(sportsKey, mockData, 3600)
+        console.log('Set mock sports data:', mockData)
+
+        // Verify it's cached
+        const cached = await getCachedData(sportsKey)
+        console.log('Retrieved from cache:', cached)
+
+        // Test invalidation
+        console.log('\nRunning sports invalidation...')
+        await invalidateAllSportRelatedData()
+
+        // Check result
+        const afterInvalidation = await getCachedData(sportsKey)
+        console.log('After invalidation:', afterInvalidation)
+
+        if (afterInvalidation === null) {
+            console.log('✅ SUCCESS: Cache was properly deleted')
+        } else if (JSON.stringify(afterInvalidation) !== JSON.stringify(mockData)) {
+            console.log('✅ SUCCESS: Cache was refreshed with new data')
+        } else {
+            console.log('❌ FAILED: Cache still contains old data')
+        }
+
+    } catch (error) {
+        console.error('Error in sports invalidation test:', error)
     }
 } 

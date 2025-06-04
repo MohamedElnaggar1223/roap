@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { testCacheOperations, debugCacheState, clearTestCache } from '@/lib/cache/test'
+import { testCacheOperations, debugCacheState, clearTestCache, testSportsInvalidation } from '@/lib/cache/test'
 
 export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
@@ -28,9 +28,16 @@ export async function GET(request: NextRequest) {
                     message: 'Test cache cleared successfully.'
                 })
 
+            case 'sports':
+                await testSportsInvalidation()
+                return NextResponse.json({
+                    success: true,
+                    message: 'Sports invalidation test completed. Check server logs for results.'
+                })
+
             default:
                 return NextResponse.json({
-                    error: 'Invalid action. Use ?action=test, ?action=debug, or ?action=clear'
+                    error: 'Invalid action. Use ?action=test, ?action=debug, ?action=clear, or ?action=sports'
                 })
         }
     } catch (error) {

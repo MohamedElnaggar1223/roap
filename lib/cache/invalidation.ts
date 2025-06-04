@@ -1,9 +1,62 @@
 import { deleteCachedData, deleteCachedPattern, updateCachedData, updateMultipleCachedData, invalidateAndRefresh } from './redis'
 import { CACHE_PATTERNS, CACHE_KEYS, CACHE_TTL } from './keys'
+import { db } from '@/db'
+import { sports, sportTranslations } from '@/db/schema'
+import { sql, asc } from 'drizzle-orm'
+import { getImageUrl } from '@/lib/supabase-images'
 
 // Import database query functions for cache updates
 // Note: You'll need to import the actual database query functions here
 // import { getAllSports, getSport, etc. } from '../actions/sports.actions'
+
+// Direct database queries for cache invalidation (bypassing cache)
+async function fetchAllSportsFromDB() {
+    const data = await db
+        .select({
+            id: sports.id,
+            name: sql<string>`t.name`,
+            slug: sports.slug,
+            image: sports.image,
+        })
+        .from(sports)
+        .innerJoin(
+            sql`(
+                SELECT ct.sport_id, ct.name
+                FROM ${sportTranslations} ct
+                WHERE ct.locale = 'en'
+                UNION
+                SELECT ct2.sport_id, ct2.name
+                FROM ${sportTranslations} ct2
+                INNER JOIN (
+                    SELECT sport_id, MIN(locale) as first_locale
+                    FROM ${sportTranslations}
+                    WHERE sport_id NOT IN (
+                        SELECT sport_id 
+                        FROM ${sportTranslations} 
+                        WHERE locale = 'en'
+                    )
+                    GROUP BY sport_id
+                ) first_trans ON ct2.sport_id = first_trans.sport_id 
+                AND ct2.locale = first_trans.first_locale
+            ) t`,
+            sql`t.sport_id = ${sports.id}`
+        )
+        .orderBy(asc(sql`t.name`))
+
+    const dataWithImages = await Promise.all(
+        data.map(async (sport: {
+            id: number;
+            name: string;
+            slug: string | null;
+            image: string | null;
+        }) => {
+            const image = await getImageUrl(sport.image)
+            return { ...sport, image }
+        })
+    )
+
+    return dataWithImages
+}
 
 // Smart invalidation functions that update cache instead of deleting
 
@@ -339,11 +392,13 @@ export async function invalidateAllSportRelatedData() {
     console.log('Invalidating and refreshing all sport-related cache data...')
 
     try {
-        // Import the sports actions to get fresh data
-        const { getAllSports } = await import('@/lib/actions/sports.actions')
+        // APPROACH 1: Smart invalidation with fresh data
+        console.log('Fetching fresh sports data directly from database...')
+        const freshSportsData = await fetchAllSportsFromDB()
+        console.log(`Fetched ${freshSportsData.length} sports from database`)
 
         // Use smart invalidation that refreshes cache with fresh data
-        await smartInvalidateSports(await getAllSports())
+        await smartInvalidateSports(freshSportsData)
 
         // Also delete complex caches that are harder to refresh
         await Promise.all([
@@ -354,16 +409,39 @@ export async function invalidateAllSportRelatedData() {
 
         console.log('Sports cache invalidation and refresh completed successfully')
     } catch (error) {
-        console.error('Error in invalidateAllSportRelatedData:', error)
+        console.error('Error in smart invalidation, trying simple deletion...', error)
 
-        // Fallback to traditional deletion if refresh fails
+        // APPROACH 2: Simple deletion (fallback)
+        console.log('Falling back to simple cache deletion...')
+        await invalidateAllSportRelatedDataSimple()
+    }
+}
+
+// Simple approach: Just delete all sports-related cache
+export async function invalidateAllSportRelatedDataSimple() {
+    console.log('Using simple cache deletion approach...')
+
+    try {
         await Promise.all([
+            // Delete all sports-related cache keys
             deleteCachedPattern(CACHE_PATTERNS.ALL_SPORTS),
             deleteCachedPattern(CACHE_PATTERNS.SPORT_TRANSLATIONS),
             deleteCachedPattern(CACHE_PATTERNS.PAGINATED_SPORTS),
+
+            // Delete academy-related caches that include sports
             deleteCachedPattern('academy:*:sports'),
             deleteCachedPattern('academy:*:programs'),
+
+            // Delete any other sports-related caches
+            deleteCachedPattern('program:*'), // Programs reference sports
         ])
+
+        console.log('Simple sports cache deletion completed successfully')
+        console.log('Cache will be repopulated on next request')
+
+    } catch (error) {
+        console.error('Error in simple cache deletion:', error)
+        throw error
     }
 }
 
