@@ -50,6 +50,7 @@
     "@tiptap/pm": "^2.10.3",
     "@tiptap/react": "^2.10.3",
     "@tiptap/starter-kit": "^2.10.3",
+    "@upstash/redis": "^1.35.0",
     "bcryptjs": "^2.4.3",
     "better-auth": "^0.7.6-beta.1",
     "class-variance-authority": "^0.7.0",
