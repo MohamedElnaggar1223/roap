@@ -8,6 +8,9 @@ import { z } from 'zod'
 import { addCitySchema, addCityTranslationSchema } from '../validations/cities'
 import { revalidatePath } from 'next/cache'
 import { cache } from 'react'
+import { withPaginatedCache, withCache } from '@/lib/cache/wrapper'
+import { CACHE_KEYS, CACHE_TTL } from '@/lib/cache/keys'
+import { invalidateCitiesCache } from '@/lib/cache/invalidation'
 
 export async function getPaginatedCities(
     page: number = 1,
@@ -26,79 +29,87 @@ export async function getPaginatedCities(
         },
     }
 
-    const offset = (page - 1) * pageSize
+    const orderByStr = orderBy.toString()
 
-    const data = await db
-        .select({
-            id: cities.id,
-            name: sql<string>`t.name`,
-            locale: sql<string>`t.locale`,
-            state: sql<string>`st.name`,
-            stateLocale: sql<string>`st.locale`,
-        })
-        .from(cities)
-        .leftJoin(states, eq(cities.stateId, states.id))
-        .innerJoin(
-            sql`(
-                SELECT ct.city_id, ct.name, ct.locale
-                FROM ${cityTranslations} ct
-                WHERE ct.locale = 'en'
-                UNION
-                SELECT ct2.city_id, ct2.name, ct2.locale
-                FROM ${cityTranslations} ct2
-                INNER JOIN (
-                    SELECT city_id, MIN(locale) as first_locale
-                    FROM ${cityTranslations}
-                    WHERE city_id NOT IN (
-                        SELECT city_id 
-                        FROM ${cityTranslations} 
-                        WHERE locale = 'en'
-                    )
-                    GROUP BY city_id
-                ) first_trans ON ct2.city_id = first_trans.city_id 
-                AND ct2.locale = first_trans.first_locale
-            ) t`,
-            sql`t.city_id = ${cities.id}`
-        )
-        .innerJoin(
-            sql`(
-                SELECT st.state_id, st.name, st.locale
-                FROM ${stateTranslations} st
-                WHERE st.locale = 'en'
-                UNION
-                SELECT st2.state_id, st2.name, st2.locale
-                FROM ${stateTranslations} st2
-                INNER JOIN (
-                    SELECT state_id, MIN(locale) as first_locale
-                    FROM ${stateTranslations}
-                    WHERE state_id NOT IN (
-                        SELECT state_id 
-                        FROM ${stateTranslations} 
-                        WHERE locale = 'en'
-                    )
-                    GROUP BY state_id
-                ) first_trans ON st2.state_id = first_trans.state_id 
-                AND st2.locale = first_trans.first_locale
-            ) st`,
-            sql`st.state_id = ${cities.stateId}`
-        )
-        .orderBy(orderBy)
-        .limit(pageSize)
-        .offset(offset)
+    return await withPaginatedCache(
+        CACHE_KEYS.PAGINATED_CITIES(page, pageSize, orderByStr),
+        async () => {
+            const offset = (page - 1) * pageSize
 
-    const [{ count }] = await db
-        .select({ count: sql`count(*)`.mapWith(Number) })
-        .from(cities)
+            const data = await db
+                .select({
+                    id: cities.id,
+                    name: sql<string>`t.name`,
+                    locale: sql<string>`t.locale`,
+                    state: sql<string>`st.name`,
+                    stateLocale: sql<string>`st.locale`,
+                })
+                .from(cities)
+                .leftJoin(states, eq(cities.stateId, states.id))
+                .innerJoin(
+                    sql`(
+                        SELECT ct.city_id, ct.name, ct.locale
+                        FROM ${cityTranslations} ct
+                        WHERE ct.locale = 'en'
+                        UNION
+                        SELECT ct2.city_id, ct2.name, ct2.locale
+                        FROM ${cityTranslations} ct2
+                        INNER JOIN (
+                            SELECT city_id, MIN(locale) as first_locale
+                            FROM ${cityTranslations}
+                            WHERE city_id NOT IN (
+                                SELECT city_id 
+                                FROM ${cityTranslations} 
+                                WHERE locale = 'en'
+                            )
+                            GROUP BY city_id
+                        ) first_trans ON ct2.city_id = first_trans.city_id 
+                        AND ct2.locale = first_trans.first_locale
+                    ) t`,
+                    sql`t.city_id = ${cities.id}`
+                )
+                .innerJoin(
+                    sql`(
+                        SELECT st.state_id, st.name, st.locale
+                        FROM ${stateTranslations} st
+                        WHERE st.locale = 'en'
+                        UNION
+                        SELECT st2.state_id, st2.name, st2.locale
+                        FROM ${stateTranslations} st2
+                        INNER JOIN (
+                            SELECT state_id, MIN(locale) as first_locale
+                            FROM ${stateTranslations}
+                            WHERE state_id NOT IN (
+                                SELECT state_id 
+                                FROM ${stateTranslations} 
+                                WHERE locale = 'en'
+                            )
+                            GROUP BY state_id
+                        ) first_trans ON st2.state_id = first_trans.state_id 
+                        AND st2.locale = first_trans.first_locale
+                    ) st`,
+                    sql`st.state_id = ${cities.stateId}`
+                )
+                .orderBy(orderBy)
+                .limit(pageSize)
+                .offset(offset)
 
-    return {
-        data,
-        meta: {
-            page,
-            pageSize,
-            totalItems: count,
-            totalPages: Math.ceil(count / pageSize),
+            const [{ count }] = await db
+                .select({ count: sql`count(*)`.mapWith(Number) })
+                .from(cities)
+
+            return {
+                data,
+                meta: {
+                    page,
+                    pageSize,
+                    totalItems: count,
+                    totalPages: Math.ceil(count / pageSize),
+                },
+            }
         },
-    }
+        CACHE_TTL.PAGINATED_DATA
+    )
 }
 
 export const addCity = async (data: z.infer<typeof addCitySchema>) => {
@@ -132,6 +143,9 @@ export const addCity = async (data: z.infer<typeof addCitySchema>) => {
         updatedAt: sql`now()`,
     })
 
+    // Invalidate city caches
+    await invalidateCitiesCache()
+
     revalidatePath('/admin/cities')
 }
 
@@ -159,6 +173,9 @@ export const deleteCities = async (ids: number[]) => {
 
     await db.delete(cities).where(inArray(cities.id, ids))
 
+    // Invalidate city caches
+    await invalidateCitiesCache()
+
     revalidatePath('/admin/cities')
 }
 
@@ -171,6 +188,9 @@ export const deleteCityTranslations = async (ids: number[], cityId: string) => {
     }
 
     await db.delete(cityTranslations).where(inArray(cityTranslations.id, ids))
+
+    // Invalidate city caches
+    await invalidateCitiesCache()
 
     revalidatePath(`/admin/cities/${cityId}/edit`)
 }
@@ -200,6 +220,9 @@ export const addCityTranslation = async (data: z.infer<typeof addCityTranslation
             data: null,
             error: 'Something went wrong',
         }
+
+        // Invalidate city caches
+        await invalidateCitiesCache()
 
         revalidatePath(`/admin/cities/${cityId}/edit`)
 
@@ -248,6 +271,9 @@ export const editCityTranslation = async (data: { name: string, locale: string, 
             ])
         }
 
+        // Invalidate city caches
+        await invalidateCitiesCache()
+
         revalidatePath(`/admin/cities/${id}/edit`)
 
         return {
@@ -272,6 +298,9 @@ export const deleteCity = async (id: number) => {
     }
 
     await db.delete(cities).where(eq(cities.id, id))
+
+    // Invalidate city caches
+    await invalidateCitiesCache()
 
     revalidatePath('/admin/cities')
 }

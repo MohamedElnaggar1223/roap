@@ -8,6 +8,9 @@ import { z } from 'zod'
 import { addCountrySchema, addCountryTranslationSchema } from '../validations/countries'
 import { revalidatePath } from 'next/cache'
 import { cache } from 'react'
+import { withPaginatedCache, withCache } from '@/lib/cache/wrapper'
+import { CACHE_KEYS, CACHE_TTL } from '@/lib/cache/keys'
+import { invalidateCountriesCache } from '@/lib/cache/invalidation'
 
 export async function getPaginatedCountries(
     page: number = 1,
@@ -26,54 +29,62 @@ export async function getPaginatedCountries(
         },
     }
 
-    const offset = (page - 1) * pageSize
+    const orderByStr = orderBy.toString()
 
-    const data = await db
-        .select({
-            id: countries.id,
-            name: sql<string>`t.name`,
-            locale: sql<string>`t.locale`,
-        })
-        .from(countries)
-        .innerJoin(
-            sql`(
-                SELECT ct.country_id, ct.name, ct.locale
-                FROM ${countryTranslations} ct
-                WHERE ct.locale = 'en'
-                UNION
-                SELECT ct2.country_id, ct2.name, ct2.locale
-                FROM ${countryTranslations} ct2
-                INNER JOIN (
-                    SELECT country_id, MIN(locale) as first_locale
-                    FROM ${countryTranslations}
-                    WHERE country_id NOT IN (
-                        SELECT country_id 
-                        FROM ${countryTranslations} 
-                        WHERE locale = 'en'
-                    )
-                    GROUP BY country_id
-                ) first_trans ON ct2.country_id = first_trans.country_id 
-                AND ct2.locale = first_trans.first_locale
-            ) t`,
-            sql`t.country_id = ${countries.id}`
-        )
-        .orderBy(orderBy)
-        .limit(pageSize)
-        .offset(offset)
+    return await withPaginatedCache(
+        CACHE_KEYS.PAGINATED_COUNTRIES(page, pageSize, orderByStr),
+        async () => {
+            const offset = (page - 1) * pageSize
 
-    const [{ count }] = await db
-        .select({ count: sql`count(*)`.mapWith(Number) })
-        .from(countries)
+            const data = await db
+                .select({
+                    id: countries.id,
+                    name: sql<string>`t.name`,
+                    locale: sql<string>`t.locale`,
+                })
+                .from(countries)
+                .innerJoin(
+                    sql`(
+                        SELECT ct.country_id, ct.name, ct.locale
+                        FROM ${countryTranslations} ct
+                        WHERE ct.locale = 'en'
+                        UNION
+                        SELECT ct2.country_id, ct2.name, ct2.locale
+                        FROM ${countryTranslations} ct2
+                        INNER JOIN (
+                            SELECT country_id, MIN(locale) as first_locale
+                            FROM ${countryTranslations}
+                            WHERE country_id NOT IN (
+                                SELECT country_id 
+                                FROM ${countryTranslations} 
+                                WHERE locale = 'en'
+                            )
+                            GROUP BY country_id
+                        ) first_trans ON ct2.country_id = first_trans.country_id 
+                        AND ct2.locale = first_trans.first_locale
+                    ) t`,
+                    sql`t.country_id = ${countries.id}`
+                )
+                .orderBy(orderBy)
+                .limit(pageSize)
+                .offset(offset)
 
-    return {
-        data,
-        meta: {
-            page,
-            pageSize,
-            totalItems: count,
-            totalPages: Math.ceil(count / pageSize),
+            const [{ count }] = await db
+                .select({ count: sql`count(*)`.mapWith(Number) })
+                .from(countries)
+
+            return {
+                data,
+                meta: {
+                    page,
+                    pageSize,
+                    totalItems: count,
+                    totalPages: Math.ceil(count / pageSize),
+                },
+            }
         },
-    }
+        CACHE_TTL.PAGINATED_DATA
+    )
 }
 
 export const addCountry = async (data: z.infer<typeof addCountrySchema>) => {
@@ -103,6 +114,9 @@ export const addCountry = async (data: z.infer<typeof addCountrySchema>) => {
         name,
     })
 
+    // Invalidate country caches
+    await invalidateCountriesCache()
+
     revalidatePath('/admin/countries')
 }
 
@@ -128,6 +142,9 @@ export const deleteCountries = async (ids: number[]) => {
 
     await db.delete(countries).where(inArray(countries.id, ids))
 
+    // Invalidate country caches
+    await invalidateCountriesCache()
+
     revalidatePath('/admin/countries')
 }
 
@@ -140,6 +157,9 @@ export const deleteCountryTranslations = async (ids: number[], countryId: string
     }
 
     await db.delete(countryTranslations).where(inArray(countryTranslations.id, ids))
+
+    // Invalidate country caches
+    await invalidateCountriesCache()
 
     revalidatePath(`/admin/countries/${countryId}/edit`)
 }
@@ -169,6 +189,9 @@ export const addCountryTranslation = async (data: z.infer<typeof addCountryTrans
             data: null,
             error: 'Something went wrong',
         }
+
+        // Invalidate country caches
+        await invalidateCountriesCache()
 
         revalidatePath(`/admin/countries/${countryId}/edit`)
 
@@ -202,6 +225,9 @@ export const editCountryTranslation = async (data: { name: string, locale: strin
             updatedAt: sql`now()`,
         }).where(eq(countryTranslations.id, id))
 
+        // Invalidate country caches
+        await invalidateCountriesCache()
+
         revalidatePath(`/admin/countries/${id}/edit`)
 
         return {
@@ -227,10 +253,13 @@ export const deleteCountry = async (id: number) => {
 
     await db.delete(countries).where(eq(countries.id, id))
 
+    // Invalidate country caches
+    await invalidateCountriesCache()
+
     revalidatePath('/admin/countries')
 }
 
-export const getAllCountries = cache(async () => {
+export const getAllCountries = async () => {
     const AdminRes = await isAdmin()
 
     if (!AdminRes) return {
@@ -238,41 +267,46 @@ export const getAllCountries = cache(async () => {
         error: 'You are not authorized to perform this action',
     }
 
-    const data = await db.select({
-        id: countries.id,
-        name: countryTranslations.name,
-        locale: countryTranslations.locale,
-        translationId: countryTranslations.id,
-    })
-        .from(countries)
-        .leftJoin(countryTranslations, eq(countryTranslations.countryId, countries.id))
+    return await withCache(
+        CACHE_KEYS.ALL_COUNTRIES,
+        async () => {
+            const data = await db.select({
+                id: countries.id,
+                name: countryTranslations.name,
+                locale: countryTranslations.locale,
+                translationId: countryTranslations.id,
+            })
+                .from(countries)
+                .leftJoin(countryTranslations, eq(countryTranslations.countryId, countries.id))
 
+            const finalData = data.reduce((acc, curr) => {
+                const existingCountry = acc.find(country => country.id === curr.id);
 
-    const finalData = data.reduce((acc, curr) => {
-        const existingCountry = acc.find(country => country.id === curr.id);
+                if (existingCountry) {
+                    existingCountry.countryTranslations.push({
+                        id: curr.translationId ?? 0,
+                        name: curr.name ?? '',
+                        locale: curr.locale ?? '',
+                    });
+                } else {
+                    acc.push({
+                        id: curr.id,
+                        countryTranslations: [{
+                            id: curr.translationId ?? 0,
+                            name: curr.name ?? '',
+                            locale: curr.locale ?? '',
+                        }]
+                    });
+                }
 
-        if (existingCountry) {
-            existingCountry.countryTranslations.push({
-                id: curr.translationId ?? 0,
-                name: curr.name ?? '',
-                locale: curr.locale ?? '',
-            });
-        } else {
-            acc.push({
-                id: curr.id,
-                countryTranslations: [{
-                    id: curr.translationId ?? 0,
-                    name: curr.name ?? '',
-                    locale: curr.locale ?? '',
-                }]
-            });
-        }
+                return acc;
+            }, [] as { id: number; countryTranslations: { id: number; name: string; locale: string; }[] }[]);
 
-        return acc;
-    }, [] as { id: number; countryTranslations: { id: number; name: string; locale: string; }[] }[]);
-
-    return {
-        data: finalData,
-        error: null,
-    }
-})
+            return {
+                data: finalData,
+                error: null,
+            }
+        },
+        CACHE_TTL.STATIC_DATA
+    )
+}
