@@ -10,76 +10,30 @@ import { fetchPlaceInformation, getPlaceId } from './reviews.actions'
 
 const getLocationsAction = async (academicId: number) => {
     return unstable_cache(async (academicId: number) => {
-        // OPTIMIZED: Use parallel queries instead of complex subqueries
-        const [locationsData, sportsData, facilitiesData] = await Promise.all([
-            // Get branch data with simplified translation join
-            db
-                .select({
-                    id: branches.id,
-                    name: branchTranslations.name,
-                    locale: branchTranslations.locale,
-                    nameInGoogleMap: branches.nameInGoogleMap,
-                    url: branches.url,
-                    isDefault: branches.isDefault,
-                    rate: branches.rate,
-                    hidden: branches.hidden,
-                    createdAt: branches.createdAt,
-                })
-                .from(branches)
-                .leftJoin(branchTranslations, and(
-                    eq(branches.id, branchTranslations.branchId),
-                    eq(branchTranslations.locale, 'en')
-                ))
-                .where(eq(branches.academicId, academicId)),
-
-            // Get sports separately for better performance
-            db
-                .select({
-                    branchId: branchSport.branchId,
-                    sportId: branchSport.sportId,
-                })
-                .from(branchSport)
-                .innerJoin(branches, eq(branchSport.branchId, branches.id))
-                .where(eq(branches.academicId, academicId)),
-
-            // Get facilities separately for better performance
-            db
-                .select({
-                    branchId: branchFacility.branchId,
-                    facilityId: branchFacility.facilityId,
-                })
-                .from(branchFacility)
-                .innerJoin(branches, eq(branchFacility.branchId, branches.id))
-                .where(eq(branches.academicId, academicId))
-        ])
-
-        // OPTIMIZED: Build lookup maps for O(1) access
-        const sportsByBranch = sportsData.reduce((acc, sport) => {
-            if (!acc[sport.branchId]) acc[sport.branchId] = []
-            acc[sport.branchId].push(sport.sportId)
-            return acc
-        }, {} as Record<number, number[]>)
-
-        const facilitiesByBranch = facilitiesData.reduce((acc, facility) => {
-            if (!acc[facility.branchId]) acc[facility.branchId] = []
-            acc[facility.branchId].push(facility.facilityId)
-            return acc
-        }, {} as Record<number, number[]>)
-
-        const transformedLocations = locationsData.map(location => ({
-            ...location,
-            name: location.name || 'Unnamed Location', // Handle missing translations
-            locale: location.locale || 'en', // Ensure locale is never null
-            sports: (sportsByBranch[location.id] || []).map(String), // Convert to string[] for UI compatibility
-            facilities: facilitiesByBranch[location.id] || [],
-            amenities: (facilitiesByBranch[location.id] || []).map(String), // Convert to string[] for UI compatibility
-        }))
+        // ULTRA-OPTIMIZED: Use materialized view for instant location data access
+        const locationsData = await db
+            .select({
+                id: sql<number>`id`,
+                name: sql<string>`name`,
+                locale: sql<string>`locale`,
+                nameInGoogleMap: sql<string>`name_in_google_map`,
+                url: sql<string>`url`,
+                isDefault: sql<boolean>`is_default`,
+                rate: sql<number>`rate`,
+                hidden: sql<boolean>`hidden`,
+                createdAt: sql<string>`created_at`,
+                sports: sql<string[]>`sports_str`, // Pre-computed string array
+                facilities: sql<number[]>`facilities`,
+                amenities: sql<string[]>`amenities`, // Pre-computed string array for UI compatibility
+            })
+            .from(sql`mv_location_details`)
+            .where(sql`academic_id = ${academicId}`)
 
         return {
-            data: transformedLocations,
+            data: locationsData,
             error: null
         }
-    }, [`locations-${academicId.toString()}`], { tags: [`locations-${academicId.toString()}`], revalidate: 60 })(academicId)
+    }, [`locations-${academicId.toString()}`], { tags: [`locations-${academicId.toString()}`], revalidate: 300 })(academicId) // Increased cache time since materialized view is already optimized
 }
 
 export async function getLocations() {
