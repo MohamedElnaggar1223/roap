@@ -32,7 +32,7 @@ export type OptimizedDashboardResponse = {
 }
 
 // Cached dashboard stats with 5-minute refresh
-export const getOptimizedDashboardStats = cache(async (): Promise<OptimizedDashboardResponse> => {
+export const getDashboardStats = cache(async (): Promise<OptimizedDashboardResponse> => {
     try {
         const academyResult = await checkAcademyStatus()
         if (academyResult.shouldRedirect || !academyResult.academyId) {

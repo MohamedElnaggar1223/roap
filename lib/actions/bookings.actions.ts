@@ -45,7 +45,7 @@ export type OptimizedCalendarEvent = {
 }
 
 // Optimized calendar data fetching with caching
-export const getOptimizedCalendarEvents = cache(async (
+export const getCalendarEvents = cache(async (
     startDate: Date,
     endDate: Date
 ): Promise<{ data: OptimizedCalendarEvent[], error: string | null }> => {
@@ -291,7 +291,7 @@ export const getTodaySessions = cache(async (): Promise<{
 })
 
 // Bulk delete optimized
-export const deleteBookingsOptimized = async (ids: number[]): Promise<{
+export const deleteBookings = async (ids: number[]): Promise<{
     success: boolean,
     error: string | null
 }> => {
@@ -316,7 +316,7 @@ export const deleteBookingsOptimized = async (ids: number[]): Promise<{
 }
 
 // Optimized search athletes function
-export const searchAthletesOptimized = cache(async (query: string): Promise<{
+export const searchAthletes = cache(async (query: string): Promise<{
     data: Array<{
         id: number | null
         name: string | null
