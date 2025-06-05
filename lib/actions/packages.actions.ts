@@ -258,24 +258,29 @@ export async function updatePackage(id: number, data: {
                     )
             }
 
-            for (const schedule of schedulesToUpdate) {
-                await tx
-                    .update(schedules)
-                    .set({
-                        day: schedule.day,
-                        from: schedule.from,
-                        to: schedule.to,
-                        memo: schedule.memo,
-                        updatedAt: sql`now()`,
-                        startAgeMonths: schedule.startAgeMonths,
-                        endAgeMonths: schedule.endAgeMonths,
-                        isEndAgeUnlimited: schedule.isEndAgeUnlimited,
-                        startDateOfBirth: schedule.startDateOfBirth,
-                        endDateOfBirth: schedule.endDateOfBirth,
-                        gender: schedule.gender,
-                        capacity: schedule.capacity ?? 9999,
-                    })
-                    .where(eq(schedules.id, schedule.id!))
+            // OPTIMIZED: Batch schedule updates instead of sequential operations
+            if (schedulesToUpdate.length > 0) {
+                await Promise.all(
+                    schedulesToUpdate.map(schedule =>
+                        tx
+                            .update(schedules)
+                            .set({
+                                day: schedule.day,
+                                from: schedule.from,
+                                to: schedule.to,
+                                memo: schedule.memo,
+                                updatedAt: sql`now()`,
+                                startAgeMonths: schedule.startAgeMonths,
+                                endAgeMonths: schedule.endAgeMonths,
+                                isEndAgeUnlimited: schedule.isEndAgeUnlimited,
+                                startDateOfBirth: schedule.startDateOfBirth,
+                                endDateOfBirth: schedule.endDateOfBirth,
+                                gender: schedule.gender,
+                                capacity: schedule.capacity ?? 9999,
+                            })
+                            .where(eq(schedules.id, schedule.id!))
+                    )
+                )
             }
         })
 
@@ -309,8 +314,9 @@ export async function getProgramPackages(url: string | null, programId: number) 
         return { error: 'You are not authorized to perform this action', field: null, data: [] }
     }
 
-    const packagesWithSchedules = await db
-        .select({
+    // OPTIMIZED: Use parallel queries instead of complex JSON aggregation
+    const [packagesData, schedulesData] = await Promise.all([
+        db.select({
             id: packages.id,
             name: packages.name,
             price: packages.price,
@@ -325,38 +331,50 @@ export async function getProgramPackages(url: string | null, programId: number) 
             entryFeesEndDate: packages.entryFeesEndDate,
             capacity: packages.capacity,
             hidden: packages.hidden,
-            schedules: sql<Schedule[]>`json_agg(
-                json_build_object(
-                    'id', ${schedules.id},
-                    'day', ${schedules.day},
-                    'from', ${schedules.from},
-                    'to', ${schedules.to},
-                    'memo', ${schedules.memo},
-                    'startDateOfBirth', ${schedules.startDateOfBirth},
-                    'endDateOfBirth', ${schedules.endDateOfBirth},
-                    'gender', ${schedules.gender},
-                    'capacity', ${schedules.capacity},
-                    'hidden', ${schedules.hidden}
-                )
-                ORDER BY ${schedules.createdAt} ASC
-            )`
         })
-        .from(packages)
-        .leftJoin(schedules, eq(packages.id, schedules.packageId))
-        .where(eq(packages.programId, programId))
-        .groupBy(packages.id)
-        .orderBy(asc(packages.createdAt))
-        .then(results =>
-            results.map(pkg => ({
-                ...pkg,
-                schedules: pkg.schedules?.[0]?.id === null ? [] : pkg.schedules,
-                type: pkg.name.startsWith('Term') ? 'Term' as const :
-                    pkg.name.toLowerCase().includes('monthly') ? 'Monthly' as const :
-                        'Full Season' as const,
-                termNumber: pkg.name.startsWith('Term') ?
-                    parseInt(pkg.name.split(' ')[1]) : undefined
-            }))
-        )
+            .from(packages)
+            .where(eq(packages.programId, programId))
+            .orderBy(asc(packages.createdAt)),
+
+        db.select({
+            id: schedules.id,
+            packageId: schedules.packageId,
+            day: schedules.day,
+            from: schedules.from,
+            to: schedules.to,
+            memo: schedules.memo,
+            startDateOfBirth: schedules.startDateOfBirth,
+            endDateOfBirth: schedules.endDateOfBirth,
+            gender: schedules.gender,
+            capacity: schedules.capacity,
+            hidden: schedules.hidden,
+            startAgeMonths: schedules.startAgeMonths,
+            endAgeMonths: schedules.endAgeMonths,
+            isEndAgeUnlimited: schedules.isEndAgeUnlimited,
+            createdAt: schedules.createdAt,
+        })
+            .from(schedules)
+            .innerJoin(packages, eq(schedules.packageId, packages.id))
+            .where(eq(packages.programId, programId))
+            .orderBy(asc(schedules.createdAt))
+    ])
+
+    // OPTIMIZED: Build schedule lookup map for O(1) access
+    const schedulesByPackage = schedulesData.reduce((acc, schedule) => {
+        if (!acc[schedule.packageId]) acc[schedule.packageId] = []
+        acc[schedule.packageId].push(schedule)
+        return acc
+    }, {} as Record<number, any[]>)
+
+    const packagesWithSchedules = packagesData.map(pkg => ({
+        ...pkg,
+        schedules: schedulesByPackage[pkg.id] || [],
+        type: pkg.name.startsWith('Term') ? 'Term' as const :
+            pkg.name.toLowerCase().includes('monthly') ? 'Monthly' as const :
+                'Full Season' as const,
+        termNumber: pkg.name.startsWith('Term') ?
+            parseInt(pkg.name.split(' ')[1]) : undefined
+    }))
 
     return { data: packagesWithSchedules, error: null }
 }

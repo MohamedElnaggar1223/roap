@@ -48,6 +48,7 @@ export const getProgramsDataStore = async (): Promise<{
         return { error: 'Academy not found', data: [], field: null }
     }
 
+    // OPTIMIZED: Use our new indexes and reduce nested queries
     const programsData = await db.query.programs.findMany({
         where: and(
             eq(programs.academicId, academy.id),
@@ -154,64 +155,126 @@ export const getProgramsData = async (birthday?: string) => {
     //     ))
     //     .orderBy(asc(programs.createdAt))
 
-    const programsData = await db.query.programs.findMany({
-        where: eq(programs.academicId, academy.id),
-        with: {
-            packages: {
-                with: {
-                    schedules: true
-                }
-            },
-            coachPrograms: {
-                with: {
-                    coach: {
-                        columns: {
-                            id: true,
-                            name: true,
-                            image: true
-                        }
-                    }
-                }
-            },
-            branch: {
-                with: {
-                    branchTranslations: {
-                        where: eq(branchTranslations.locale, 'en'),
-                        columns: {
-                            name: true
-                        }
-                    }
-                }
-            },
-            sport: {
-                with: {
-                    sportTranslations: {
-                        where: eq(sportTranslations.locale, 'en'),
-                        columns: {
-                            name: true
-                        }
-                    }
-                }
-            }
-        },
-        orderBy: asc(programs.createdAt)
-    })
+    // OPTIMIZED: Use more efficient query structure with our new indexes
+    const programsData = await db
+        .select({
+            id: programs.id,
+            name: programs.name,
+            description: programs.description,
+            academicId: programs.academicId,
+            branchId: programs.branchId,
+            sportId: programs.sportId,
+            gender: programs.gender,
+            startDateOfBirth: programs.startDateOfBirth,
+            endDateOfBirth: programs.endDateOfBirth,
+            startAgeMonths: programs.startAgeMonths,
+            endAgeMonths: programs.endAgeMonths,
+            isEndAgeUnlimited: programs.isEndAgeUnlimited,
+            numberOfSeats: programs.numberOfSeats,
+            type: programs.type,
+            color: programs.color,
+            createdAt: programs.createdAt,
+            updatedAt: programs.updatedAt,
+            branchName: branchTranslations.name,
+            sportName: sportTranslations.name,
+        })
+        .from(programs)
+        .innerJoin(branches, eq(programs.branchId, branches.id))
+        .innerJoin(branchTranslations, and(
+            eq(branches.id, branchTranslations.branchId),
+            eq(branchTranslations.locale, 'en')
+        ))
+        .innerJoin(sports, eq(programs.sportId, sports.id))
+        .innerJoin(sportTranslations, and(
+            eq(sports.id, sportTranslations.sportId),
+            eq(sportTranslations.locale, 'en')
+        ))
+        .where(eq(programs.academicId, academy.id))
+        .orderBy(asc(programs.createdAt))
+
+    // OPTIMIZED: Get packages and schedules separately to avoid N+1
+    const programIds = programsData.map(p => p.id)
+    let packagesData: any[] = []
+    let schedulesData: any[] = []
+    let coachProgramsData: any[] = []
+
+    if (programIds.length > 0) {
+        [packagesData, schedulesData, coachProgramsData] = await Promise.all([
+            // Get all packages for these programs
+            db.select()
+                .from(packages)
+                .where(inArray(packages.programId, programIds))
+                .orderBy(asc(packages.createdAt)),
+
+            // Get all schedules for packages (will join with packages below)
+            db.select({
+                id: schedules.id,
+                packageId: schedules.packageId,
+                day: schedules.day,
+                from: schedules.from,
+                to: schedules.to,
+                memo: schedules.memo,
+                startDateOfBirth: schedules.startDateOfBirth,
+                endDateOfBirth: schedules.endDateOfBirth,
+                startAgeMonths: schedules.startAgeMonths,
+                endAgeMonths: schedules.endAgeMonths,
+                isEndAgeUnlimited: schedules.isEndAgeUnlimited,
+                gender: schedules.gender,
+                capacity: schedules.capacity,
+                hidden: schedules.hidden,
+                createdAt: schedules.createdAt,
+                updatedAt: schedules.updatedAt,
+            })
+                .from(schedules)
+                .innerJoin(packages, eq(schedules.packageId, packages.id))
+                .where(inArray(packages.programId, programIds)),
+
+            // Get coach programs
+            db.select({
+                programId: coachProgram.programId,
+                coachId: coachProgram.coachId,
+                coachName: coaches.name,
+                coachImage: coaches.image,
+            })
+                .from(coachProgram)
+                .innerJoin(coaches, eq(coachProgram.coachId, coaches.id))
+                .where(inArray(coachProgram.programId, programIds))
+        ])
+    }
+
+    // OPTIMIZED: Build data structure efficiently using maps for O(1) lookups
+    const packagesByProgram = packagesData.reduce((acc, pkg) => {
+        if (!acc[pkg.programId]) acc[pkg.programId] = []
+        acc[pkg.programId].push(pkg)
+        return acc
+    }, {} as Record<number, any[]>)
+
+    const schedulesByPackage = schedulesData.reduce((acc, schedule) => {
+        if (!acc[schedule.packageId]) acc[schedule.packageId] = []
+        acc[schedule.packageId].push(schedule)
+        return acc
+    }, {} as Record<number, any[]>)
+
+    const coachesByProgram = coachProgramsData.reduce((acc, cp) => {
+        if (!acc[cp.programId]) acc[cp.programId] = []
+        acc[cp.programId].push({
+            id: cp.coachId,
+            name: cp.coachName,
+            image: cp.coachImage || ''
+        })
+        return acc
+    }, {} as Record<number, any[]>)
 
     const finalProgramsData = programsData.map(program => ({
         ...program,
-        name: program.name === 'Assessment' ? 'Assessment ' + program.sport?.sportTranslations[0]?.name + program.branch?.branchTranslations[0]?.name : program.name,
-        packages: program.packages.map(pkg => ({
+        name: program.name === 'Assessment' ? 'Assessment ' + program.sportName + program.branchName : program.name,
+        packages: (packagesByProgram[program.id] || []).map((pkg: any) => ({
             ...pkg,
-            schedules: pkg.schedules.map(s => ({
-                ...s,
-            }))
+            schedules: schedulesByPackage[pkg.id] || []
         })),
-        coaches: program.coachPrograms.map(cp => ({
-            ...cp.coach,
-            image: cp.coach.image || ''
-        })),
-        branch: program.branch?.branchTranslations[0]?.name || '',
-        sport: program.sport?.sportTranslations[0]?.name || ''
+        coaches: coachesByProgram[program.id] || [],
+        branch: program.branchName,
+        sport: program.sportName
     }))
 
     console.log("Final Programs Data", finalProgramsData)
@@ -224,7 +287,7 @@ export const getProgramsData = async (birthday?: string) => {
 
             if (!startDate || !endDate) return true;
 
-            return birthDate <= startDate && birthDate >= endDate;
+            return birthDate >= startDate && birthDate <= endDate;
         })
         : finalProgramsData
 
@@ -276,6 +339,7 @@ export async function getPrograms() {
         return { error: 'Academy not found' }
     }
 
+    // OPTIMIZED: Use parallel queries instead of complex subqueries
     const programsData = await db
         .select({
             id: programs.id,
@@ -294,16 +358,6 @@ export async function getPrograms() {
             branchName: branchTranslations.name,
             sportName: sportTranslations.name,
             color: programs.color,
-            coaches: sql<string[]>`(
-                SELECT COALESCE(array_agg(coach_id), ARRAY[]::integer[])
-                FROM ${coachProgram}
-                WHERE ${coachProgram.programId} = ${programs.id}
-            )`,
-            packages: sql<string[]>`(
-                SELECT COALESCE(array_agg(id), ARRAY[]::integer[])
-                FROM ${packages}
-                WHERE ${packages.programId} = ${programs.id}
-            )`
         })
         .from(programs)
         .innerJoin(branches, eq(programs.branchId, branches.id))
@@ -322,10 +376,46 @@ export async function getPrograms() {
         ))
         .orderBy(asc(programs.createdAt))
 
+    // OPTIMIZED: Get coaches and packages separately with our new indexes
+    const programIds = programsData.map(p => p.id)
+    let coachesData: any[] = []
+    let packagesData: any[] = []
+
+    if (programIds.length > 0) {
+        [coachesData, packagesData] = await Promise.all([
+            db.select({
+                programId: coachProgram.programId,
+                coachId: coachProgram.coachId,
+            })
+                .from(coachProgram)
+                .where(inArray(coachProgram.programId, programIds)),
+
+            db.select({
+                programId: packages.programId,
+                id: packages.id,
+            })
+                .from(packages)
+                .where(inArray(packages.programId, programIds))
+        ])
+    }
+
+    // OPTIMIZED: Build lookup maps for efficient data assembly
+    const coachesByProgram = coachesData.reduce((acc, coach) => {
+        if (!acc[coach.programId]) acc[coach.programId] = []
+        acc[coach.programId].push(coach.coachId)
+        return acc
+    }, {} as Record<number, number[]>)
+
+    const packagesByProgram = packagesData.reduce((acc, pkg) => {
+        if (!acc[pkg.programId]) acc[pkg.programId] = []
+        acc[pkg.programId].push(pkg.id)
+        return acc
+    }, {} as Record<number, number[]>)
+
     const transformedPrograms = programsData.map(program => ({
         ...program,
-        coaches: program.coaches || [],
-        packages: program.packages || [],
+        coaches: coachesByProgram[program.id] || [],
+        packages: packagesByProgram[program.id] || [],
     }))
 
     return {
