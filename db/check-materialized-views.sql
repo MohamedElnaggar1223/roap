@@ -108,4 +108,4 @@ SELECT 'Athlete View Performance' as test_type, COUNT(*) FROM mv_athlete_details
 \echo ''
 \echo '   If materialized views exist but have no data, run:'
 \echo '   REFRESH MATERIALIZED VIEW mv_location_details;'
-\echo '   REFRESH MATERIALIZED VIEW mv_athlete_details;' 
+\echo '   REFRESH MATERIALIZED VIEW mv_athlete_details;'
