@@ -7,6 +7,16 @@ import { isAdmin } from '../admin'
 import { getImageUrl } from '../supabase-images'
 import { revalidatePath } from 'next/cache'
 import { slugify } from '../utils'
+import { getFromCache, setToCache, generateCacheKey, updateCachedItem, clearCache } from '@/lib/cache.utils';
+import { redis } from '@/lib/redis';
+
+// Helper function to create a somewhat stable string from orderBy SQL object
+const serializeOrderBy = (orderBy: SQL): string => {
+    // This is a basic approach. For complex SQL objects, a more structured
+    // serialization might be needed. If orderBy options are limited and known,
+    // mapping them to specific strings would be most robust.
+    return String(orderBy).replace(/\s+/g, '_'); // Replace spaces for a cleaner key part
+};
 
 export async function getPaginatedSports(
     page: number = 1,
@@ -25,7 +35,45 @@ export async function getPaginatedSports(
         },
     }
 
-    const offset = (page - 1) * pageSize
+    const versionKey = generateCacheKey('cache', 'version', 'sports', 'paginated');
+    let currentVersion = await redis.get<string>(versionKey);
+    if (currentVersion === null) {
+        currentVersion = '1'; // Default to version 1 if not set
+        // Optionally, set it in Redis if it's the first time, though incr will create it too
+        // await redis.set(versionKey, currentVersion, { nx: true }); 
+    }
+
+    const cacheKey = generateCacheKey(
+        'sports',
+        'paginated',
+        `v-${currentVersion}`,
+        `page-${page}`,
+        `size-${pageSize}`,
+        `order-${serializeOrderBy(orderBy)}`
+    );
+
+    const cachedData = await getFromCache<Awaited<ReturnType<typeof getPaginatedSportsCoreLogic>>>(cacheKey);
+    if (cachedData) {
+        return cachedData;
+    }
+
+    const result = await getPaginatedSportsCoreLogic(page, pageSize, orderBy);
+
+    if (result && result.data.length > 0) { // Only cache if there's data
+        await setToCache(cacheKey, result);
+    }
+
+    return result;
+}
+
+// Extracted core logic for getPaginatedSports
+async function getPaginatedSportsCoreLogic(
+    page: number = 1,
+    pageSize: number = 10,
+    orderBy: SQL = asc(sports.id)
+) {
+    // Assuming isAdmin check is handled by the calling function (getPaginatedSports)
+    const offset = (page - 1) * pageSize;
 
     const data = await db
         .select({
@@ -88,6 +136,29 @@ export async function getSport(id: string) {
 
     if (!isAdminRes) return null
 
+    const cacheKey = generateCacheKey('sport', id, 'details');
+    const cachedSport = await getFromCache<Awaited<ReturnType<typeof getSportCoreLogic>>>(cacheKey);
+
+    if (cachedSport) {
+        return cachedSport;
+    }
+
+    const sportData = await getSportCoreLogic(id);
+
+    if (sportData) {
+        await setToCache(cacheKey, sportData);
+    }
+
+    return sportData;
+}
+
+// Extracted core logic for getSport to be reused by cache update mechanisms
+async function getSportCoreLogic(id: string) {
+    // Note: Original function did not explicitly check isAdmin again here,
+    // assuming the caller (getSport) handles authorization.
+    // If getSportCoreLogic could be called directly from an unauthorized context,
+    // the isAdmin check might be needed here too. For now, following original pattern.
+
     const data = await db.query.sportTranslations.findFirst({
         where: eq(sports.id, parseInt(id)),
         with: {
@@ -101,14 +172,16 @@ export async function getSport(id: string) {
         columns: {
             name: true
         }
-    })
+    });
 
-    const image = await getImageUrl(data?.sport?.image ?? '')
+    if (!data) return null; // Handle case where sport is not found
+
+    const image = await getImageUrl(data?.sport?.image ?? '');
 
     return {
         ...data,
         image,
-    }
+    };
 }
 
 export const editSport = async (values: { name: string, image: string | null, id: number }) => {
@@ -144,7 +217,22 @@ export const editSport = async (values: { name: string, image: string | null, id
                 ))
         })
 
-        revalidatePath('/admin/sports')
+        // Update the cache for the specific sport that was edited
+        const cacheKey = generateCacheKey('sport', values.id, 'details');
+        await updateCachedItem(cacheKey, () => getSportCoreLogic(String(values.id)));
+
+        // Increment paginated sports version
+        await redis.incr(generateCacheKey('cache', 'version', 'sports', 'paginated'));
+
+        // Clear paginated sports caches as an edit might affect multiple pages
+        // This is a broad approach. More granular updates are complex.
+        // For now, we'll rely on revalidatePath and TTL for paginated views, 
+        // but explicitly clear a known pattern if we had one or if the client supported it easily.
+        // Example of what one might do if pattern deletion was simple (Upstash recommends against KEYS for performance):
+        // const paginatedSportsPattern = generateCacheKey('sports', 'paginated', '*');
+        // await clearCacheByPattern(paginatedSportsPattern); // Hypothetical function
+
+        revalidatePath('/admin/sports') // This will help Next.js refetch data for list views
         return { success: true }
 
     } catch (error) {
@@ -200,6 +288,9 @@ export const createSport = async (values: { name: string, image: string | null }
             updatedAt: sql`now()`
         })
 
+        // Increment paginated sports version
+        await redis.incr(generateCacheKey('cache', 'version', 'sports', 'paginated'));
+
         revalidatePath('/admin/sports')
         return { success: true }
 
@@ -225,7 +316,20 @@ export async function deleteSports(ids: number[]) {
         error: 'You are not authorized to perform this action',
     }
 
+    // Before deleting from DB, prepare cache keys for the items being deleted
+    const cacheKeysToClear: string[] = ids.map(id => generateCacheKey('sport', id, 'details'));
+
     await db.delete(sports).where(inArray(sports.id, ids))
 
+    // Clear the cache for the deleted sports
+    if (cacheKeysToClear.length > 0) {
+        await clearCache(cacheKeysToClear);
+    }
+
+    // Increment paginated sports version
+    await redis.incr(generateCacheKey('cache', 'version', 'sports', 'paginated'));
+
+    // Revalidate path for list views
     revalidatePath('/admin/sports')
+    // Return void or a success indicator if preferred by function signature
 }
