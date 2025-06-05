@@ -7,23 +7,33 @@ let redis: Redis | null = null
 // Get or create Redis client
 export function getRedisClient(): Redis {
     if (!redis) {
+        if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+            throw new Error('Upstash Redis environment variables are not set')
+        }
+
         redis = new Redis({
-            url: process.env.UPSTASH_REDIS_REST_URL!,
-            token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+            url: process.env.UPSTASH_REDIS_REST_URL,
+            token: process.env.UPSTASH_REDIS_REST_TOKEN,
         })
     }
 
     return redis
 }
 
-// Basic cache operations
+// Improved cache operations that handle Upstash Redis properly
 export async function getCachedData<T>(key: string): Promise<T | null> {
     try {
         const client = getRedisClient()
         const data = await client.get(key)
-        return data as T | null
+
+        if (data === null || data === undefined) {
+            return null
+        }
+
+        // Upstash Redis automatically deserializes JSON, so we can return directly
+        return data as T
     } catch (error) {
-        console.error('Error getting cached data:', error)
+        console.error('Error getting cached data for key:', key, error)
         return null
     }
 }
@@ -32,12 +42,23 @@ export async function setCachedData<T>(
     key: string,
     data: T,
     ttl: number = 3600
-): Promise<void> {
+): Promise<boolean> {
     try {
         const client = getRedisClient()
-        await client.setex(key, ttl, JSON.stringify(data))
+
+        // Upstash Redis automatically handles JSON serialization
+        const result = await client.setex(key, ttl, data)
+
+        if (result === 'OK') {
+            console.log(`✅ Cache SET successful: ${key} (TTL: ${ttl}s)`)
+            return true
+        } else {
+            console.error(`❌ Cache SET failed: ${key}, result:`, result)
+            return false
+        }
     } catch (error) {
-        console.error('Error setting cached data:', error)
+        console.error('❌ Error setting cached data for key:', key, error)
+        return false
     }
 }
 
@@ -47,17 +68,33 @@ export async function updateCachedData<T>(
     fetcher: () => Promise<T>,
     ttl: number = 3600
 ): Promise<T> {
+    console.log(`🔄 Updating cache for key: ${key}`)
+
     try {
         // Fetch fresh data
         const freshData = await fetcher()
+        console.log(`📥 Fetched fresh data for ${key}`)
 
-        // Update cache with fresh data
-        await setCachedData(key, freshData, ttl)
+        // Set the fresh data in cache
+        const setSuccess = await setCachedData(key, freshData, ttl)
+
+        if (!setSuccess) {
+            console.warn(`⚠️ Failed to set cache for ${key}`)
+        } else {
+            // Verify the data was stored correctly
+            const verification = await getCachedData<T>(key)
+            if (verification !== null) {
+                console.log(`✅ Cache update verified for ${key}`)
+            } else {
+                console.warn(`⚠️ Cache verification failed for ${key}`)
+            }
+        }
 
         return freshData
     } catch (error) {
-        console.error('Error updating cached data:', error)
-        // If update fails, at least delete stale data
+        console.error('❌ Error updating cached data for key:', key, error)
+
+        // If update fails, delete stale data
         await deleteCachedData(key)
         throw error
     }
@@ -70,38 +107,51 @@ export async function updateMultipleCachedData<T>(
         fetcher: () => Promise<T>
         ttl?: number
     }>
-): Promise<void> {
+): Promise<{ successful: number; failed: number }> {
+    console.log(`🔄 Batch updating ${updates.length} cache keys...`)
+
+    let successful = 0
+    let failed = 0
+
     try {
         const updatePromises = updates.map(async ({ key, fetcher, ttl = 3600 }) => {
             try {
-                const freshData = await fetcher()
-                await setCachedData(key, freshData, ttl)
+                await updateCachedData(key, fetcher, ttl)
+                successful++
                 return { key, success: true }
             } catch (error) {
-                console.error(`Error updating cache for key ${key}:`, error)
-                await deleteCachedData(key) // Fallback to deletion
+                console.error(`❌ Error updating cache for key ${key}:`, error)
+                failed++
                 return { key, success: false, error }
             }
         })
 
         await Promise.allSettled(updatePromises)
+        console.log(`✅ Batch update completed: ${successful} successful, ${failed} failed`)
+
+        return { successful, failed }
     } catch (error) {
-        console.error('Error in batch cache update:', error)
+        console.error('❌ Error in batch cache update:', error)
+        return { successful, failed: updates.length }
     }
 }
 
-export async function deleteCachedData(key: string): Promise<void> {
+export async function deleteCachedData(key: string): Promise<boolean> {
     try {
         const client = getRedisClient()
-        await client.del(key)
+        const result = await client.del(key)
+        console.log(`🗑️ Cache DELETE: ${key} (deleted: ${result})`)
+        return result > 0
     } catch (error) {
-        console.error('Error deleting cached data:', error)
+        console.error('❌ Error deleting cached data for key:', key, error)
+        return false
     }
 }
 
 export async function deleteCachedPattern(pattern: string): Promise<void> {
     try {
         const client = getRedisClient()
+        console.log(`🗑️ Deleting cache pattern: ${pattern}`)
 
         // Upstash doesn't support SCAN/KEYS, so we need to delete specific known keys
         // Instead of using patterns, we'll delete all the known cache keys for that pattern
@@ -208,10 +258,17 @@ export async function deleteCachedPattern(pattern: string): Promise<void> {
         // Delete all keys in batches to avoid overwhelming the server
         if (keysToDelete.length > 0) {
             const batches = chunkArray(keysToDelete, 100) // Process in batches of 100
+            let totalDeleted = 0
+
             for (const batch of batches) {
-                await Promise.all(batch.map(key => client.del(key)))
+                const deletePromises = batch.map(async key => {
+                    const result = await client.del(key)
+                    return result
+                })
+                const results = await Promise.all(deletePromises)
+                totalDeleted += results.reduce((sum, result) => sum + result, 0)
             }
-            console.log(`Deleted ${keysToDelete.length} cache keys for pattern: ${pattern}`)
+            console.log(`🗑️ Deleted ${totalDeleted} cache keys for pattern: ${pattern}`)
         }
     } catch (error) {
         console.error('Error deleting cached pattern:', error)
@@ -278,8 +335,8 @@ export async function invalidateAndRefresh<T>(
 export async function isRedisHealthy(): Promise<boolean> {
     try {
         const client = getRedisClient()
-        await client.ping()
-        return true
+        const result = await client.ping()
+        return result === 'PONG'
     } catch (error) {
         console.error('Redis health check failed:', error)
         return false

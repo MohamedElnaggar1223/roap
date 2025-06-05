@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { testCacheOperations, debugCacheState, clearTestCache, testSportsInvalidation } from '@/lib/cache/test'
+import { testCacheOperations, debugCacheState, clearTestCache, testSportsInvalidation, debugCacheUpdates } from '@/lib/cache/test'
+import { simpleRedisTest } from '@/lib/cache/simple-test'
+import { verifyCacheOperations } from '@/lib/cache/redis-v2'
 
 export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
@@ -21,6 +23,29 @@ export async function GET(request: NextRequest) {
                     message: 'Cache debug completed. Check server logs for current state.'
                 })
 
+            case 'debug-updates':
+                await debugCacheUpdates()
+                return NextResponse.json({
+                    success: true,
+                    message: 'Cache update debugging completed. Check server logs for detailed results.'
+                })
+
+            case 'simple':
+                await simpleRedisTest()
+                return NextResponse.json({
+                    success: true,
+                    message: 'Simple Redis test completed. Check server logs for results.'
+                })
+
+            case 'verify':
+                const verifyResult = await verifyCacheOperations()
+                return NextResponse.json({
+                    success: verifyResult,
+                    message: verifyResult
+                        ? 'Cache verification passed! All operations working correctly.'
+                        : 'Cache verification failed. Check server logs for details.'
+                })
+
             case 'clear':
                 await clearTestCache()
                 return NextResponse.json({
@@ -37,7 +62,7 @@ export async function GET(request: NextRequest) {
 
             default:
                 return NextResponse.json({
-                    error: 'Invalid action. Use ?action=test, ?action=debug, ?action=clear, or ?action=sports'
+                    error: 'Invalid action. Use ?action=test, ?action=debug, ?action=debug-updates, ?action=simple, ?action=verify, ?action=clear, or ?action=sports'
                 })
         }
     } catch (error) {

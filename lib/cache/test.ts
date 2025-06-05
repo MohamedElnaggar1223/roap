@@ -1,6 +1,145 @@
-import { getCachedData, setCachedData, deleteCachedPattern, isRedisHealthy } from './redis'
+import { getCachedData, setCachedData, deleteCachedPattern, isRedisHealthy, updateCachedData } from './redis'
 import { CACHE_KEYS, CACHE_PATTERNS } from './keys'
 import { invalidateAllSportRelatedData, invalidateAllSportRelatedDataSimple } from './invalidation'
+
+// Comprehensive test to debug cache update issues
+export async function debugCacheUpdates() {
+    console.log('=== Debugging Cache Update Issues ===')
+
+    try {
+        // 1. Test Redis connectivity
+        console.log('\n1. Testing Redis connectivity...')
+        const isHealthy = await isRedisHealthy()
+        console.log(`Redis health check: ${isHealthy ? '✅ PASS' : '❌ FAIL'}`)
+
+        if (!isHealthy) {
+            console.error('Redis is not healthy. Stopping tests.')
+            return
+        }
+
+        // 2. Test basic set/get with logging
+        console.log('\n2. Testing basic set/get operations...')
+        const testKey = 'debug:test:basic'
+        const originalData = {
+            test: true,
+            timestamp: Date.now(),
+            message: 'Original data'
+        }
+
+        console.log('Setting original data:', originalData)
+        await setCachedData(testKey, originalData, 60)
+
+        console.log('Getting data back...')
+        const retrievedData = await getCachedData(testKey)
+        console.log('Retrieved data:', retrievedData)
+
+        const isBasicWorking = JSON.stringify(originalData) === JSON.stringify(retrievedData)
+        console.log(`Basic operations: ${isBasicWorking ? '✅ PASS' : '❌ FAIL'}`)
+
+        if (!isBasicWorking) {
+            console.error('Basic operations failed. Cannot proceed with update tests.')
+            return
+        }
+
+        // 3. Test cache update function
+        console.log('\n3. Testing updateCachedData function...')
+
+        const updatedData = {
+            test: true,
+            timestamp: Date.now(),
+            message: 'Updated data via updateCachedData'
+        }
+
+        console.log('Original cached data:', await getCachedData(testKey))
+
+        const updateResult = await updateCachedData(
+            testKey,
+            async () => {
+                console.log('Fetcher function called, returning:', updatedData)
+                return updatedData
+            },
+            60
+        )
+
+        console.log('Update function returned:', updateResult)
+        console.log('Data after update:', await getCachedData(testKey))
+
+        const isUpdateWorking = JSON.stringify(updatedData) === JSON.stringify(await getCachedData(testKey))
+        console.log(`Update function: ${isUpdateWorking ? '✅ PASS' : '❌ FAIL'}`)
+
+        // 4. Test with sports cache specifically
+        console.log('\n4. Testing sports cache update...')
+
+        const sportsKey = CACHE_KEYS.ALL_SPORTS
+        const originalSports = [
+            { id: 1, name: 'Football', slug: 'football' },
+            { id: 2, name: 'Basketball', slug: 'basketball' }
+        ]
+
+        const updatedSports = [
+            { id: 1, name: 'Football Updated', slug: 'football' },
+            { id: 2, name: 'Basketball Updated', slug: 'basketball' },
+            { id: 3, name: 'Tennis', slug: 'tennis' }
+        ]
+
+        // Set original sports data
+        console.log('Setting original sports data...')
+        await setCachedData(sportsKey, originalSports, 3600)
+        console.log('Original sports cached:', await getCachedData(sportsKey))
+
+        // Update sports data
+        console.log('Updating sports cache...')
+        const sportsUpdateResult = await updateCachedData(
+            sportsKey,
+            async () => {
+                console.log('Sports fetcher called, returning updated data')
+                return updatedSports
+            },
+            3600
+        )
+
+        console.log('Sports update result:', sportsUpdateResult)
+        const finalSportsData = await getCachedData(sportsKey)
+        console.log('Final sports data in cache:', finalSportsData)
+
+        const isSportsUpdateWorking = JSON.stringify(updatedSports) === JSON.stringify(finalSportsData)
+        console.log(`Sports update: ${isSportsUpdateWorking ? '✅ PASS' : '❌ FAIL'}`)
+
+        // 5. Test the actual invalidation function
+        console.log('\n5. Testing actual invalidation function...')
+
+        // Set up test data
+        await setCachedData(sportsKey, originalSports, 3600)
+        console.log('Set original sports for invalidation test:', await getCachedData(sportsKey))
+
+        // Run invalidation (which should update with fresh DB data)
+        console.log('Running invalidateAllSportRelatedData...')
+        await invalidateAllSportRelatedData()
+
+        const dataAfterInvalidation = await getCachedData(sportsKey)
+        console.log('Data after invalidation:', dataAfterInvalidation)
+
+        if (dataAfterInvalidation === null) {
+            console.log('✅ Invalidation deleted the cache (fallback approach worked)')
+        } else if (JSON.stringify(dataAfterInvalidation) !== JSON.stringify(originalSports)) {
+            console.log('✅ Invalidation updated the cache with fresh data')
+        } else {
+            console.log('❌ Invalidation did not change the cache')
+        }
+
+        // Clean up
+        await deleteCachedPattern(testKey)
+        await deleteCachedPattern(sportsKey)
+
+        console.log('\n=== Debug Summary ===')
+        console.log(`Basic operations: ${isBasicWorking ? '✅' : '❌'}`)
+        console.log(`Update function: ${isUpdateWorking ? '✅' : '❌'}`)
+        console.log(`Sports update: ${isSportsUpdateWorking ? '✅' : '❌'}`)
+
+    } catch (error) {
+        console.error('Error during cache debugging:', error)
+    }
+}
 
 export async function testCacheOperations() {
     console.log('=== Testing Redis Cache Operations ===')
@@ -137,6 +276,7 @@ export async function clearTestCache() {
 
     const testKeys = [
         'test:cache:operation',
+        'debug:test:basic',
         CACHE_KEYS.ALL_SPORTS,
         CACHE_KEYS.PAGINATED_SPORTS(1, 10, 'asc'),
         CACHE_KEYS.PAGINATED_SPORTS(1, 20, 'desc'),
