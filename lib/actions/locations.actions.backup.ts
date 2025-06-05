@@ -10,69 +10,59 @@ import { fetchPlaceInformation, getPlaceId } from './reviews.actions'
 
 const getLocationsAction = async (academicId: number) => {
     return unstable_cache(async (academicId: number) => {
-        // OPTIMIZED: Use parallel queries instead of complex subqueries
-        const [locationsData, sportsData, facilitiesData] = await Promise.all([
-            // Get branch data with simplified translation join
-            db
-                .select({
-                    id: branches.id,
-                    name: branchTranslations.name,
-                    locale: branchTranslations.locale,
-                    nameInGoogleMap: branches.nameInGoogleMap,
-                    url: branches.url,
-                    isDefault: branches.isDefault,
-                    rate: branches.rate,
-                    hidden: branches.hidden,
-                    createdAt: branches.createdAt,
-                })
-                .from(branches)
-                .leftJoin(branchTranslations, and(
-                    eq(branches.id, branchTranslations.branchId),
-                    eq(branchTranslations.locale, 'en')
-                ))
-                .where(eq(branches.academicId, academicId)),
+        const locations = await db
+            .select({
+                id: branches.id,
+                name: sql<string>`t.name`,
+                locale: sql<string>`t.locale`,
+                nameInGoogleMap: branches.nameInGoogleMap,
+                url: branches.url,
+                isDefault: branches.isDefault,
+                rate: branches.rate,
+                hidden: branches.hidden,
+                createdAt: branches.createdAt,
+                sports: sql<string[]>`(
+                SELECT COALESCE(array_agg(sport_id), ARRAY[]::integer[])
+                FROM ${branchSport}
+                WHERE ${branchSport.branchId} = ${branches.id}
+            )`,
+                amenities: sql<string[]>`(
+                SELECT COALESCE(array_agg(facility_id), ARRAY[]::integer[])
+                FROM ${branchFacility}
+                WHERE ${branchFacility.branchId} = ${branches.id}
+            )`
+            })
+            .from(branches)
+            .innerJoin(
+                sql`(
+                SELECT bt.branch_id, bt.name, bt.locale
+                FROM ${branchTranslations} bt
+                WHERE bt.locale = 'en'
+                UNION
+                SELECT bt2.branch_id, bt2.name, bt2.locale
+                FROM ${branchTranslations} bt2
+                INNER JOIN (
+                    SELECT branch_id, MIN(locale) as first_locale
+                    FROM ${branchTranslations}
+                    WHERE branch_id NOT IN (
+                        SELECT branch_id 
+                        FROM ${branchTranslations} 
+                        WHERE locale = 'en'
+                    )
+                    GROUP BY branch_id
+                ) first_trans ON bt2.branch_id = first_trans.branch_id 
+                AND bt2.locale = first_trans.first_locale
+            ) t`,
+                sql`t.branch_id = ${branches.id}`
+            )
+            .where(eq(branches.academicId, academicId))
 
-            // Get sports separately for better performance
-            db
-                .select({
-                    branchId: branchSport.branchId,
-                    sportId: branchSport.sportId,
-                })
-                .from(branchSport)
-                .innerJoin(branches, eq(branchSport.branchId, branches.id))
-                .where(eq(branches.academicId, academicId)),
+        console.log("Ran")
 
-            // Get facilities separately for better performance
-            db
-                .select({
-                    branchId: branchFacility.branchId,
-                    facilityId: branchFacility.facilityId,
-                })
-                .from(branchFacility)
-                .innerJoin(branches, eq(branchFacility.branchId, branches.id))
-                .where(eq(branches.academicId, academicId))
-        ])
-
-        // OPTIMIZED: Build lookup maps for O(1) access
-        const sportsByBranch = sportsData.reduce((acc, sport) => {
-            if (!acc[sport.branchId]) acc[sport.branchId] = []
-            acc[sport.branchId].push(sport.sportId)
-            return acc
-        }, {} as Record<number, number[]>)
-
-        const facilitiesByBranch = facilitiesData.reduce((acc, facility) => {
-            if (!acc[facility.branchId]) acc[facility.branchId] = []
-            acc[facility.branchId].push(facility.facilityId)
-            return acc
-        }, {} as Record<number, number[]>)
-
-        const transformedLocations = locationsData.map(location => ({
+        const transformedLocations = locations.map(location => ({
             ...location,
-            name: location.name || 'Unnamed Location', // Handle missing translations
-            locale: location.locale || 'en', // Ensure locale is never null
-            sports: (sportsByBranch[location.id] || []).map(String), // Convert to string[] for UI compatibility
-            facilities: facilitiesByBranch[location.id] || [],
-            amenities: (facilitiesByBranch[location.id] || []).map(String), // Convert to string[] for UI compatibility
+            sports: location.sports || [],
+            facilities: location.amenities || [],
         }))
 
         return {
@@ -217,13 +207,10 @@ export async function createLocation(data: {
                     .where(eq(branches.academicId, academy.id))
             }
 
-            // OPTIMIZED: Fetch external data in parallel
-            const [ratesAndReviews, placeId] = await Promise.all([
-                fetchPlaceInformation(data.nameInGoogleMap),
-                getPlaceId(data.nameInGoogleMap)
-            ])
+            const ratesAndReviews = await fetchPlaceInformation(data.nameInGoogleMap)
+            const placeId = await getPlaceId(data.nameInGoogleMap)
 
-            const [branch] = await tx
+            const [branch] = await db
                 .insert(branches)
                 .values({
                     nameInGoogleMap: data.nameInGoogleMap,
@@ -241,39 +228,36 @@ export async function createLocation(data: {
                     id: branches.id,
                 })
 
-            // OPTIMIZED: Combine all database insertions in parallel
+            if (ratesAndReviews?.reviews && placeId) {
+                await tx.insert(reviews).values(
+                    ratesAndReviews.reviews.map(review => ({
+                        branchId: branch.id,
+                        placeId: placeId,
+                        authorName: review.author_name,
+                        authorUrl: review.author_url || null,
+                        language: review.language || 'en',
+                        originalLanguage: review.original_language || review.language || 'en',
+                        profilePhotoUrl: review.profile_photo_url || null,
+                        rating: review.rating,
+                        relativeTimeDescription: review.relative_time_description,
+                        text: review.text,
+                        time: review.time,
+                        translated: review.translated || false,
+                        createdAt: sql`now()`,
+                        updatedAt: sql`now()`
+                    }))
+                )
+            }
+
+            await tx.insert(branchTranslations).values({
+                branchId: branch.id,
+                locale: 'en',
+                name: data.name,
+                createdAt: sql`now()`,
+                updatedAt: sql`now()`,
+            })
+
             await Promise.all([
-                // Insert branch translations
-                tx.insert(branchTranslations).values({
-                    branchId: branch.id,
-                    locale: 'en',
-                    name: data.name,
-                    createdAt: sql`now()`,
-                    updatedAt: sql`now()`,
-                }),
-
-                // Insert reviews if available
-                ratesAndReviews?.reviews && placeId ?
-                    tx.insert(reviews).values(
-                        ratesAndReviews.reviews.map(review => ({
-                            branchId: branch.id,
-                            placeId: placeId,
-                            authorName: review.author_name,
-                            authorUrl: review.author_url || null,
-                            language: review.language || 'en',
-                            originalLanguage: review.original_language || review.language || 'en',
-                            profilePhotoUrl: review.profile_photo_url || null,
-                            rating: review.rating,
-                            relativeTimeDescription: review.relative_time_description,
-                            text: review.text,
-                            time: review.time,
-                            translated: review.translated || false,
-                            createdAt: sql`now()`,
-                            updatedAt: sql`now()`
-                        }))
-                    ) : Promise.resolve(),
-
-                // Insert branch sports
                 data.sports.length > 0 ?
                     tx.insert(branchSport)
                         .values(
@@ -285,7 +269,6 @@ export async function createLocation(data: {
                             }))
                         ) : Promise.resolve(),
 
-                // Insert branch facilities
                 data.facilities.length > 0 ?
                     tx.insert(branchFacility)
                         .values(
@@ -296,8 +279,6 @@ export async function createLocation(data: {
                                 updatedAt: sql`now()`,
                             }))
                         ) : Promise.resolve(),
-
-                // Manage assessment programs
                 data.sports.length > 0 ?
                     manageAssessmentPrograms(tx, branch.id, academy.id, data.sports) : Promise.resolve()
             ])
@@ -431,7 +412,6 @@ export async function updateLocation(id: number, data: {
                 )
         ])
 
-        // OPTIMIZED: Get existing data with our improved indexes
         const [existingSports, existingFacilities] = await Promise.all([
             db
                 .select({ sportId: branchSport.sportId })
@@ -456,12 +436,8 @@ export async function updateLocation(id: number, data: {
 
         const clientIp = headers?.['x-forwarded-for']?.split(',')[0] || '0.0.0.0'
 
-        // OPTIMIZED: Batch operations more efficiently
         await Promise.all([
-            // Manage assessment programs
             manageAssessmentPrograms(db, id, academy.id, data.sports),
-
-            // Add new sports
             sportsToAdd.length > 0 ?
                 db.insert(branchSport)
                     .values(sportsToAdd.map(sportId => ({
@@ -470,8 +446,55 @@ export async function updateLocation(id: number, data: {
                         createdAt: sql`now()`,
                         updatedAt: sql`now()`,
                     }))) : Promise.resolve(),
+            sportsToRemove.length > 0 ?
+                db.transaction(async (tx) => {
+                    // First, log the deletions
+                    const sportsToLog = existingSports.filter(s => sportsToRemove.includes(s.sportId))
 
-            // Add new facilities
+                    await tx.insert(branchSportDeletionLog).values(
+                        sportsToLog.map(sport => ({
+                            deleted_row_data: { sportId: sport.sportId, branchId: id },
+                            deleted_by_ip: clientIp as any,
+                            academy_id: academy.id,
+                            deleted_at: sql`now()`
+                        }))
+                    )
+
+                    // Then delete from branch_sport
+                    await tx.delete(branchSport)
+                        .where(and(
+                            eq(branchSport.branchId, id),
+                            inArray(branchSport.sportId, sportsToRemove)
+                        ))
+
+                    // Delete related entry fees history
+                    await tx.delete(entryFeesHistory)
+                        .where(and(
+                            inArray(entryFeesHistory.programId,
+                                db.select({ id: programs.id })
+                                    .from(programs)
+                                    .where(and(
+                                        eq(programs.branchId, id),
+                                        inArray(programs.sportId, sportsToRemove)
+                                    ))
+                            )
+                        ))
+
+                    // Finally delete the programs
+                    await tx.delete(programs)
+                        .where(and(
+                            eq(programs.branchId, id),
+                            inArray(programs.sportId, sportsToRemove)
+                        ))
+                }) : Promise.resolve(),
+
+            facilitiesToRemove.length > 0 ?
+                db.delete(branchFacility)
+                    .where(and(
+                        eq(branchFacility.branchId, id),
+                        inArray(branchFacility.facilityId, facilitiesToRemove)
+                    )) : Promise.resolve(),
+
             facilitiesToAdd.length > 0 ?
                 db.insert(branchFacility)
                     .values(facilitiesToAdd.map(facilityId => ({
@@ -480,60 +503,15 @@ export async function updateLocation(id: number, data: {
                         createdAt: sql`now()`,
                         updatedAt: sql`now()`,
                     }))) : Promise.resolve(),
-
-            // Remove facilities
-            facilitiesToRemove.length > 0 ?
-                db.delete(branchFacility)
-                    .where(and(
-                        eq(branchFacility.branchId, id),
-                        inArray(branchFacility.facilityId, facilitiesToRemove)
-                    )) : Promise.resolve(),
-
-            // Remove sports (complex operation kept separate for data integrity)
-            sportsToRemove.length > 0 ?
-                db.transaction(async (tx) => {
-                    // First, log the deletions
-                    const sportsToLog = existingSports.filter(s => sportsToRemove.includes(s.sportId))
-
-                    await Promise.all([
-                        // Log deletions
-                        tx.insert(branchSportDeletionLog).values(
-                            sportsToLog.map(sport => ({
-                                deleted_row_data: { sportId: sport.sportId, branchId: id },
-                                deleted_by_ip: clientIp as any,
-                                academy_id: academy.id,
-                                deleted_at: sql`now()`
-                            }))
-                        ),
-
-                        // Delete related entry fees history
-                        tx.delete(entryFeesHistory)
-                            .where(and(
-                                inArray(entryFeesHistory.programId,
-                                    db.select({ id: programs.id })
-                                        .from(programs)
-                                        .where(and(
-                                            eq(programs.branchId, id),
-                                            inArray(programs.sportId, sportsToRemove)
-                                        ))
-                                )
-                            )),
-
-                        // Delete programs
-                        tx.delete(programs)
-                            .where(and(
-                                eq(programs.branchId, id),
-                                inArray(programs.sportId, sportsToRemove)
-                            )),
-
-                        // Delete from branch_sport
-                        tx.delete(branchSport)
-                            .where(and(
-                                eq(branchSport.branchId, id),
-                                inArray(branchSport.sportId, sportsToRemove)
-                            ))
-                    ])
-                }) : Promise.resolve()
+            // sportsToRemove.length > 0 ?
+            //     db.delete(programs)
+            //         .where(and(
+            //             eq(programs.branchId, id),
+            //             inArray(programs.sportId, sportsToRemove),
+            //             eq(programs.type, 'assessment')
+            //         )) : Promise.resolve(),
+            // sportsToAdd.length > 0 ?
+            //     manageAssessmentPrograms(db, id, academy.id, sportsToAdd) : Promise.resolve()
         ])
 
         // revalidatePath('/academy/locations')
