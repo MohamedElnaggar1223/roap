@@ -270,6 +270,14 @@ export async function createLocation(data: {
         return { error: 'Failed to create location' }
     }
     finally {
+        // PERFORMANCE FIX: Manually refresh materialized view to ensure UI reflects changes instantly
+        try {
+            await db.execute(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY mv_location_details`)
+        } catch (error) {
+            console.warn('Materialized view refresh failed (may not exist yet):', error)
+            // Fallback: If materialized view doesn't exist, still invalidate cache
+        }
+
         revalidateTag(`locations-${academy?.id}`)
         revalidateTag(`programs-${academy?.id}`)
     }
@@ -498,6 +506,14 @@ export async function updateLocation(id: number, data: {
         return { error: 'Failed to update location' }
     }
     finally {
+        // PERFORMANCE FIX: Manually refresh materialized view to ensure UI reflects changes instantly
+        try {
+            await db.execute(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY mv_location_details`)
+        } catch (error) {
+            console.warn('Materialized view refresh failed (may not exist yet):', error)
+            // Fallback: If materialized view doesn't exist, still invalidate cache
+        }
+
         revalidateTag(`locations-${academy?.id}`)
         revalidateTag(`programs-${academy?.id}`)
     }
@@ -551,6 +567,13 @@ export async function toggleBranchVisibility(id: number) {
             })
             .where(eq(branches.id, id))
 
+        // PERFORMANCE FIX: Manually refresh materialized view to ensure UI reflects changes instantly
+        try {
+            await db.execute(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY mv_location_details`)
+        } catch (error) {
+            console.warn('Materialized view refresh failed (may not exist yet):', error)
+        }
+
         revalidateTag(`locations-${academy.id}`)
         return { success: true }
     } catch (error) {
@@ -574,6 +597,13 @@ export async function deleteLocations(ids: number[]) {
             id: true,
         }
     })
+
+    // PERFORMANCE FIX: Manually refresh materialized view to ensure UI reflects changes instantly
+    try {
+        await db.execute(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY mv_location_details`)
+    } catch (error) {
+        console.warn('Materialized view refresh failed (may not exist yet):', error)
+    }
 
     revalidateTag(`locations-${academy?.id}`)
     return { success: true }
