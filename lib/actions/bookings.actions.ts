@@ -1,350 +1,122 @@
 'use server'
+import { auth } from "@/auth"
+import { db } from "@/db"
+import { academicAthletic, blockPrograms, blocks, bookings, bookingSessions, branchTranslations, coaches, entryFeesHistory, packageDiscount, packages, profiles, programs, schedules, sports, sportTranslations, users } from "@/db/schema"
+import { and, desc, eq, inArray, not, or, sql } from "drizzle-orm"
+import { revalidateTag } from "next/cache"
+import { revalidatePath } from 'next/cache'
+import { createBookingSchema } from '../validations/bookings'
+import type {
+    SearchAthletesResponse,
+    ProgramDetailsResponse,
+    CreateBookingResponse,
+    TimeSlotResponse,
+    ValidationResult,
+    SearchedAthlete,
+    TimeSlot
+} from '../validations/bookings'
+import { formatDateForDB } from "../utils"
+import { getImageUrl } from "../supabase-images"
+import { cookies } from "next/headers"
+import { format } from "date-fns"
 
-import { db } from '@/db'
-import {
-    bookings, bookingSessions, packages, programs, branches, sports,
-    branchTranslations, sportTranslations, profiles, users, academicAthletic
-} from '@/db/schema'
-import { eq, and, sql, desc, gte, lte, inArray } from 'drizzle-orm'
-import { checkAcademyStatus } from './check-academy-status'
-import { cache } from 'react'
+const validateScheduleAgeRange = (schedule: any, birthDate: Date) => {
+    console.log("SCHEDULE AGE VALIDATION", schedule, birthDate)
+    if (!schedule.startDateOfBirth || !schedule.endDateOfBirth) return true;
 
-// Optimized booking types
-export type OptimizedBookingSession = {
-    id: number
-    date: Date
-    startTime: string
-    endTime: string
-    status: string
-    booking: {
-        id: number
-        price: number
-        packageName: string
-        programName: string
-        branchName: string
-        sportName: string
-        athleteName: string
-        athletePhone: string | null
-    }
+    const athleteDate = new Date(birthDate);
+    const startAge = new Date(schedule.startDateOfBirth);
+    const endAge = new Date(schedule.endDateOfBirth);
+
+    return athleteDate <= startAge && birthDate >= endAge;
 }
 
-export type OptimizedCalendarEvent = {
-    id: number
-    title: string
-    start: Date
-    end: Date
-    type: 'booking' | 'block'
-    color: string
-    meta: {
-        packageName: string
-        athleteName: string
-        branchName: string
-        sportName: string
-        price?: number
+export async function deleteBookings(ids: number[]) {
+    const session = await auth()
+
+    if (!session?.user) {
+        return { error: 'You are not authorized to perform this action', field: null, data: [] }
     }
-}
 
-// Optimized calendar data fetching with caching
-export const getCalendarEvents = cache(async (
-    startDate: Date,
-    endDate: Date
-): Promise<{ data: OptimizedCalendarEvent[], error: string | null }> => {
-    try {
-        const academyResult = await checkAcademyStatus()
-        if (academyResult.shouldRedirect || !academyResult.academyId) {
-            return { data: [], error: 'Academy not found or requires redirect' }
-        }
+    const cookieStore = await cookies()
+    const impersonatedId = session.user.role === 'admin'
+        ? cookieStore.get('impersonatedAcademyId')?.value
+        : null
 
-        const academy = { id: academyResult.academyId }
+    // Build the where condition based on user role and impersonation
+    const academicId = session.user.role === 'admin' && impersonatedId
+        ? parseInt(impersonatedId)
+        : parseInt(session.user.id)
 
-        // Single optimized query using our new indexes
-        const sessions = await db
-            .select({
-                sessionId: bookingSessions.id,
-                sessionDate: bookingSessions.date,
-                sessionFrom: bookingSessions.from,
-                sessionTo: bookingSessions.to,
-                sessionStatus: bookingSessions.status,
-                bookingId: bookings.id,
-                bookingPrice: bookings.price,
-                packageName: packages.name,
-                programName: programs.name,
-                programColor: programs.color,
-                branchName: branchTranslations.name,
-                sportName: sportTranslations.name,
-                athleteName: profiles.name,
-                athletePhone: users.phoneNumber,
-            })
-            .from(bookingSessions)
-            .innerJoin(bookings, eq(bookingSessions.bookingId, bookings.id))
-            .innerJoin(packages, eq(bookings.packageId, packages.id))
-            .innerJoin(programs, eq(packages.programId, programs.id))
-            .innerJoin(branches, eq(programs.branchId, branches.id))
-            .innerJoin(branchTranslations, and(
-                eq(branches.id, branchTranslations.branchId),
-                eq(branchTranslations.locale, 'en')
-            ))
-            .innerJoin(sports, eq(programs.sportId, sports.id))
-            .innerJoin(sportTranslations, and(
-                eq(sports.id, sportTranslations.sportId),
-                eq(sportTranslations.locale, 'en')
-            ))
-            .leftJoin(profiles, eq(bookings.profileId, profiles.id))
-            .leftJoin(users, eq(profiles.userId, users.id))
-            .where(and(
-                eq(programs.academicId, academy.id),
-                gte(bookingSessions.date, startDate.toISOString().split('T')[0]),
-                lte(bookingSessions.date, endDate.toISOString().split('T')[0])
-            ))
-            .orderBy(bookingSessions.date, bookingSessions.from)
-
-        // Transform to calendar events
-        const calendarEvents: OptimizedCalendarEvent[] = sessions.map(session => {
-            const startDateTime = new Date(`${session.sessionDate}T${session.sessionFrom}`)
-            const endDateTime = new Date(`${session.sessionDate}T${session.sessionTo}`)
-
-            return {
-                id: session.sessionId,
-                title: `${session.athleteName} - ${session.packageName}`,
-                start: startDateTime,
-                end: endDateTime,
-                type: 'booking' as const,
-                color: session.programColor || '#3B82F6',
-                meta: {
-                    packageName: session.packageName,
-                    athleteName: session.athleteName || 'Unknown',
-                    branchName: session.branchName,
-                    sportName: session.sportName,
-                    price: session.bookingPrice
-                }
-            }
-        })
-
-        return { data: calendarEvents, error: null }
-
-    } catch (error) {
-        console.error('Error fetching optimized calendar events:', error)
-        return {
-            data: [],
-            error: error instanceof Error ? error.message : 'Unknown error occurred'
-        }
+    // If not admin and not academic, return error
+    if (session.user.role !== 'admin' && session.user.role !== 'academic') {
+        return { error: 'You are not authorized to perform this action', field: null, data: [] }
     }
-})
 
-// Optimized recent bookings for dashboard
-export const getRecentBookings = cache(async (limit: number = 10): Promise<{
-    data: OptimizedBookingSession[],
-    error: string | null
-}> => {
+    const academic = await db.query.academics.findFirst({
+        where: (academics, { eq }) => eq(academics.userId, academicId),
+        columns: {
+            id: true,
+        }
+    })
+
+    if (!academic) return { error: 'Academy not found' }
+
     try {
-        const academyResult = await checkAcademyStatus()
-        if (academyResult.shouldRedirect || !academyResult.academyId) {
-            return { data: [], error: 'Academy not found or requires redirect' }
-        }
-
-        const academy = { id: academyResult.academyId }
-
-        const recentBookings = await db
-            .select({
-                id: bookingSessions.id,
-                date: bookingSessions.date,
-                startTime: bookingSessions.from,
-                endTime: bookingSessions.to,
-                status: bookingSessions.status,
-                bookingId: bookings.id,
-                price: bookings.price,
-                packageName: packages.name,
-                programName: programs.name,
-                branchName: branchTranslations.name,
-                sportName: sportTranslations.name,
-                athleteName: profiles.name,
-                athletePhone: users.phoneNumber,
-            })
-            .from(bookingSessions)
-            .innerJoin(bookings, eq(bookingSessions.bookingId, bookings.id))
-            .innerJoin(packages, eq(bookings.packageId, packages.id))
-            .innerJoin(programs, eq(packages.programId, programs.id))
-            .innerJoin(branches, eq(programs.branchId, branches.id))
-            .innerJoin(branchTranslations, and(
-                eq(branches.id, branchTranslations.branchId),
-                eq(branchTranslations.locale, 'en')
-            ))
-            .innerJoin(sports, eq(programs.sportId, sports.id))
-            .innerJoin(sportTranslations, and(
-                eq(sports.id, sportTranslations.sportId),
-                eq(sportTranslations.locale, 'en')
-            ))
-            .leftJoin(profiles, eq(bookings.profileId, profiles.id))
-            .leftJoin(users, eq(profiles.userId, users.id))
-            .where(eq(programs.academicId, academy.id))
-            .orderBy(desc(bookings.createdAt))
-            .limit(limit)
-
-        const optimizedBookings: OptimizedBookingSession[] = recentBookings.map(booking => ({
-            id: booking.id,
-            date: new Date(booking.date),
-            startTime: booking.startTime,
-            endTime: booking.endTime,
-            status: booking.status,
-            booking: {
-                id: booking.bookingId,
-                price: booking.price,
-                packageName: booking.packageName,
-                programName: booking.programName || '',
-                branchName: booking.branchName,
-                sportName: booking.sportName,
-                athleteName: booking.athleteName || 'Unknown',
-                athletePhone: booking.athletePhone
-            }
-        }))
-
-        return { data: optimizedBookings, error: null }
-
-    } catch (error) {
-        console.error('Error fetching recent bookings:', error)
-        return {
-            data: [],
-            error: error instanceof Error ? error.message : 'Unknown error occurred'
-        }
-    }
-})
-
-// Optimized today's sessions
-export const getTodaySessions = cache(async (): Promise<{
-    data: OptimizedBookingSession[],
-    error: string | null
-}> => {
-    try {
-        const academyResult = await checkAcademyStatus()
-        if (academyResult.shouldRedirect || !academyResult.academyId) {
-            return { data: [], error: 'Academy not found or requires redirect' }
-        }
-
-        const academy = { id: academyResult.academyId }
-        const today = new Date().toISOString().split('T')[0]
-
-        const todaySessions = await db
-            .select({
-                id: bookingSessions.id,
-                date: bookingSessions.date,
-                startTime: bookingSessions.from,
-                endTime: bookingSessions.to,
-                status: bookingSessions.status,
-                bookingId: bookings.id,
-                price: bookings.price,
-                packageName: packages.name,
-                programName: programs.name,
-                branchName: branchTranslations.name,
-                sportName: sportTranslations.name,
-                athleteName: profiles.name,
-                athletePhone: users.phoneNumber,
-            })
-            .from(bookingSessions)
-            .innerJoin(bookings, eq(bookingSessions.bookingId, bookings.id))
-            .innerJoin(packages, eq(bookings.packageId, packages.id))
-            .innerJoin(programs, eq(packages.programId, programs.id))
-            .innerJoin(branches, eq(programs.branchId, branches.id))
-            .innerJoin(branchTranslations, and(
-                eq(branches.id, branchTranslations.branchId),
-                eq(branchTranslations.locale, 'en')
-            ))
-            .innerJoin(sports, eq(programs.sportId, sports.id))
-            .innerJoin(sportTranslations, and(
-                eq(sports.id, sportTranslations.sportId),
-                eq(sportTranslations.locale, 'en')
-            ))
-            .leftJoin(profiles, eq(bookings.profileId, profiles.id))
-            .leftJoin(users, eq(profiles.userId, users.id))
-            .where(and(
-                eq(programs.academicId, academy.id),
-                sql`DATE(${bookingSessions.date}) = '${today}'::date`
-            ))
-            .orderBy(bookingSessions.from)
-
-        const optimizedSessions: OptimizedBookingSession[] = todaySessions.map(session => ({
-            id: session.id,
-            date: new Date(session.date),
-            startTime: session.startTime,
-            endTime: session.endTime,
-            status: session.status,
-            booking: {
-                id: session.bookingId,
-                price: session.price,
-                packageName: session.packageName,
-                programName: session.programName || '',
-                branchName: session.branchName,
-                sportName: session.sportName,
-                athleteName: session.athleteName || 'Unknown',
-                athletePhone: session.athletePhone
-            }
-        }))
-
-        return { data: optimizedSessions, error: null }
-
-    } catch (error) {
-        console.error('Error fetching today sessions:', error)
-        return {
-            data: [],
-            error: error instanceof Error ? error.message : 'Unknown error occurred'
-        }
-    }
-})
-
-// Bulk delete optimized
-export const deleteBookings = async (ids: number[]): Promise<{
-    success: boolean,
-    error: string | null
-}> => {
-    try {
-        const academyResult = await checkAcademyStatus()
-        if (academyResult.shouldRedirect || !academyResult.academyId) {
-            return { success: false, error: 'Academy not found or requires redirect' }
-        }
-
         await db.delete(bookings)
             .where(inArray(bookings.id, ids))
 
-        return { success: true, error: null }
-
+        return { error: null }
     } catch (error) {
         console.error('Error deleting bookings:', error)
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : 'Failed to delete bookings'
-        }
+        return { error: 'Failed to delete bookings' }
+    }
+    finally {
+        revalidateTag(`athletes-${academic?.id}`)
     }
 }
 
-// Optimized search athletes function
-export const searchAthletes = cache(async (query: string): Promise<{
-    data: Array<{
-        id: number | null
-        name: string | null
-        phone: string | null
-        image: string | null
-        birthday: string | null
-        academicAthleticId: number
-    }>,
-    error: string | null
-}> => {
-    if (!query || query.length < 3) {
-        return { data: [], error: null }
+export async function searchAthletes(query: string): Promise<SearchAthletesResponse> {
+    if (!query || query.length < 3) return { data: [] }
+
+    const session = await auth()
+
+    if (!session?.user) {
+        return { data: [] }
     }
 
-    try {
-        const academyResult = await checkAcademyStatus()
-        if (academyResult.shouldRedirect || !academyResult.academyId) {
-            return { data: [], error: 'Academy not found or requires redirect' }
+    const cookieStore = await cookies()
+    const impersonatedId = session.user.role === 'admin'
+        ? cookieStore.get('impersonatedAcademyId')?.value
+        : null
+
+    // Build the where condition based on user role and impersonation
+    const academicId = session.user.role === 'admin' && impersonatedId
+        ? parseInt(impersonatedId)
+        : parseInt(session.user.id)
+
+    // If not admin and not academic, return error
+    if (session.user.role !== 'admin' && session.user.role !== 'academic') {
+        return { data: [] }
+    }
+
+    const academic = await db.query.academics.findFirst({
+        where: (academics, { eq }) => eq(academics.userId, academicId),
+        columns: {
+            id: true,
         }
+    })
 
-        const academy = { id: academyResult.academyId }
+    if (!academic) return { data: [] }
 
+    try {
+        // OPTIMIZED: Better indexing usage and query structure
         const athletes = await db
             .select({
                 id: profiles.id,
                 name: profiles.name,
-                phone: users.phoneNumber,
                 image: profiles.image,
+                phoneNumber: users.phoneNumber,
                 birthday: profiles.birthday,
                 academicAthleticId: academicAthletic.id,
             })
@@ -352,22 +124,995 @@ export const searchAthletes = cache(async (query: string): Promise<{
             .leftJoin(users, eq(academicAthletic.userId, users.id))
             .leftJoin(profiles, eq(academicAthletic.profileId, profiles.id))
             .where(and(
-                eq(academicAthletic.academicId, academy.id),
-                sql`(
-                    ${users.phoneNumber} ILIKE ${`%${query}%`} OR
-                    ${profiles.name} ILIKE ${`%${query}%`} OR
-                    ${academicAthletic.firstGuardianPhone} ILIKE ${`%${query}%`}
-                )`
+                eq(academicAthletic.academicId, academic.id),
+                or(
+                    sql`${users.phoneNumber} ILIKE ${`%${query}%`}`,
+                    sql`${academicAthletic.firstGuardianPhone} ILIKE ${`%${query}%`}`,
+                    sql`${profiles.name} ILIKE ${`%${query}%`}`
+                )
             ))
-            .limit(10)
+            .limit(5)
 
-        return { data: athletes, error: null }
+        console.log(athletes)
 
+        const finalAthletes = await Promise.all(athletes.map(async (athlete) => {
+            const image = await getImageUrl(athlete.image)
+            return { ...athlete, phoneNumber: athlete.phoneNumber || '', image }
+        }))
+
+        return { data: finalAthletes as SearchedAthlete[] }
     } catch (error) {
         console.error('Error searching athletes:', error)
         return {
-            data: [],
-            error: error instanceof Error ? error.message : 'Search failed'
+            error: {
+                message: 'Failed to search athletes'
+            }
         }
     }
-}) 
+}
+
+function determinePackageType(name: string) {
+    if (name.startsWith('Assessment')) return 'assessment';
+    if (name.startsWith('Monthly')) return 'monthly';
+    if (name.startsWith('Term')) return 'term';
+    return 'full_season';
+}
+
+
+export async function getProgramDetails(programId: number): Promise<ProgramDetailsResponse> {
+    try {
+        const program = await db.query.programs.findFirst({
+            where: eq(programs.id, programId),
+            with: {
+                packages: {
+                    with: {
+                        schedules: true
+                    }
+                },
+                coachPrograms: {
+                    with: {
+                        coach: true
+                    }
+                },
+                branch: {
+                    with: {
+                        branchTranslations: {
+                            where: eq(branchTranslations.locale, 'en')
+                        }
+                    }
+                },
+                sport: {
+                    with: {
+                        sportTranslations: {
+                            where: eq(sportTranslations.locale, 'en')
+                        }
+                    }
+                }
+            }
+        })
+
+        if (!program) {
+            return {
+                error: {
+                    message: 'Program not found',
+                    field: 'programId'
+                }
+            }
+        }
+
+        return {
+            data: {
+                id: program.id,
+                name: program.name || '',
+                branch: program.branch?.branchTranslations[0]?.name || '',
+                sport: program.sport?.sportTranslations[0]?.name || '',
+                packages: program.packages.map(pkg => ({
+                    id: pkg.id,
+                    name: pkg.name,
+                    price: Number(pkg.price),
+                    entryFees: pkg.entryFees ? Number(pkg.entryFees) : null,
+                    sessionPerWeek: pkg.sessionPerWeek,
+                    sessionDuration: pkg.sessionDuration,
+                    months: pkg.months,
+                    capacity: pkg.capacity,
+                    flexible: pkg.flexible,
+                    schedules: pkg.schedules.map(s => ({
+                        id: s.id,
+                        day: s.day,
+                        from: s.from,
+                        to: s.to,
+                        capacity: s.capacity
+                    })),
+                    endDate: pkg.endDate,
+                    startDate: pkg.startDate
+                })),
+                coaches: program.coachPrograms.map(cp => ({
+                    id: cp.coach.id,
+                    name: cp.coach.name,
+                    image: cp.coach.image
+                }))
+            }
+        }
+    } catch (error) {
+        console.error('Error fetching program details:', error)
+        return {
+            error: {
+                message: 'Failed to fetch program details'
+            }
+        }
+    }
+}
+
+type CreateBookingInput = {
+    profileId: number;
+    packageId: number;
+    coachId?: number;
+    date: string;
+    time: string; // Format: "HH:mm HH:mm"
+};
+
+export async function calculateSessionsAndPrice(
+    packageDetails: any,
+    selectedDate: Date,
+    schedules: any[],
+    bookingTime: string
+) {
+    const packageName = packageDetails.name.toLowerCase();
+    const isAssessment = packageName.startsWith('assessment');
+    const isMonthly = packageName.startsWith('monthly');
+    let schedulesToUse = schedules;
+
+    // If package is flexible, parse the selected schedules from bookingTime
+    if (packageDetails.flexible) {
+        schedulesToUse = JSON.parse(bookingTime);
+    }
+
+    const sessions = [];
+    let totalPrice = Number(packageDetails.price);
+    let deductions = 0;
+
+    if (isAssessment) {
+        // Assessment logic remains the same
+        const [startTime, endTime] = bookingTime.split(' ');
+        sessions.push({
+            date: selectedDate,
+            from: startTime,
+            to: endTime,
+            status: 'pending'
+        });
+    } else if (isMonthly) {
+        const selectedMonthYear = format(selectedDate, 'MMMM yyyy');
+        if (!packageDetails.months?.includes(selectedMonthYear)) {
+            throw new Error('Selected month is not available in this package');
+        }
+
+        // Generate sessions only for the selected month
+        const monthStartDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+        const monthEndDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
+
+        // Get all possible sessions for this month using only the selected schedules
+        const allSessions = generateSessionsFromSchedules(
+            schedulesToUse,
+            monthStartDate,
+            monthEndDate,
+            packageDetails
+        );
+
+        // Calculate price per session for the month
+        const pricePerSession = totalPrice / allSessions.length;
+
+        // Find missed sessions
+        const missedSessions = allSessions.filter(
+            session => session.date < selectedDate
+        );
+
+        deductions = missedSessions.length * pricePerSession;
+        sessions.push(...allSessions.filter(
+            session => session.date >= selectedDate
+        ));
+    } else {
+        // Term and Full Season logic
+        const packageStartDate = new Date(packageDetails.startDate);
+        const endDate = new Date(packageDetails.endDate);
+
+        const allSessions = generateSessionsFromSchedules(
+            schedulesToUse,
+            packageStartDate,
+            endDate,
+            packageDetails
+        );
+
+        const pricePerSession = totalPrice / allSessions.length;
+        const missedSessions = allSessions.filter(
+            session => session.date < selectedDate
+        );
+
+        deductions = missedSessions.length * pricePerSession;
+        sessions.push(...allSessions.filter(
+            session => session.date >= selectedDate
+        ));
+    }
+
+    return {
+        sessions,
+        totalPrice,
+        deductions,
+        finalPrice: totalPrice - deductions
+    };
+}
+
+export const getSportIdFromName = async (sportName: string) => {
+    const sport = await db
+        .select({
+            id: sports.id,
+            name: sql<string>`t.name`,
+        })
+        .from(sports)
+        .innerJoin(
+            sql`(
+                        SELECT ct.sport_id, ct.name, ct.locale
+                        FROM ${sportTranslations} ct
+                        WHERE ct.locale = 'en'
+                        UNION
+                        SELECT ct2.sport_id, ct2.name, ct2.locale
+                        FROM ${sportTranslations} ct2
+                        INNER JOIN (
+                            SELECT sport_id, MIN(locale) as first_locale
+                            FROM ${sportTranslations}
+                            WHERE sport_id NOT IN (
+                                SELECT sport_id 
+                                FROM ${sportTranslations} 
+                                WHERE locale = 'en'
+                            )
+                            GROUP BY sport_id
+                        ) first_trans ON ct2.sport_id = first_trans.sport_id 
+                        AND ct2.locale = first_trans.first_locale
+                    ) t`,
+            sql`t.sport_id = ${sports.id}`
+        )
+        .where(sql`LOWER(t.name) = ${sportName.toLowerCase()}`)
+        .limit(1)
+
+    return sport[0]?.id;
+}
+
+export async function checkAssessmentDeduction(
+    profileId: number,
+    sportId: number,
+    programId: number,
+    packageDetails: any,
+    startDate: string
+): Promise<{ shouldPay: boolean; amount: number, assessmentBookingId?: number }> {
+    const program = await db.query.programs.findFirst({
+        where: eq(programs.id, programId),
+        with: {
+            branch: true
+        }
+    });
+    const assessmentBookings = await db.query.bookings.findMany({
+        where: and(
+            eq(bookings.profileId, profileId),
+            eq(bookings.status, 'success'),
+            sql`${bookings.id} NOT IN (
+                SELECT assessment_deduction_id 
+                FROM ${bookings} 
+                WHERE assessment_deduction_id IS NOT NULL
+            )`
+        ),
+        with: {
+            package: {
+                with: {
+                    program: {
+                        columns: {
+                            assessmentDeductedFromProgram: true,
+                            id: true
+                        },
+                        with: {
+                            sport: true,
+                            branch: true
+                        }
+                    }
+                }
+            }
+        },
+        orderBy: [desc(bookings.createdAt)] // Get most recent first
+    });
+
+    console.log("Eligible assessment bookings", assessmentBookings.map(booking => `Assessment Deducted: ${booking.package?.program?.assessmentDeductedFromProgram}\nBranch: ${booking.package?.program?.branch?.id}\nSport: ${booking.package?.program?.sport?.id}\nPackage: ${booking.package?.name}\nPrice: ${booking.price}`))
+    console.log("Current sport ID", sportId)
+    console.log("Current branch ID", program?.branch?.id)
+    // Find the most recent eligible assessment
+    const eligibleAssessment = assessmentBookings.find(booking =>
+        booking.package?.program?.assessmentDeductedFromProgram &&
+        booking.package.program.sport?.id === sportId &&
+        booking.package.name.toLowerCase().startsWith('assessment') &&
+        booking.package.program.branch?.id === program?.branch?.id
+    );
+
+    console.log("Eligible assessment", eligibleAssessment)
+    console.log(packageDetails.entryFees - Number(eligibleAssessment?.price))
+
+    if (eligibleAssessment) {
+        return {
+            shouldPay: true,
+            amount: packageDetails.entryFees - Number(eligibleAssessment.price),
+            assessmentBookingId: eligibleAssessment.id
+        };
+    }
+    return {
+        shouldPay: false,
+        amount: 0
+    };
+}
+
+export async function checkEntryFees(
+    profileId: number,
+    sportId: number,
+    programId: number,
+    packageDetails: any,
+    startDate: string
+): Promise<{ shouldPay: boolean; amount: number, assessmentBookingId?: number }> {
+    const currentDate = new Date(startDate);
+    const entryFeesStartDate = packageDetails.entryFeesStartDate ? new Date(packageDetails.entryFeesStartDate) : null;
+    const entryFeesEndDate = packageDetails.entryFeesEndDate ? new Date(packageDetails.entryFeesEndDate) : null;
+
+    // Get the current program's branch
+
+
+    if (entryFeesStartDate && currentDate < entryFeesStartDate) {
+        return { shouldPay: false, amount: 0 };
+    }
+    if (entryFeesEndDate && currentDate > entryFeesEndDate) {
+        return { shouldPay: false, amount: 0 };
+    }
+
+    const existingFees = await db.query.entryFeesHistory.findFirst({
+        where: and(
+            eq(entryFeesHistory.profileId, profileId),
+            eq(entryFeesHistory.sportId, sportId),
+            eq(entryFeesHistory.programId, programId)
+        )
+    });
+
+    if (existingFees) {
+        return { shouldPay: false, amount: 0 };
+    }
+
+    const packageName = packageDetails.name.toLowerCase();
+    const isMonthly = packageName.startsWith('monthly');
+
+    if (isMonthly && packageDetails.entryFeesAppliedUntil) {
+        const currentMonthYear = format(currentDate, 'MMMM yyyy');
+        if (!packageDetails.entryFeesAppliedUntil.includes(currentMonthYear)) {
+            return { shouldPay: false, amount: 0 };
+        }
+    }
+
+    // Get ALL assessment bookings that are eligible
+
+
+    return {
+        shouldPay: true,
+        amount: Number(packageDetails.entryFees || 0)
+    };
+}
+
+export const getPriceAfterActiveDiscounts = async (validatedInput: CreateBookingInput, totalPrice: number, deductions: number) => {
+    const activeDiscounts = await db.query.packageDiscount.findMany({
+        where: eq(packageDiscount.packageId, validatedInput.packageId),
+        with: {
+            discount: true
+        }
+    });
+
+    // Apply discounts
+    let discountedPrice = totalPrice - deductions;
+    for (const { discount } of activeDiscounts) {
+        if (discount.type === 'percentage') {
+            discountedPrice *= (1 - discount.value / 100);
+        } else {
+            discountedPrice -= discount.value;
+        }
+    }
+
+    return discountedPrice;
+}
+
+const validateScheduleGender = (schedule: any, athleteGender: string) => {
+    if (!schedule.gender) return true;
+    return schedule.gender.split(',').includes(athleteGender) as boolean;
+}
+
+async function checkPackageCapacity(
+    packageId: number,
+    db: any
+): Promise<boolean> {
+    // Get the package details
+    const packageDetails = await db.query.packages.findFirst({
+        where: eq(packages.id, packageId),
+    });
+
+    if (!packageDetails || packageDetails.capacity <= 0) {
+        return false;
+    }
+
+    // Count total successful bookings for this package
+    const existingBookings = await db
+        .select({
+            count: sql<number>`count(*)::int`
+        })
+        .from(bookings)
+        .where(
+            and(
+                eq(bookings.packageId, packageId),
+                eq(bookings.status, 'success')
+            )
+        );
+
+    const bookedCount = existingBookings[0]?.count || 0;
+    return bookedCount < packageDetails.capacity;
+}
+
+async function checkScheduleCapacity(
+    scheduleId: number,
+    packageId: number,
+    date: Date,
+    db: any
+): Promise<boolean> {
+    // Get the schedule details with its package
+    const schedule = await db.query.schedules.findFirst({
+        where: eq(schedules.id, scheduleId),
+        with: {
+            package: {
+                with: {
+                    program: true
+                }
+            }
+        }
+    });
+
+    if (!schedule || schedule.capacity <= 0) {
+        return false;
+    }
+
+    // Get the day of the week for the given date
+    const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
+
+    // Verify this schedule matches the day
+    if (schedule.day.toLowerCase() !== dayOfWeek) {
+        return false;
+    }
+
+    // Count existing bookings for this schedule on this date
+    const existingBookings = await db
+        .select({
+            count: sql<number>`count(*)::int`
+        })
+        .from(bookingSessions)
+        .innerJoin(
+            bookings,
+            and(
+                eq(bookingSessions.bookingId, bookings.id),
+                eq(bookings.status, 'success') // Only count successful bookings
+            )
+        )
+        .where(
+            and(
+                eq(bookingSessions.date, formatDateForDB(date)),
+                eq(bookingSessions.from, schedule.from),
+                eq(bookingSessions.to, schedule.to),
+                // Only count active sessions
+                not(inArray(
+                    bookingSessions.status,
+                    ['cancelled', 'rejected']
+                ))
+            )
+        );
+
+    const bookedCount = existingBookings[0]?.count || 0;
+
+    // Check if adding one more booking would exceed capacity
+    return bookedCount < schedule.capacity;
+}
+
+async function validateCapacity(
+    packageDetails: any,
+    selectedDate: Date,
+    timeInput: string,
+    db: any
+): Promise<{ isValid: boolean; error?: string }> {
+    if (packageDetails.flexible) {
+        // For flexible packages, check each selected schedule
+        const selectedSchedules = JSON.parse(timeInput);
+
+        for (const selectedSchedule of selectedSchedules) {
+            const matchingSchedule = packageDetails.schedules.find(
+                (s: any) => s.day === selectedSchedule.day && s.from === selectedSchedule.from
+            );
+
+            if (!matchingSchedule) {
+                return {
+                    isValid: false,
+                    error: 'Invalid schedule selected'
+                };
+            }
+
+            const hasCapacity = await checkScheduleCapacity(
+                matchingSchedule.id,
+                packageDetails.id,
+                selectedDate,
+                db
+            );
+
+            if (!hasCapacity) {
+                return {
+                    isValid: false,
+                    error: `Schedule on ${selectedSchedule.day} at ${selectedSchedule.from} is full`
+                };
+            }
+        }
+
+        return { isValid: true };
+    } else {
+        // For normal packages, check the specific time slot
+        const [startTime] = timeInput.split(' ');
+        const matchingSchedule = packageDetails.schedules.find(
+            (s: any) => s.from === startTime
+        );
+
+        if (!matchingSchedule) {
+            return {
+                isValid: false,
+                error: 'Invalid schedule selected'
+            };
+        }
+
+        const hasCapacity = await checkPackageCapacity(
+            packageDetails.id,
+            db
+        );
+
+        if (!hasCapacity) {
+            return {
+                isValid: false,
+                error: 'Selected schedule is full'
+            };
+        }
+
+        return { isValid: true };
+    }
+}
+
+export async function createBooking(input: CreateBookingInput): Promise<CreateBookingResponse> {
+    try {
+        // Validate input
+        const validatedInput = createBookingSchema.parse(input);
+
+        // Validate session
+        const session = await auth();
+        if (!session?.user) {
+            return { error: { message: 'Unauthorized' } };
+        }
+
+        // Get package details with related data
+        const packageDetails = await db.query.packages.findFirst({
+            where: eq(packages.id, validatedInput.packageId),
+            with: {
+                program: {
+                    with: {
+                        sport: true,
+                        branch: true
+                    }
+                },
+                schedules: true
+            }
+        });
+
+        if (!packageDetails) {
+            return { error: { message: 'Package not found', field: 'packageId' } };
+        }
+
+        if (!packageDetails.program?.sport) {
+            return { error: { message: 'Invalid package configuration', field: 'packageId' } };
+        }
+
+        // Calculate sessions and initial price
+        if (packageDetails.flexible) {
+            const selectedSchedules = JSON.parse(validatedInput.time);
+
+            // Verify selected schedules match sessionPerWeek
+            if (selectedSchedules.length !== packageDetails.sessionPerWeek) {
+                return { error: { message: 'Invalid number of sessions selected', field: 'time' } };
+            }
+
+            // Check capacity for each selected schedule
+            for (const schedule of selectedSchedules) {
+                const matchingSchedule = packageDetails.schedules.find(
+                    s => s.day === schedule.day && s.from === schedule.from
+                );
+                if (!matchingSchedule || matchingSchedule.capacity <= 0) {
+                    return { error: { message: 'One or more selected sessions are full', field: 'time' } };
+                }
+            }
+        }
+
+        const athlete = await db.query.profiles.findFirst({
+            where: eq(users.id, validatedInput.profileId),
+            columns: {
+                id: true,
+                birthday: true,
+                gender: true
+            }
+        })
+
+        if (packageDetails.name.toLowerCase().startsWith('assessment')) {
+            if (!athlete?.birthday) {
+                return { error: { message: 'Athlete birthday is required for assessment booking' } };
+            }
+
+            // For flexible packages
+            if (packageDetails.flexible) {
+                const selectedSchedules = JSON.parse(validatedInput.time);
+                const isValidAge = selectedSchedules.every((schedule: any) =>
+                    validateScheduleAgeRange(schedule, new Date(athlete?.birthday ?? ''))
+                );
+                if (!isValidAge) {
+                    return { error: { message: 'Athlete age does not meet schedule requirements' } };
+                }
+            }
+            // For non-flexible packages
+            else {
+                const scheduleTime = validatedInput.time.split(' ')[0];
+                const schedule = packageDetails.schedules.find(s => s.from === scheduleTime);
+                if (!validateScheduleAgeRange(schedule, new Date(athlete.birthday))) {
+                    return { error: { message: 'Athlete age does not meet schedule requirements' } };
+                }
+                if (schedule?.gender) {
+                    const isValidGender = validateScheduleGender(
+                        schedule.gender,
+                        athlete?.gender ?? ''
+                    );
+
+                    if (!isValidGender) {
+                        return {
+                            error: {
+                                message: 'Selected schedule is not available for athlete\'s gender',
+                                field: 'gender'
+                            }
+                        };
+                    }
+                }
+            }
+        }
+
+        const isAssessment = packageDetails.name.toLowerCase().startsWith('assessment');
+
+        console.log("PROGRAM GENDERS", packageDetails?.program?.gender?.split(','))
+        console.log("ATHLETE GENDERS", athlete?.gender?.toLowerCase())
+
+        const isValidGender = isAssessment ? true : packageDetails?.program?.gender?.split(',').includes(athlete?.gender?.toLowerCase() ?? '') ?? false;
+
+        if (!isValidGender) {
+            return {
+                error: {
+                    message: 'Selected package is not available for athlete\'s gender',
+                    field: 'gender'
+                }
+            };
+        }
+
+        // Calculate sessions and prices
+        const selectedDate = new Date(validatedInput.date);
+        const { sessions, totalPrice, deductions } = await calculateSessionsAndPrice(
+            packageDetails,
+            selectedDate,
+            packageDetails.schedules,
+            validatedInput.time
+        );
+
+        if (!isAssessment) {
+            const capacityValidation = await validateCapacity(
+                packageDetails,
+                selectedDate,
+                validatedInput.time,
+                db
+            );
+
+            if (!capacityValidation.isValid) {
+                return {
+                    error: {
+                        message: capacityValidation.error || 'Capacity validation failed',
+                        field: 'time'
+                    }
+                };
+            }
+        }
+
+
+        // Check entry fees
+        const { shouldPay: shouldPayEntryFees, amount: entryFeesAmount } =
+            await checkEntryFees(
+                validatedInput.profileId,
+                packageDetails.program.sport.id,
+                packageDetails.program.id,
+                packageDetails,
+                validatedInput.date
+            );
+
+        const { shouldPay: shouldPayAssessmentDeduction, amount: assessmentDeductionAmount, assessmentBookingId } =
+            await checkAssessmentDeduction(
+                validatedInput.profileId,
+                packageDetails.program.sport.id,
+                packageDetails.program.id,
+                packageDetails,
+                validatedInput.date
+            );
+
+        // Get active discounts
+        const discountedPrice = await getPriceAfterActiveDiscounts(validatedInput, totalPrice, deductions);
+
+        // Create booking in a transaction
+        const [newBooking] = await db.transaction(async (tx) => {
+            // Create booking
+            const [booking] = await tx.insert(bookings).values({
+                profileId: validatedInput.profileId,
+                packageId: validatedInput.packageId,
+                coachId: validatedInput.coachId || null,
+                price: discountedPrice + (shouldPayEntryFees ? entryFeesAmount : 0) + (shouldPayAssessmentDeduction ? assessmentDeductionAmount : 0),
+                packagePrice: packageDetails.price,
+                status: 'success',
+                academyPolicy: false,
+                roapPolicy: false,
+                entryFeesPaid: shouldPayEntryFees,
+                assessmentDeductionId: assessmentBookingId || null,
+                createdAt: sql`now()`,
+                updatedAt: sql`now()`
+            }).returning();
+
+            console.log("sessions", sessions)
+
+            // Create booking sessions
+            await tx.insert(bookingSessions).values(
+                sessions.map(session => ({
+                    bookingId: booking.id,
+                    date: formatDateForDB(session.date),
+                    from: session.from,
+                    to: session.to,
+                    status: 'pending',
+                    createdAt: sql`now()`,
+                    updatedAt: sql`now()`
+                }))
+            );
+
+            // Record entry fees payment if needed
+            if (shouldPayEntryFees && packageDetails.program?.sport) {
+                await tx.insert(entryFeesHistory).values({
+                    profileId: validatedInput.profileId,
+                    sportId: packageDetails.program.sport.id,
+                    programId: packageDetails.program.id,
+                    paidAt: sql`now()`,
+                    createdAt: sql`now()`,
+                    updatedAt: sql`now()`
+                });
+            }
+
+            // if (packageDetails.flexible) {
+            //     const selectedSchedules = JSON.parse(validatedInput.time);
+            //     // Update capacity for each selected schedule
+            //     for (const schedule of selectedSchedules) {
+            //         await tx.update(schedules)
+            //             .set({
+            //                 capacity: sql`${schedules.capacity} - 1`
+            //             })
+            //             .where(and(
+            //                 eq(schedules.packageId, packageDetails.id),
+            //                 eq(schedules.day, schedule.day),
+            //                 eq(schedules.from, schedule.from)
+            //             ));
+            //     }
+            // }
+
+            return [booking];
+        });
+
+        revalidatePath('/calendar');
+        return { data: newBooking };
+
+    } catch (error) {
+        console.error('Error creating booking:', error);
+        return {
+            error: {
+                message: error instanceof Error ? error.message : 'Failed to create booking'
+            }
+        };
+    }
+}
+
+const days = {
+    'sun': 'Sunday',
+    'mon': 'Monday',
+    'tue': 'Tuesday',
+    'wed': 'Wednesday',
+    'thu': 'Thursday',
+    'fri': 'Friday',
+    'sat': 'Saturday'
+}
+
+function generateSessionsFromSchedules(
+    schedules: any[],
+    startDate: Date,
+    endDate: Date,
+    packageDetails: any
+): Array<{ date: Date; from: string; to: string }> {
+    const sessions = [];
+    const currentDate = new Date(startDate);
+
+    // For flexible packages, schedules will be the JSON parsed selected schedules
+    const schedulesToUse = packageDetails.flexible ?
+        schedules : // These are the selected schedules
+        packageDetails.schedules; // All package schedules
+
+    while (currentDate <= endDate) {
+        const daySchedule = schedulesToUse.find(
+            (s: any) => days[s.day.toLowerCase() as keyof typeof days].toLowerCase() ===
+                currentDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+        );
+
+        if (daySchedule) {
+            sessions.push({
+                date: new Date(currentDate),
+                from: daySchedule.from,
+                to: daySchedule.to
+            });
+        }
+
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    return sessions;
+}
+
+// export async function getAvailableTimeSlots(
+//     date: string,
+//     coachId: number | null
+// ): Promise<TimeSlotResponse> {
+//     try {
+//         const parsedDate = formatDateForDB(new Date(date))
+
+//         if (!coachId) {
+//             const allTimeSlots = generateTimeSlots().map(time => ({
+//                 time,
+//                 isAvailable: true
+//             }))
+//             return { data: allTimeSlots }
+//         }
+
+//         const bookedSlotsData = await db.query.bookingSessions.findMany({
+//             where: and(
+//                 eq(bookingSessions.date, parsedDate)
+//                 // eq(bookings.coachId, coachId)
+//             ),
+//             with: {
+//                 booking: true
+//             }
+//         })
+
+//         const bookedSlots = bookedSlotsData.filter(slot => slot.booking.coachId === coachId)
+
+//         const blockedSlotsData = await db.query.blockCoaches.findMany({
+//             where: and(
+//                 // eq(blocks.date, parsedDate),
+//                 eq(blockCoaches.coachId, coachId)
+//             ),
+//             with: {
+//                 block: true
+//             }
+//         })
+
+//         const blockedSlots = blockedSlotsData.filter(slot => slot.block.date === parsedDate)
+
+//         const allTimeSlots = generateTimeSlots().map(time => ({
+//             time,
+//             isAvailable: true
+//         }))
+
+//         console.log("All time slots", allTimeSlots)
+//         console.log("Booked slots", bookedSlots)
+//         console.log("Blocked slots", blockedSlots)
+
+//         const availableSlots = allTimeSlots.map(slot => {
+//             const isBooked = bookedSlots.some(booking => booking.from === slot.time)
+//             const isBlocked = blockedSlots.some(block =>
+//                 block.block.startTime <= slot.time &&
+//                 block.block.endTime > slot.time
+//             )
+
+//             return {
+//                 ...slot,
+//                 isAvailable: !isBooked && !isBlocked,
+//                 reason: isBooked ? 'booked' as const :
+//                     isBlocked ? 'blocked' as const :
+//                         undefined
+//             }
+//         })
+
+//         return { data: availableSlots }
+
+//     } catch (error) {
+//         console.error('Error getting available time slots:', error)
+//         return {
+//             error: {
+//                 message: 'Failed to fetch available time slots'
+//             }
+//         }
+//     }
+// }
+
+async function validateBooking(input: CreateBookingInput): Promise<ValidationResult> {
+    const errors: Record<string, string> = {}
+
+    // Validate profile
+    const profile = await db.query.profiles.findFirst({
+        where: eq(profiles.id, input.profileId)
+    })
+
+    console.log("Profile", profile)
+
+    if (!profile) {
+        errors.profile = 'Athlete not found'
+    }
+
+    // Validate package
+    const packageDetails = await db.query.packages.findFirst({
+        where: eq(packages.id, input.packageId)
+    })
+
+    console.log("Package", packageDetails)
+
+    if (!packageDetails) {
+        errors.package = 'Package not found'
+    } else {
+        const currentDate = new Date()
+        const startDate = new Date(packageDetails.startDate)
+        const endDate = new Date(packageDetails.endDate)
+
+        if (currentDate < startDate || currentDate > endDate) {
+            console.log("Package is not active")
+            // errors.package = 'Package is not active'
+        }
+    }
+
+    if (input.coachId) {
+        // Validate coach
+        const coach = await db.query.coaches.findFirst({
+            where: eq(coaches.id, input.coachId)
+        })
+
+        if (!coach) {
+            errors.coach = 'Coach not found'
+        }
+    }
+
+
+    return {
+        isValid: Object.keys(errors).length === 0,
+        errors
+    }
+}
+
+function generateTimeSlots(): string[] {
+    const slots = []
+    for (let hour = 8; hour < 20; hour++) {
+        slots.push(`${hour.toString().padStart(2, '0')}:00:00`)
+    }
+    return slots
+}
+
+function calculateEndTime(startTime: string, durationMinutes: number): string {
+    const [hours, minutes] = startTime.split(':').map(Number)
+    const startDate = new Date()
+    startDate.setHours(hours, minutes, 0)
+
+    const endDate = new Date(startDate.getTime() + durationMinutes * 60000)
+    return `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}:00`
+}
