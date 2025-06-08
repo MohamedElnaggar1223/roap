@@ -1,8 +1,8 @@
 import { getCoaches } from '@/lib/actions/coaches.actions'
-import { CoachesDataTable } from './coaches-table'
 import { getAcademySports, getAllSports } from '@/lib/actions/academics.actions'
 import { getAllSpokenLanguages } from '@/lib/actions/spoken-languages.actions'
 import { getImageUrl } from '@/lib/supabase-images-server'
+import CoachesClient from './coaches-client'
 
 export default async function CoachesPage() {
     const { data: coaches, error } = await getCoaches()
@@ -21,14 +21,11 @@ export default async function CoachesPage() {
     })) : []
 
     return (
-        <section className='flex flex-col gap-4 w-full px-4'>
-            <CoachesDataTable
-                data={finalCoaches!}
-                sports={sports!}
-                languages={languages!}
-                academySports={academySports}
-                key={JSON.stringify(coaches)}
-            />
-        </section>
+        <CoachesClient
+            initialCoaches={finalCoaches || []}
+            sports={sports || []}
+            languages={languages || []}
+            academySports={academySports}
+        />
     )
 }

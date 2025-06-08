@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getAllSports } from '@/lib/actions/academics.actions';
 import { getAllFacilities } from '@/lib/actions/facilities.actions';
-import { updateLocation } from '@/lib/actions/locations.actions';
+import { useLocationsStore } from '@/providers/store-provider';
 import { Loader2, X } from 'lucide-react';
 import { addLocationSchema } from '@/lib/validations/locations';
 import { z } from 'zod';
@@ -35,8 +35,15 @@ type Location = {
     nameInGoogleMap: string | null
     url: string | null
     isDefault: boolean
+    rate: number | null
+    hidden: boolean
+    createdAt: string | null
     sports: string[]
+    facilities: number[]
     amenities: string[]
+    locale: string
+    pending?: boolean
+    tempId?: number
 }
 
 type Props = {
@@ -50,6 +57,9 @@ export default function EditLocation({ locationEdited, academySports }: Props) {
     const { toast } = useToast()
 
     const { mutate } = useOnboarding()
+
+    // Store action
+    const editLocation = useLocationsStore((state) => state.editLocation)
 
     const [editOpen, setEditOpen] = useState(false)
 
@@ -102,24 +112,37 @@ export default function EditLocation({ locationEdited, academySports }: Props) {
             return
         }
 
-        const headers = {
-            'x-forwarded-for': await fetch('/api/client-ip').then(res => res.text())
-        }
-
-        await updateLocation(locationEdited.id, {
+        const result = await editLocation({
+            id: locationEdited.id,
             facilities: selectedAmenities,
             name: values.name,
             nameInGoogleMap: values.nameInGoogleMap ?? '',
-            sports: selectedSports,
+            sports: selectedSports.map(s => s.toString()),
             url: values.url,
             isDefault: values.isDefault,
-            latitude: coordinates?.latitude,
-            longitude: coordinates?.longitude
-        }, headers)
+            locale: 'en',
+            amenities: selectedAmenities.map(a => a.toString()),
+            rate: locationEdited.rate,
+            hidden: locationEdited.hidden,
+            createdAt: locationEdited.createdAt
+        })
+
+        if (result.error) {
+            toast({
+                title: "Error",
+                description: result.error,
+                variant: "destructive",
+            })
+        } else {
+            toast({
+                title: "Success",
+                description: "Location updated successfully",
+            })
+            setEditOpen(false)
+            mutate()
+        }
+
         setLoading(false)
-        setEditOpen(false)
-        mutate()
-        router.refresh()
     }
 
     const handleSelectSport = (id: number) => {

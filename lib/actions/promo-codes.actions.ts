@@ -21,6 +21,7 @@ const getPromoCodesAction = async (academicId: number) => {
                     discountValue: true,
                     startDate: true,
                     endDate: true,
+                    canBeUsed: true,
                 },
                 orderBy: (promoCodesTable, { asc }) => asc(promoCodesTable.createdAt),
             })
@@ -75,6 +76,7 @@ export const createPromoCode = async (data: {
     discountValue: number
     startDate: Date
     endDate: Date
+    canBeUsed: number
 }) => {
     const session = await auth()
 
@@ -127,6 +129,7 @@ export const createPromoCode = async (data: {
                     discountValue: data.discountValue,
                     startDate: formatDateForDB(data.startDate),
                     endDate: formatDateForDB(data.endDate),
+                    canBeUsed: data.canBeUsed,
                     academicId: academy.id,
                     createdAt: sql`now()`,
                     updatedAt: sql`now()`,
@@ -152,6 +155,7 @@ export const updatePromoCode = async (id: number, data: {
     discountValue: number
     startDate: Date
     endDate: Date
+    canBeUsed: number
 }) => {
     const session = await auth()
 
@@ -201,6 +205,7 @@ export const updatePromoCode = async (id: number, data: {
                 discountValue: data.discountValue,
                 startDate: formatDateForDB(data.startDate),
                 endDate: formatDateForDB(data.endDate),
+                canBeUsed: data.canBeUsed,
                 updatedAt: sql`now()`
             })
             .where(eq(promoCodes.id, id))

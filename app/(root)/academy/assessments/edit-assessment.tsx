@@ -1,10 +1,10 @@
 'use client'
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { updateAssessment } from '@/lib/actions/assessments.actions'
+import { useAssessmentsStore } from '@/providers/store-provider'
 import { Loader2, X, Eye, EyeOff } from 'lucide-react'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+
 import { useEffect, useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
@@ -139,26 +139,10 @@ interface Schedule {
     hidden?: boolean
 }
 
+import type { Assessment } from '@/stores/assessments-store'
+
 interface Props {
-    assessment: {
-        coaches: string[];
-        packages: string[];
-        id: number;
-        description: string | null;
-        type: string | null;
-        numberOfSeats: number | null;
-        branchId: number | null;
-        sportId: number | null;
-        gender: string | null;
-        startDateOfBirth: string | null;
-        endDateOfBirth: string | null;
-        branchName: string;
-        sportName: string;
-        assessmentDeductedFromProgram: boolean;
-        startAgeMonths?: number | null;
-        endAgeMonths?: number | null;
-        isEndAgeUnlimited?: boolean;
-    }
+    assessment: Assessment
     branches: {
         id: number;
         name: string;
@@ -178,11 +162,10 @@ interface Props {
 }
 
 export default function EditAssessment({ assessment, sports, branches }: Props) {
-    const router = useRouter()
-
     const { toast } = useToast()
 
     const { mutate: mutateAssessment } = useOnboarding()
+    const editAssessment = useAssessmentsStore((state) => state.editAssessment)
 
     const { data: packagesData, isLoading, isValidating, mutate } = useSWR(
         `assessment-packages ${assessment.id}`,
@@ -280,7 +263,7 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
         try {
             setLoading(true)
 
-            const result = await updateAssessment(assessment.id, {
+            await editAssessment(assessment.id, {
                 description: values.description,
                 branchId: assessment.branchId!,
                 sportId: assessment.sportId!,
@@ -305,24 +288,8 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                 assessmentDeductedFromProgram: values.assessmentDeductedFromProgram ? values.assessmentDeductedFromProgram : false
             })
 
-            if (result.error) {
-                if (result?.field) {
-                    form.setError(result.field as any, {
-                        type: 'custom',
-                        message: result.error
-                    })
-                    return
-                }
-                form.setError('root', {
-                    type: 'custom',
-                    message: result.error
-                })
-                return
-            }
-
             setDialogOpen(false)
             mutateAssessment()
-            router.refresh()
         } catch (error) {
             console.error('Error updating assessment:', error)
             form.setError('root', {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Fragment } from 'react'
+import { useState, Fragment, useEffect } from 'react'
 import { ChevronDown, ChevronLeft, Loader2, SearchIcon, Trash2Icon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,50 +9,21 @@ import AddNewAthlete from './add-new-athlete'
 import { useDebouncedCallback } from 'use-debounce'
 import Image from 'next/image'
 import EditAthlete from './edit-athlete'
-import { useRouter } from 'next/navigation'
-import { Booking, deleteAthletes } from '@/lib/actions/athletes.actions'
+import { useAthletesStore } from '@/providers/store-provider'
+import type { Athlete } from '@/stores/athletes-store'
+import type { Booking } from '@/lib/actions/athletes.actions'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { AnimatePresence, motion } from "motion/react"
 import { format } from 'date-fns'
 import { deleteBookings } from '@/lib/actions/bookings.actions'
 
-interface Athlete {
-    id: number
-    userId: number
-    email: string
-    phoneNumber: string | null
-    profileId: number | null
-    certificate: string | null
-    type: 'primary' | 'fellow'
-    firstGuardianName: string | null
-    firstGuardianRelationship: string | null
-    secondGuardianName: string | null
-    secondGuardianRelationship: string | null
-    firstGuardianEmail: string | null
-    secondGuardianEmail: string | null
-    firstGuardianPhone: string | null
-    secondGuardianPhone: string | null
-    bookings: Booking[]
-    profile?: {
-        name: string
-        gender: string | null
-        birthday: string | null
-        image: string | null
-        country: string | null
-        nationality: string | null
-        city: string | null
-        streetAddress: string | null
-    }
-}
 
-interface AthletesDataTableProps {
-    data: Athlete[]
-}
 
-export function AthletesDataTable({ data }: AthletesDataTableProps) {
-    const router = useRouter()
+export function AthletesDataTable() {
+    const athletes = useAthletesStore((state) => state.athletes)
+    const deleteAthletesAction = useAthletesStore((state) => state.deleteAthletes)
 
-    const [filteredData, setFilteredData] = useState<Athlete[]>(data)
+    const [filteredData, setFilteredData] = useState<Athlete[]>(athletes)
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedRows, setSelectedRows] = useState<number[]>([])
     const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false)
@@ -62,13 +33,18 @@ export function AthletesDataTable({ data }: AthletesDataTableProps) {
     const [bulkDeleteBookingsOpen, setBulkDeleteBookingsOpen] = useState(false)
     const [bulkDeleteBookingsLoading, setBulkDeleteBookingsLoading] = useState(false)
 
+    // Update filtered data when athletes change
+    useEffect(() => {
+        setFilteredData(athletes)
+    }, [athletes])
+
     const debouncedSearch = useDebouncedCallback((value: string) => {
         const lowercasedValue = value.toLowerCase()
         if (!lowercasedValue) {
-            setFilteredData(data)
+            setFilteredData(athletes)
         }
         else {
-            const filtered = data.filter(athlete =>
+            const filtered = athletes.filter((athlete: Athlete) =>
                 athlete.profile?.name?.toLowerCase().includes(lowercasedValue) ||
                 athlete.email.toLowerCase().includes(lowercasedValue) ||
                 athlete.phoneNumber?.toLowerCase().includes(lowercasedValue) ||
@@ -101,8 +77,8 @@ export function AthletesDataTable({ data }: AthletesDataTableProps) {
 
     const handleBulkDelete = async () => {
         setBulkDeleteLoading(true)
-        await deleteAthletes(selectedRows)
-        router.refresh()
+        await deleteAthletesAction(selectedRows)
+        setSelectedRows([])
         setBulkDeleteLoading(false)
         setBulkDeleteOpen(false)
     }
@@ -137,7 +113,6 @@ export function AthletesDataTable({ data }: AthletesDataTableProps) {
         setBulkDeleteBookingsLoading(true)
         const result = await deleteBookings(selectedBookings)
         if (!result.error) {
-            router.refresh()
             setSelectedBookings([])
         }
         setBulkDeleteBookingsLoading(false)
@@ -275,7 +250,11 @@ export function AthletesDataTable({ data }: AthletesDataTableProps) {
                                     </Button>
                                 )} */}
                                 <div onClick={(e) => e.stopPropagation()}>
-                                    <EditAthlete athleteEdited={athlete} />
+                                    {athlete.pending ? (
+                                        <div className="animate-spin h-4 w-4 border-2 border-main-green border-t-transparent rounded-full" />
+                                    ) : (
+                                        <EditAthlete athleteEdited={athlete} />
+                                    )}
                                 </div>
                             </div>
                         </div>

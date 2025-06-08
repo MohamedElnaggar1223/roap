@@ -6,4 +6,5 @@ export const addPromoCodeSchema = z.object({
     discountValue: z.number().min(0),
     startDate: z.date(),
     endDate: z.date(),
+    canBeUsed: z.number().min(1, "Usage limit must be at least 1"),
 })

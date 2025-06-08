@@ -15,10 +15,9 @@ import AddNewCoach from './add-new-coach'
 import { useDebouncedCallback } from 'use-debounce'
 import Image from 'next/image'
 import EditCoach from './edit-coach'
-import { useRouter } from 'next/navigation'
-import { deleteCoaches } from '@/lib/actions/coaches.actions'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { useOnboarding } from '@/providers/onboarding-provider'
+import { useCoachesStore } from '@/providers/store-provider'
+import { useToast } from '@/hooks/use-toast'
 
 interface Coach {
     id: number
@@ -32,7 +31,9 @@ interface Coach {
     sports: number[]
     languages: number[]
     packages: number[]
-    createdAt: string | null // Added createdAt field
+    createdAt: string | null
+    pending?: boolean
+    tempId?: number
 }
 
 interface Sport {
@@ -56,9 +57,8 @@ interface CoachesDataTableProps {
 }
 
 export function CoachesDataTable({ data, sports, languages, academySports }: CoachesDataTableProps) {
-    const router = useRouter()
-
-    const { mutate } = useOnboarding()
+    const { toast } = useToast()
+    const deleteCoachesAction = useCoachesStore((state) => state.deleteCoaches)
 
     const [selectedSport, setSelectedSport] = useState<string | null>(null)
     const [filteredData, setFilteredData] = useState<Coach[]>([])
@@ -108,9 +108,23 @@ export function CoachesDataTable({ data, sports, languages, academySports }: Coa
 
     const handleBulkDelete = async () => {
         setBulkDeleteLoading(true)
-        await deleteCoaches(selectedRows)
-        mutate()
-        router.refresh()
+
+        const result = await deleteCoachesAction(selectedRows)
+
+        if (result.error) {
+            toast({
+                title: "Error",
+                description: result.error,
+                variant: "destructive",
+            })
+        } else {
+            toast({
+                title: "Success",
+                description: `Successfully deleted ${selectedRows.length} coach(es)`,
+            })
+            setSelectedRows([])
+        }
+
         setBulkDeleteLoading(false)
         setBulkDeleteOpen(false)
     }
@@ -180,6 +194,7 @@ export function CoachesDataTable({ data, sports, languages, academySports }: Coa
                             variant="destructive"
                             onClick={() => setBulkDeleteOpen(true)}
                             className="flex items-center gap-2"
+                            disabled={bulkDeleteLoading}
                         >
                             <Trash2Icon className="h-4 w-4" />
                             Delete Selected ({selectedRows.length})
@@ -226,6 +241,7 @@ export function CoachesDataTable({ data, sports, languages, academySports }: Coa
                                     checked={selectedRows.includes(coach.id)}
                                     onCheckedChange={() => handleRowSelect(coach.id)}
                                     aria-label={`Select ${coach.name}`}
+                                    disabled={coach.pending || !!coach.tempId}
                                 />
                             </div>
                             <div className="py-4 px-4 bg-main-white flex items-center justify-start">
@@ -241,6 +257,9 @@ export function CoachesDataTable({ data, sports, languages, academySports }: Coa
                             </div>
                             <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
                                 {coach.name}
+                                {(coach.pending || coach.tempId) && (
+                                    <Loader2 className="ml-2 h-4 w-4 animate-spin text-gray-400" />
+                                )}
                             </div>
                             <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
                                 {coach.dateOfBirth ? calculateAge(new Date(coach.dateOfBirth!)) : 'N/A'}

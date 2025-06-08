@@ -1,8 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useProgramsStore } from '@/providers/store-provider';
-import useSWR from 'swr';
-import { getAssessmentsData } from '@/lib/actions/assessments.actions';
+import { useProgramsStore, useAssessmentsStore } from '@/providers/store-provider';
 
 interface Props {
     open: boolean;
@@ -12,21 +10,37 @@ interface Props {
 }
 
 export default function ImportSchedulesDialog({ open, onOpenChange, onScheduleImport, branchId }: Props) {
-    const { data, isLoading } = useSWR('assessments', () => getAssessmentsData(), {
-        revalidateOnFocus: true,
-        revalidateOnReconnect: true,
-        refreshInterval: 60000,
-    })
     const programs = useProgramsStore((state) => state.programs);
+    const assessments = useAssessmentsStore((state) => state.assessments);
+    const assessmentsFetched = useAssessmentsStore((state) => state.fetched);
+    const fetchAssessments = useAssessmentsStore((state) => state.fetchAssessments);
+
+    useEffect(() => {
+        if (!assessmentsFetched && open) {
+            fetchAssessments();
+        }
+    }, [assessmentsFetched, fetchAssessments, open]);
 
     const availablePackages = useMemo(() => {
-        const allPrograms = [...programs, ...(data?.data ?? [])];
+        // Convert assessments to the same format as programs for compatibility
+        const assessmentPrograms = assessments.map(assessment => ({
+            id: assessment.id,
+            name: 'Assessment',
+            branchId: assessment.branchId,
+            packages: [{
+                id: assessment.id,
+                name: assessment.description || 'Assessment Package',
+                schedules: [], // Assessments don't have schedules directly, so empty array
+                deleted: false
+            }]
+        }));
+
+        const allPrograms = [...programs, ...assessmentPrograms];
 
         const finalPrograms = allPrograms
-            // .filter(program => !program.packages.some(pkg => pkg.name.toLowerCase().includes('assessment')))
             .filter(program => program.branchId === branchId)
-            .reduce<Array<typeof programs[0]['packages'][0] & { programName: string }>>((acc, program) => {
-                const firstValidPackage = program.packages.find(pkg => !pkg?.deleted);
+            .reduce<Array<any>>((acc, program) => {
+                const firstValidPackage = program.packages.find((pkg: any) => !pkg?.deleted);
 
                 if (firstValidPackage) {
                     acc.push({
@@ -38,9 +52,9 @@ export default function ImportSchedulesDialog({ open, onOpenChange, onScheduleIm
             }, []);
 
         return finalPrograms;
-    }, [data, isLoading, programs, branchId]);
+    }, [programs, assessments, branchId]);
 
-    if (isLoading) {
+    if (!assessmentsFetched) {
         return (
             <Dialog open={open} onOpenChange={onOpenChange}>
                 <DialogContent className="bg-main-white max-w-2xl">
@@ -87,7 +101,7 @@ export default function ImportSchedulesDialog({ open, onOpenChange, onScheduleIm
                                 </div>
 
                                 <div className="mt-2 text-sm text-gray-500">
-                                    {pkg.schedules.map((schedule, index) => (
+                                    {pkg.schedules.map((schedule: any, index: number) => (
                                         <p key={index}>
                                             {schedule.day.toUpperCase()}: {schedule.from} - {schedule.to}
                                         </p>

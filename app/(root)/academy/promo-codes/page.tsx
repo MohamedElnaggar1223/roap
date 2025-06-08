@@ -1,5 +1,5 @@
 import { getPromoCodes } from '@/lib/actions/promo-codes.actions'
-import { PromoCodesDataTable } from './promo-codes-table'
+import PromoCodesClient from './promo-codes-client'
 
 export default async function PromoCodesPage() {
     const { data: promoCodes, error } = await getPromoCodes()
@@ -8,7 +8,7 @@ export default async function PromoCodesPage() {
 
     return (
         <section className='flex flex-col gap-4 w-full px-4'>
-            <PromoCodesDataTable data={promoCodes!} key={JSON.stringify(promoCodes)} />
+            <PromoCodesClient initialData={promoCodes || []} />
         </section>
     )
 }

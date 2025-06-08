@@ -79,8 +79,22 @@ export type Database = {
             foreignKeyName: "academic_athletic_sport_id_fkey"
             columns: ["sport_id"]
             isOneToOne: false
+            referencedRelation: "mv_athlete_details"
+            referencedColumns: ["sport_id"]
+          },
+          {
+            foreignKeyName: "academic_athletic_sport_id_fkey"
+            columns: ["sport_id"]
+            isOneToOne: false
             referencedRelation: "sports"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academic_athletic_sport_id_foreign"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "mv_athlete_details"
+            referencedColumns: ["sport_id"]
           },
           {
             foreignKeyName: "academic_athletic_sport_id_foreign"
@@ -127,6 +141,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "academics"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academic_sport_sport_id_foreign"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "mv_athlete_details"
+            referencedColumns: ["sport_id"]
           },
           {
             foreignKeyName: "academic_sport_sport_id_foreign"
@@ -180,10 +201,12 @@ export type Database = {
           created_at: string | null
           entry_fees: number
           extra: string | null
+          hidden: boolean
           id: number
           image: string | null
           onboarded: boolean
           policy: string | null
+          searches: number
           slug: string
           status: Database["public"]["Enums"]["status"] | null
           updated_at: string | null
@@ -193,10 +216,12 @@ export type Database = {
           created_at?: string | null
           entry_fees?: number
           extra?: string | null
+          hidden?: boolean
           id?: never
           image?: string | null
           onboarded?: boolean
           policy?: string | null
+          searches?: number
           slug: string
           status?: Database["public"]["Enums"]["status"] | null
           updated_at?: string | null
@@ -206,10 +231,12 @@ export type Database = {
           created_at?: string | null
           entry_fees?: number
           extra?: string | null
+          hidden?: boolean
           id?: never
           image?: string | null
           onboarded?: boolean
           policy?: string | null
+          searches?: number
           slug?: string
           status?: Database["public"]["Enums"]["status"] | null
           updated_at?: string | null
@@ -305,6 +332,13 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "block_branches_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "mv_location_details"
             referencedColumns: ["id"]
           },
         ]
@@ -416,6 +450,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "blocks"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "block_sports_sport_id_fkey"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "mv_athlete_details"
+            referencedColumns: ["sport_id"]
           },
           {
             foreignKeyName: "block_sports_sport_id_fkey"
@@ -628,6 +669,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "branch_facility_branch_id_foreign"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "mv_location_details"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "branch_facility_facility_id_foreign"
             columns: ["facility_id"]
             isOneToOne: false
@@ -667,10 +715,101 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "branch_sport_branch_id_foreign"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "mv_location_details"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_sport_sport_id_foreign"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "mv_athlete_details"
+            referencedColumns: ["sport_id"]
+          },
+          {
             foreignKeyName: "branch_sport_sport_id_foreign"
             columns: ["sport_id"]
             isOneToOne: false
             referencedRelation: "sports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      branch_sport_deletion_log: {
+        Row: {
+          academy_id: number | null
+          deleted_at: string | null
+          deleted_by_ip: unknown
+          deleted_row_data: Json
+          id: number
+        }
+        Insert: {
+          academy_id?: number | null
+          deleted_at?: string | null
+          deleted_by_ip: unknown
+          deleted_row_data: Json
+          id?: never
+        }
+        Update: {
+          academy_id?: number | null
+          deleted_at?: string | null
+          deleted_by_ip?: unknown
+          deleted_row_data?: Json
+          id?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_sport_deletion_log_academy_id_foreign"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      branch_sport_violations: {
+        Row: {
+          attempted_at: string
+          branch_id: number
+          created_at: string | null
+          details: Json
+          id: number
+          updated_at: string | null
+          violation_type: string
+        }
+        Insert: {
+          attempted_at?: string
+          branch_id: number
+          created_at?: string | null
+          details: Json
+          id?: never
+          updated_at?: string | null
+          violation_type: string
+        }
+        Update: {
+          attempted_at?: string
+          branch_id?: number
+          created_at?: string | null
+          details?: Json
+          id?: never
+          updated_at?: string | null
+          violation_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_sport_violations_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_sport_violations_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "mv_location_details"
             referencedColumns: ["id"]
           },
         ]
@@ -708,12 +847,20 @@ export type Database = {
             referencedRelation: "branches"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "branch_translations_branch_id_foreign"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "mv_location_details"
+            referencedColumns: ["id"]
+          },
         ]
       }
       branches: {
         Row: {
           academic_id: number | null
           created_at: string | null
+          hidden: boolean
           id: number
           is_default: boolean
           latitude: string | null
@@ -729,6 +876,7 @@ export type Database = {
         Insert: {
           academic_id?: number | null
           created_at?: string | null
+          hidden?: boolean
           id?: never
           is_default?: boolean
           latitude?: string | null
@@ -744,6 +892,7 @@ export type Database = {
         Update: {
           academic_id?: number | null
           created_at?: string | null
+          hidden?: boolean
           id?: never
           is_default?: boolean
           latitude?: string | null
@@ -981,6 +1130,13 @@ export type Database = {
             foreignKeyName: "coach_sport_sport_id_foreign"
             columns: ["sport_id"]
             isOneToOne: false
+            referencedRelation: "mv_athlete_details"
+            referencedColumns: ["sport_id"]
+          },
+          {
+            foreignKeyName: "coach_sport_sport_id_foreign"
+            columns: ["sport_id"]
+            isOneToOne: false
             referencedRelation: "sports"
             referencedColumns: ["id"]
           },
@@ -1142,7 +1298,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
-          id?: never
+          id?: number
           paid_at: string
           profile_id: number
           program_id: number
@@ -1151,7 +1307,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
-          id?: never
+          id?: number
           paid_at?: string
           profile_id?: number
           program_id?: number
@@ -1172,6 +1328,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "programs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entry_fees_history_sport_id_foreign"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "mv_athlete_details"
+            referencedColumns: ["sport_id"]
           },
           {
             foreignKeyName: "entry_fees_history_sport_id_foreign"
@@ -1444,7 +1607,7 @@ export type Database = {
       }
       packages: {
         Row: {
-          capacity: number
+          capacity: number | null
           created_at: string | null
           end_date: string
           entry_fees: number
@@ -1452,6 +1615,8 @@ export type Database = {
           entry_fees_end_date: string | null
           entry_fees_explanation: string | null
           entry_fees_start_date: string | null
+          flexible: boolean | null
+          hidden: boolean | null
           id: number
           memo: string | null
           months: string[] | null
@@ -1464,7 +1629,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          capacity?: number
+          capacity?: number | null
           created_at?: string | null
           end_date: string
           entry_fees?: number
@@ -1472,6 +1637,8 @@ export type Database = {
           entry_fees_end_date?: string | null
           entry_fees_explanation?: string | null
           entry_fees_start_date?: string | null
+          flexible?: boolean | null
+          hidden?: boolean | null
           id?: never
           memo?: string | null
           months?: string[] | null
@@ -1484,7 +1651,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          capacity?: number
+          capacity?: number | null
           created_at?: string | null
           end_date?: string
           entry_fees?: number
@@ -1492,6 +1659,8 @@ export type Database = {
           entry_fees_end_date?: string | null
           entry_fees_explanation?: string | null
           entry_fees_start_date?: string | null
+          flexible?: boolean | null
+          hidden?: boolean | null
           id?: never
           memo?: string | null
           months?: string[] | null
@@ -1642,7 +1811,7 @@ export type Database = {
           country?: string | null
           created_at?: string | null
           gender?: string | null
-          id?: never
+          id?: number
           image?: string | null
           name: string
           nationality?: string | null
@@ -1657,7 +1826,7 @@ export type Database = {
           country?: string | null
           created_at?: string | null
           gender?: string | null
-          id?: never
+          id?: number
           image?: string | null
           name?: string
           nationality?: string | null
@@ -1668,7 +1837,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "profiles_user_id_foreign"
+            foreignKeyName: "profiles_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
@@ -1684,12 +1853,17 @@ export type Database = {
           color: string | null
           created_at: string | null
           description: string | null
+          end_age_months: number | null
           end_date_of_birth: string | null
+          flexible: boolean | null
           gender: string | null
+          hidden: boolean | null
           id: number
+          is_end_age_unlimited: boolean
           name: string | null
           number_of_seats: number | null
           sport_id: number | null
+          start_age_months: number | null
           start_date_of_birth: string | null
           type: string | null
           updated_at: string | null
@@ -1701,12 +1875,17 @@ export type Database = {
           color?: string | null
           created_at?: string | null
           description?: string | null
+          end_age_months?: number | null
           end_date_of_birth?: string | null
+          flexible?: boolean | null
           gender?: string | null
+          hidden?: boolean | null
           id?: never
+          is_end_age_unlimited?: boolean
           name?: string | null
           number_of_seats?: number | null
           sport_id?: number | null
+          start_age_months?: number | null
           start_date_of_birth?: string | null
           type?: string | null
           updated_at?: string | null
@@ -1718,12 +1897,17 @@ export type Database = {
           color?: string | null
           created_at?: string | null
           description?: string | null
+          end_age_months?: number | null
           end_date_of_birth?: string | null
+          flexible?: boolean | null
           gender?: string | null
+          hidden?: boolean | null
           id?: never
+          is_end_age_unlimited?: boolean
           name?: string | null
           number_of_seats?: number | null
           sport_id?: number | null
+          start_age_months?: number | null
           start_date_of_birth?: string | null
           type?: string | null
           updated_at?: string | null
@@ -1744,6 +1928,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "programs_branch_id_foreign"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "mv_location_details"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "programs_sport_id_foreign"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "mv_athlete_details"
+            referencedColumns: ["sport_id"]
+          },
+          {
             foreignKeyName: "programs_sport_id_foreign"
             columns: ["sport_id"]
             isOneToOne: false
@@ -1755,6 +1953,7 @@ export type Database = {
       promo_codes: {
         Row: {
           academic_id: number
+          can_be_used: number
           code: string
           created_at: string | null
           discount_type: Database["public"]["Enums"]["discount_type"]
@@ -1766,6 +1965,7 @@ export type Database = {
         }
         Insert: {
           academic_id: number
+          can_be_used?: number
           code: string
           created_at?: string | null
           discount_type: Database["public"]["Enums"]["discount_type"]
@@ -1777,6 +1977,7 @@ export type Database = {
         }
         Update: {
           academic_id?: number
+          can_be_used?: number
           code?: string
           created_at?: string | null
           discount_type?: Database["public"]["Enums"]["discount_type"]
@@ -1856,36 +2057,67 @@ export type Database = {
             referencedRelation: "branches"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "reviews_branch_id_foreign"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "mv_location_details"
+            referencedColumns: ["id"]
+          },
         ]
       }
       schedules: {
         Row: {
+          capacity: number
           created_at: string | null
           day: string
+          end_age_months: number | null
+          end_date_of_birth: string | null
           from: string
+          gender: string | null
+          hidden: boolean
           id: number
+          is_end_age_unlimited: boolean
           memo: string | null
           package_id: number
+          start_age_months: number | null
+          start_date_of_birth: string | null
           to: string
           updated_at: string | null
         }
         Insert: {
+          capacity?: number
           created_at?: string | null
           day: string
+          end_age_months?: number | null
+          end_date_of_birth?: string | null
           from: string
+          gender?: string | null
+          hidden?: boolean
           id?: never
+          is_end_age_unlimited?: boolean
           memo?: string | null
           package_id: number
+          start_age_months?: number | null
+          start_date_of_birth?: string | null
           to: string
           updated_at?: string | null
         }
         Update: {
+          capacity?: number
           created_at?: string | null
           day?: string
+          end_age_months?: number | null
+          end_date_of_birth?: string | null
           from?: string
+          gender?: string | null
+          hidden?: boolean
           id?: never
+          is_end_age_unlimited?: boolean
           memo?: string | null
           package_id?: number
+          start_age_months?: number | null
+          start_date_of_birth?: string | null
           to?: string
           updated_at?: string | null
         }
@@ -1952,6 +2184,39 @@ export type Database = {
         }
         Relationships: []
       }
+      sport_deletion_audit: {
+        Row: {
+          created_at: string | null
+          deleted_at: string
+          deleted_by: string | null
+          deletion_context: Json
+          id: number
+          record_id: number
+          table_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          deleted_at?: string
+          deleted_by?: string | null
+          deletion_context: Json
+          id?: never
+          record_id: number
+          table_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          deleted_at?: string
+          deleted_by?: string | null
+          deletion_context?: Json
+          id?: never
+          record_id?: number
+          table_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       sport_translations: {
         Row: {
           created_at: string | null
@@ -1978,6 +2243,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "sport_translations_sport_id_foreign"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "mv_athlete_details"
+            referencedColumns: ["sport_id"]
+          },
           {
             foreignKeyName: "sport_translations_sport_id_foreign"
             columns: ["sport_id"]
@@ -2166,6 +2438,42 @@ export type Database = {
           },
         ]
       }
+      used_promo_codes: {
+        Row: {
+          created_at: string
+          id: number
+          promo_id: number | null
+          user_id: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          promo_id?: number | null
+          user_id?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          promo_id?: number | null
+          user_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "used_promo_codes_promo_id_fkey"
+            columns: ["promo_id"]
+            isOneToOne: false
+            referencedRelation: "promo_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "used_promo_codes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           apple_id: string | null
@@ -2174,6 +2482,7 @@ export type Database = {
           device_token: string | null
           email: string | null
           email_verified_at: string | null
+          fcm: string | null
           google_id: string | null
           id: number
           is_athletic: boolean
@@ -2196,6 +2505,7 @@ export type Database = {
           device_token?: string | null
           email?: string | null
           email_verified_at?: string | null
+          fcm?: string | null
           google_id?: string | null
           id?: never
           is_athletic?: boolean
@@ -2218,6 +2528,7 @@ export type Database = {
           device_token?: string | null
           email?: string | null
           email_verified_at?: string | null
+          fcm?: string | null
           google_id?: string | null
           id?: never
           is_athletic?: boolean
@@ -2276,14 +2587,90 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      mv_athlete_details: {
+        Row: {
+          academic_id: number | null
+          athlete_id: number | null
+          athlete_type: Database["public"]["Enums"]["athletic_type"] | null
+          birthday: string | null
+          certificate: string | null
+          city: string | null
+          country: string | null
+          email: string | null
+          email_verified_at: string | null
+          first_guardian_email: string | null
+          first_guardian_name: string | null
+          first_guardian_phone: string | null
+          gender: string | null
+          image: string | null
+          last_booking_date: string | null
+          name: string | null
+          nationality: string | null
+          phone_number: string | null
+          profile_id: number | null
+          registered_at: string | null
+          second_guardian_email: string | null
+          second_guardian_name: string | null
+          second_guardian_phone: string | null
+          sport_id: number | null
+          sport_image: string | null
+          sport_name: string | null
+          total_bookings: number | null
+          total_spent: number | null
+          user_id: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academic_athletic_academic_id_foreign"
+            columns: ["academic_id"]
+            isOneToOne: false
+            referencedRelation: "academics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academic_athletic_user_id_foreign"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mv_location_details: {
+        Row: {
+          academic_id: number | null
+          amenities: string[] | null
+          created_at: string | null
+          facilities: number[] | null
+          hidden: boolean | null
+          id: number | null
+          is_default: boolean | null
+          locale: string | null
+          name: string | null
+          name_in_google_map: string | null
+          rate: number | null
+          sports: number[] | null
+          sports_str: string[] | null
+          url: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branches_academic_id_foreign"
+            columns: ["academic_id"]
+            isOneToOne: false
+            referencedRelation: "academics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       insert_policy: {
-        Args: {
-          academic_id: number
-          policy: string
-        }
+        Args: { academic_id: number; policy: string }
+        Returns: undefined
+      }
+      refresh_location_details: {
+        Args: Record<PropertyKey, never>
         Returns: undefined
       }
     }
@@ -2300,27 +2687,29 @@ export type Database = {
   }
 }
 
-type PublicSchema = Database[Extract<keyof Database, "public">]
+type DefaultSchema = Database[Extract<keyof Database, "public">]
 
 export type Tables<
-  PublicTableNameOrOptions extends
-    | keyof (PublicSchema["Tables"] & PublicSchema["Views"])
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-        Database[PublicTableNameOrOptions["schema"]]["Views"])
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-      Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : PublicTableNameOrOptions extends keyof (PublicSchema["Tables"] &
-        PublicSchema["Views"])
-    ? (PublicSchema["Tables"] &
-        PublicSchema["Views"])[PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -2328,20 +2717,22 @@ export type Tables<
     : never
 
 export type TablesInsert<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -2349,20 +2740,22 @@ export type TablesInsert<
     : never
 
 export type TablesUpdate<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
@@ -2370,21 +2763,23 @@ export type TablesUpdate<
     : never
 
 export type Enums<
-  PublicEnumNameOrOptions extends
-    | keyof PublicSchema["Enums"]
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
     | { schema: keyof Database },
-  EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"]
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = PublicEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
-    ? PublicSchema["Enums"][PublicEnumNameOrOptions]
+> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof PublicSchema["CompositeTypes"]
+    | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof Database },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof Database
@@ -2393,6 +2788,18 @@ export type CompositeTypes<
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
   ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof PublicSchema["CompositeTypes"]
-    ? PublicSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      athletic_type: ["primary", "fellow"],
+      block_scope: ["all", "specific"],
+      discount_type: ["fixed", "percentage"],
+      status: ["pending", "accepted", "rejected"],
+      user_roles: ["admin", "user", "academic"],
+    },
+  },
+} as const

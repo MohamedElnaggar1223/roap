@@ -1,10 +1,10 @@
 'use client'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { updatePromoCode } from '@/lib/actions/promo-codes.actions';
+import { usePromoCodesStore } from '@/providers/store-provider';
 import { Loader2, Plus, X } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { addPromoCodeSchema } from '@/lib/validations/promo-codes';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -37,6 +37,7 @@ type PromoCode = {
     discountValue: number
     startDate: string
     endDate: string
+    canBeUsed: number
 }
 
 type Props = {
@@ -44,7 +45,7 @@ type Props = {
 }
 
 export default function EditNewPromoCode({ promoCodeEdited }: Props) {
-    const router = useRouter()
+    const editPromoCode = usePromoCodesStore((state) => state.editPromoCode)
 
     const [loading, setLoading] = useState(false)
     const [editNewPromoCodeOpen, setEditNewPromoCodeOpen] = useState(false)
@@ -57,43 +58,47 @@ export default function EditNewPromoCode({ promoCodeEdited }: Props) {
             discountValue: promoCodeEdited.discountValue,
             startDate: new Date(promoCodeEdited.startDate),
             endDate: new Date(promoCodeEdited.endDate),
+            canBeUsed: promoCodeEdited.canBeUsed,
         }
     })
+
+    // Reset form with current data when dialog opens
+    useEffect(() => {
+        if (editNewPromoCodeOpen) {
+            form.reset({
+                code: promoCodeEdited.code,
+                discountType: promoCodeEdited.discountType,
+                discountValue: promoCodeEdited.discountValue,
+                startDate: new Date(promoCodeEdited.startDate),
+                endDate: new Date(promoCodeEdited.endDate),
+                canBeUsed: promoCodeEdited.canBeUsed,
+            })
+        }
+    }, [editNewPromoCodeOpen, promoCodeEdited, form])
 
     const onSubmit = async (values: z.infer<typeof addPromoCodeSchema>) => {
         try {
             setLoading(true)
-            const result = await updatePromoCode(promoCodeEdited.id, {
+            await editPromoCode(promoCodeEdited.id, {
                 code: values.code,
                 discountType: values.discountType,
                 discountValue: values.discountValue,
                 startDate: new Date(values.startDate),
                 endDate: new Date(values.endDate),
+                canBeUsed: values.canBeUsed,
             })
 
-            if (result.error) {
-                if (result?.field) {
-                    form.setError(result.field as "code" | "discountType" | "discountValue" | "startDate" | "endDate", {
-                        type: 'custom',
-                        message: result.error
-                    })
-                    return
-                }
-                form.setError('root', {
-                    type: 'custom',
-                    message: result.error
-                })
-                return
-            }
-
-            router.refresh()
+            // Reset loading state and close dialog with small delay
+            setLoading(false)
+            setTimeout(() => {
+                setEditNewPromoCodeOpen(false)
+            }, 100)
         } catch (error) {
-            console.error('Error creating promoCode:', error)
+            console.error('Error updating promoCode:', error)
             form.setError('root', {
                 type: 'custom',
                 message: 'An unexpected error occurred'
             })
-        } finally {
             setLoading(false)
         }
     }
@@ -212,6 +217,26 @@ export default function EditNewPromoCode({ promoCodeEdited }: Props) {
                                             )}
                                         />
                                     </div>
+                                    <FormField
+                                        control={form.control}
+                                        name='canBeUsed'
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Usage Limit</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        type="number"
+                                                        min="1"
+                                                        placeholder="Enter usage limit"
+                                                        {...field}
+                                                        onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                                                        className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
                                 </div>
                             </div>
                         </form>

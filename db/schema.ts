@@ -553,8 +553,9 @@ export const promoCodes = pgTable("promo_codes", {
     discountValue: doublePrecision().notNull(),
     startDate: timestamp("start_date", { mode: 'string' }).notNull(),
     endDate: timestamp("end_date", { mode: 'string' }).notNull(),
+    canBeUsed: integer("can_be_used").default(1).notNull(),
     // You can use { mode: "bigint" } if numbers are exceeding js number limitations
-    academicId: bigint("academic_id", { mode: "number" }).notNull(),
+    academicId: bigint("academic_id", { mode: "number" }),
     createdAt: timestamp("created_at", { mode: 'string' }),
     updatedAt: timestamp("updated_at", { mode: 'string' }),
 }, (table) => {

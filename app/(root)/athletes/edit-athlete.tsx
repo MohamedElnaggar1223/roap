@@ -1,8 +1,7 @@
 'use client'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { updateAthlete } from '@/lib/actions/athletes.actions'
+import { useAthletesStore } from '@/providers/store-provider'
 import { Loader2, X } from 'lucide-react'
-import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { addAthleteSchema } from '@/lib/validations/athletes'
 import { z } from 'zod'
@@ -31,33 +30,7 @@ import { countries, nationalities } from '@/constants'
 import { DateSelector } from '@/components/shared/date-selector'
 import { useToast } from '@/hooks/use-toast'
 
-type Athlete = {
-    id: number
-    userId: number
-    email: string
-    phoneNumber: string | null
-    profileId: number | null
-    certificate: string | null
-    type: 'primary' | 'fellow'
-    firstGuardianName: string | null
-    firstGuardianRelationship: string | null
-    secondGuardianName: string | null
-    secondGuardianRelationship: string | null
-    firstGuardianPhone: string | null
-    firstGuardianEmail: string | null
-    secondGuardianPhone: string | null
-    secondGuardianEmail: string | null
-    profile?: {
-        country: string | null
-        nationality: string | null
-        city: string | null
-        streetAddress: string | null
-        name: string
-        gender: string | null
-        birthday: string | null
-        image: string | null
-    }
-}
+import type { Athlete } from '@/stores/athletes-store'
 
 const relationships = [
     "mother",
@@ -79,9 +52,8 @@ type FileState = {
 }
 
 export default function EditAthlete({ athleteEdited }: Props) {
-    const router = useRouter()
-
     const { toast } = useToast()
+    const editAthlete = useAthletesStore((state) => state.editAthlete)
 
     const imageInputRef = useRef<HTMLInputElement>(null)
     const certificateInputRef = useRef<HTMLInputElement>(null)
@@ -199,7 +171,7 @@ export default function EditAthlete({ athleteEdited }: Props) {
                 }
             }
 
-            const result = await updateAthlete(athleteEdited.id, {
+            await editAthlete(athleteEdited.id, {
                 ...values,
                 email: values.email ?? '',
                 name: values.firstName + ' ' + values.lastName,
@@ -207,27 +179,11 @@ export default function EditAthlete({ athleteEdited }: Props) {
                 certificate: certificatePath || ''
             })
 
-            if (result.error) {
-                if (result?.field) {
-                    form.setError(result.field as any, {
-                        type: 'custom',
-                        message: result.error
-                    })
-                    return
-                }
-                form.setError('root', {
-                    type: 'custom',
-                    message: result.error
-                })
-                return
-            }
-
             if (selectedImage.preview) URL.revokeObjectURL(selectedImage.preview)
             if (selectedCertificate.preview) URL.revokeObjectURL(selectedCertificate.preview)
 
             setLoading(false)
             setEditOpen(false)
-            // router.refresh()
         } catch (error) {
             console.error('Error updating athlete:', error)
             form.setError('root', {

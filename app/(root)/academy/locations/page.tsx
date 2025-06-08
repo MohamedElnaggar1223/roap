@@ -1,6 +1,6 @@
 import { getLocations } from '@/lib/actions/locations.actions'
-import { LocationsDataTable } from './locations-table'
 import { getAcademySports, getAllSports } from '@/lib/actions/academics.actions'
+import LocationsClient from './locations-client'
 
 export default async function LocationsPage() {
     const { data: locations, error } = await getLocations()
@@ -10,8 +10,10 @@ export default async function LocationsPage() {
     if (error) return null
 
     return (
-        <section className='flex flex-col gap-4 w-full px-4'>
-            <LocationsDataTable data={locations!} sports={sports!} academySports={academySports} key={JSON.stringify(locations)} />
-        </section>
+        <LocationsClient
+            initialLocations={locations || []}
+            sports={sports || []}
+            academySports={academySports}
+        />
     )
 }

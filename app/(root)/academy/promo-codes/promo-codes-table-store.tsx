@@ -1,57 +1,46 @@
 'use client'
 
-import { useState, Fragment } from 'react'
+import { useState, Fragment, useEffect } from 'react'
 import { Loader2, SearchIcon, Trash2Icon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import AddNewPromoCode from './add-new-promo-code'
 import { useDebouncedCallback } from 'use-debounce'
-import Image from 'next/image'
 import EditPromoCode from './edit-promo-code'
-import { useRouter } from 'next/navigation'
-import { deletePromoCodes } from '@/lib/actions/promo-codes.actions'
+import { usePromoCodesStore } from '@/providers/store-provider'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import type { PromoCode } from '@/stores/promo-codes-store'
 
-interface PromoCode {
-    id: number
-    code: string
-    discountType: 'fixed' | 'percentage'
-    discountValue: number
-    startDate: string
-    endDate: string
-    canBeUsed: number
-}
+export default function PromoCodesTableStore() {
+    const promoCodes = usePromoCodesStore((state) => state.promoCodes)
+    const deletePromoCodes = usePromoCodesStore((state) => state.deletePromoCodes)
 
-interface PromoCodesDataTableProps {
-    data: PromoCode[]
-}
-
-export function PromoCodesDataTable({ data }: PromoCodesDataTableProps) {
-    const router = useRouter()
-
-    const [filteredData, setFilteredData] = useState<PromoCode[]>(data)
+    const [filteredData, setFilteredData] = useState<PromoCode[]>([])
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedRows, setSelectedRows] = useState<number[]>([])
     const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false)
     const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
 
-    const debouncedSearch = useDebouncedCallback((value: string) => {
-        const lowercasedValue = value.toLowerCase()
-        if (!lowercasedValue) {
-            setFilteredData(data)
-        }
-        else {
-            const filtered = data.filter(promoCode =>
+    // Update filtered data when promoCodes change
+    useEffect(() => {
+        if (!searchQuery) {
+            setFilteredData(promoCodes)
+        } else {
+            const lowercasedValue = searchQuery.toLowerCase()
+            const filtered = promoCodes.filter(promoCode =>
                 promoCode.code?.toLowerCase().includes(lowercasedValue)
             )
             setFilteredData(filtered)
         }
+    }, [promoCodes, searchQuery])
+
+    const debouncedSearch = useDebouncedCallback((value: string) => {
+        setSearchQuery(value)
     }, 300)
 
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value
-        setSearchQuery(value)
         debouncedSearch(value)
     }
 
@@ -63,14 +52,14 @@ export function PromoCodesDataTable({ data }: PromoCodesDataTableProps) {
 
     const handleSelectAll = () => {
         setSelectedRows(
-            selectedRows.length === filteredData.length ? [] : filteredData.map(location => location.id)
+            selectedRows.length === filteredData.length ? [] : filteredData.map(promoCode => promoCode.id)
         )
     }
 
     const handleBulkDelete = async () => {
         setBulkDeleteLoading(true)
         await deletePromoCodes(selectedRows)
-        router.refresh()
+        setSelectedRows([])
         setBulkDeleteLoading(false)
         setBulkDeleteOpen(false)
     }
@@ -85,7 +74,6 @@ export function PromoCodesDataTable({ data }: PromoCodesDataTableProps) {
                     {selectedRows.length > 0 && (
                         <Button
                             variant="destructive"
-
                             onClick={() => setBulkDeleteOpen(true)}
                             className="flex items-center gap-2"
                         >
@@ -98,7 +86,6 @@ export function PromoCodesDataTable({ data }: PromoCodesDataTableProps) {
                         <Input
                             type="search"
                             placeholder="Search..."
-                            value={searchQuery}
                             onChange={handleSearchChange}
                             className='ring-2 bg-transparent ring-[#868685] rounded-3xl pl-8 pr-4 py-2'
                         />
@@ -137,7 +124,10 @@ export function PromoCodesDataTable({ data }: PromoCodesDataTableProps) {
                                         aria-label={`Select ${promoCode.code}`}
                                     />
                                 </div>
-                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{promoCode.code}</div>
+                                <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
+                                    {promoCode.code}
+                                    {promoCode.pending && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                                </div>
                                 <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{promoCode.discountValue}{promoCode.discountType === 'fixed' ? ' AED' : '%'}</div>
                                 <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{new Date(promoCode.startDate).toLocaleDateString()}</div>
                                 <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">{new Date(promoCode.endDate).toLocaleDateString()}</div>

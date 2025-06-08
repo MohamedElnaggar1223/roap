@@ -35,23 +35,7 @@ interface Sport {
     locale: string
 }
 
-interface Assessment {
-    coaches: string[];
-    packages: string[];
-    id: number;
-    description: string | null;
-    type: string | null;
-    numberOfSeats: number | null;
-    branchId: number | null;
-    sportId: number | null;
-    gender: string | null;
-    startDateOfBirth: string | null;
-    endDateOfBirth: string | null;
-    branchName: string;
-    sportName: string;
-    firstPackagePrice: number | null;
-    assessmentDeductedFromProgram: boolean;
-}
+import type { Assessment } from '@/stores/assessments-store'
 
 interface AssessmentsTableProps {
     data: Assessment[]
@@ -240,11 +224,15 @@ export function AssessmentsTable({ data, branches, sports, academySports }: Asse
                                     </span>
                                 </div>
                                 <div className="py-4 px-4 bg-main-white rounded-r-[20px] flex items-center justify-end font-bold font-inter">
-                                    <EditAssessment
-                                        assessment={assessment}
-                                        branches={branches}
-                                        sports={sports}
-                                    />
+                                    {assessment.pending ? (
+                                        <div className="animate-spin h-4 w-4 border-2 border-main-green border-t-transparent rounded-full" />
+                                    ) : (
+                                        <EditAssessment
+                                            assessment={assessment}
+                                            branches={branches}
+                                            sports={sports}
+                                        />
+                                    )}
                                 </div>
                             </Fragment>
                         ))}

@@ -1,8 +1,7 @@
 'use client'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { createAthlete } from '@/lib/actions/athletes.actions'
+import { useAthletesStore } from '@/providers/store-provider'
 import { Loader2, Plus, X } from 'lucide-react'
-import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { addAthleteSchema } from '@/lib/validations/athletes'
 import { z } from 'zod'
@@ -47,9 +46,8 @@ const relationships = [
 ]
 
 export default function AddNewAthlete() {
-    const router = useRouter()
-
     const { toast } = useToast()
+    const addAthlete = useAthletesStore((state) => state.addAthlete)
 
     const imageInputRef = useRef<HTMLInputElement>(null)
     const certificateInputRef = useRef<HTMLInputElement>(null)
@@ -167,28 +165,13 @@ export default function AddNewAthlete() {
                 }
             }
 
-            const result = await createAthlete({
+            await addAthlete({
                 ...values,
                 email: values.email ?? '',
                 name: values.firstName + ' ' + values.lastName,
                 image: imagePath || '',
                 certificate: certificatePath || ''
             });
-
-            if (result.error) {
-                if (result?.field) {
-                    form.setError(result.field as any, {
-                        type: 'custom',
-                        message: result.error
-                    });
-                    return;
-                }
-                form.setError('root', {
-                    type: 'custom',
-                    message: result.error
-                });
-                return;
-            }
 
             if (selectedImage.preview) URL.revokeObjectURL(selectedImage.preview);
             if (selectedCertificate.preview) URL.revokeObjectURL(selectedCertificate.preview);
@@ -197,7 +180,6 @@ export default function AddNewAthlete() {
             form.reset();
             setSelectedImage({ preview: '', file: null });
             setSelectedCertificate({ preview: '', file: null });
-            // router.refresh();
         } catch (error) {
             console.error('Error creating athlete:', error);
             form.setError('root', {

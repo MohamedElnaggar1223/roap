@@ -1,9 +1,7 @@
 'use client'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { createCoach } from '@/lib/actions/coaches.actions';
 import { Loader2, Plus, X } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { addCoachSchema } from '@/lib/validations/coaches';
 import { z } from 'zod';
@@ -31,9 +29,9 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { getImageUrl, uploadImageToSupabase } from '@/lib/supabase-images';
 import Image from 'next/image';
-import { useOnboarding } from '@/providers/onboarding-provider';
 import { DateSelector } from '@/components/shared/date-selector';
 import { useToast } from '@/hooks/use-toast';
+import { useCoachesStore } from '@/providers/store-provider';
 
 type Props = {
     sports: {
@@ -56,11 +54,8 @@ type FileState = {
 }
 
 export default function AddNewCoach({ sports, languages, academySports }: Props) {
-    const router = useRouter()
-
-    const { mutate } = useOnboarding()
-
     const { toast } = useToast()
+    const addCoachAction = useCoachesStore((state) => state.addCoach)
 
     const inputRef = useRef<HTMLInputElement>(null)
 
@@ -107,10 +102,14 @@ export default function AddNewCoach({ sports, languages, academySports }: Props)
                 }
             }
 
-            const result = await createCoach({
-                ...values,
-                dateOfBirth: values.dateOfBirth ?? undefined,
+            const result = await addCoachAction({
+                name: values.name,
+                title: values.title,
+                bio: values.bio,
+                gender: values.gender,
                 image: imagePath || '',
+                dateOfBirth: values.dateOfBirth ? values.dateOfBirth.toISOString() : null,
+                privateSessionPercentage: values.privateSessionPercentage,
                 sports: selectedSports,
                 languages: selectedLanguages,
             })
@@ -121,27 +120,42 @@ export default function AddNewCoach({ sports, languages, academySports }: Props)
                         type: 'custom',
                         message: result.error
                     })
-                    return
+                } else {
+                    toast({
+                        title: "Error",
+                        description: result.error,
+                        variant: "destructive",
+                    })
                 }
-                form.setError('root', {
-                    type: 'custom',
-                    message: result.error
-                })
                 return
             }
+
+            // Success
+            toast({
+                title: "Success",
+                description: "Coach created successfully",
+            })
 
             if (selectedImage.preview) {
                 URL.revokeObjectURL(selectedImage.preview);
             }
 
+            // Reset form
+            form.reset()
+            setSelectedSports([])
+            setSelectedLanguages([])
+            setSelectedImage({ preview: '', file: null })
+            if (inputRef.current) {
+                inputRef.current.value = ''
+            }
+
             setAddNewCoachOpen(false)
-            mutate()
-            router.refresh()
         } catch (error) {
             console.error('Error creating coach:', error)
-            form.setError('root', {
-                type: 'custom',
-                message: 'An unexpected error occurred'
+            toast({
+                title: "Error",
+                description: "An unexpected error occurred",
+                variant: "destructive",
             })
         } finally {
             setLoading(false)

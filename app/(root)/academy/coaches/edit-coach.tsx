@@ -1,9 +1,7 @@
 'use client'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { updateCoach } from '@/lib/actions/coaches.actions';
 import { Loader2, X } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { addCoachSchema } from '@/lib/validations/coaches';
 import { z } from 'zod';
@@ -31,9 +29,9 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from '@/components/ui/textarea';
 import { getImageUrl, uploadImageToSupabase } from '@/lib/supabase-images';
-import { useOnboarding } from '@/providers/onboarding-provider';
 import { DateSelector } from '@/components/shared/date-selector';
 import { useToast } from '@/hooks/use-toast';
+import { useCoachesStore } from '@/providers/store-provider';
 
 type Coach = {
     id: number
@@ -47,6 +45,9 @@ type Coach = {
     sports: number[]
     languages: number[]
     packages: number[]
+    createdAt: string | null
+    pending?: boolean
+    tempId?: number
 }
 
 type Props = {
@@ -71,11 +72,8 @@ type FileState = {
 }
 
 export default function EditCoach({ coachEdited, sports, languages, academySports }: Props) {
-    const router = useRouter()
-
     const { toast } = useToast()
-
-    const { mutate } = useOnboarding()
+    const editCoachAction = useCoachesStore((state) => state.editCoach)
 
     const inputRef = useRef<HTMLInputElement>(null)
 
@@ -121,31 +119,57 @@ export default function EditCoach({ coachEdited, sports, languages, academySport
             }
         }
 
-        await updateCoach(coachEdited.id, {
-            ...values,
-            dateOfBirth: values.dateOfBirth ?? undefined,
+        const result = await editCoachAction({
+            ...coachEdited,
+            name: values.name,
+            title: values.title,
+            bio: values.bio,
+            gender: values.gender,
             image: imagePath || '',
+            dateOfBirth: values.dateOfBirth ? values.dateOfBirth.toISOString() : null,
+            privateSessionPercentage: values.privateSessionPercentage,
             sports: selectedSports,
             languages: selectedLanguages,
         })
 
-        if (selectedImage.preview) {
+        if (result.error) {
+            if (result?.field) {
+                form.setError(result.field as any, {
+                    type: 'custom',
+                    message: result.error
+                })
+            } else {
+                toast({
+                    title: "Error",
+                    description: result.error,
+                    variant: "destructive",
+                })
+            }
+            setLoading(false)
+            return
+        }
+
+        // Success
+        toast({
+            title: "Success",
+            description: "Coach updated successfully",
+        })
+
+        if (selectedImage.preview && selectedImage.file) {
             URL.revokeObjectURL(selectedImage.preview);
         }
 
         setLoading(false)
         setEditOpen(false)
-        mutate()
-        router.refresh()
     }
 
     useEffect(() => {
         return () => {
-            if (selectedImage.preview) {
+            if (selectedImage.preview && selectedImage.file) {
                 URL.revokeObjectURL(selectedImage.preview)
             }
         }
-    }, [selectedImage.preview]);
+    }, [selectedImage.preview, selectedImage.file]);
 
     const imageURL = useMemo(() => {
         const getImage = async () => {
@@ -213,13 +237,17 @@ export default function EditCoach({ coachEdited, sports, languages, academySport
 
     return (
         <>
-            <Button variant="ghost" size="icon" onClick={() => setEditOpen(true)}>
-                <Image
-                    src='/images/edit.svg'
-                    alt='Edit'
-                    width={20}
-                    height={20}
-                />
+            <Button variant="ghost" size="icon" onClick={() => setEditOpen(true)} disabled={coachEdited.pending || !!coachEdited.tempId}>
+                {(coachEdited.pending || coachEdited.tempId) ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                    <Image
+                        src='/images/edit.svg'
+                        alt='Edit'
+                        width={20}
+                        height={20}
+                    />
+                )}
             </Button>
             <Dialog open={editOpen} onOpenChange={setEditOpen}>
                 <DialogContent className='bg-main-white max-lg:max-w-[100vw] lg:min-w-[720px]'>
@@ -258,7 +286,7 @@ export default function EditCoach({ coachEdited, sports, languages, academySport
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => {
-                                                                        if (selectedImage.preview) {
+                                                                        if (selectedImage.preview && selectedImage.file) {
                                                                             URL.revokeObjectURL(selectedImage.preview);
                                                                         }
                                                                         setSelectedImage({ preview: '', file: null });

@@ -16,7 +16,7 @@ import { useDebouncedCallback } from 'use-debounce'
 import Image from 'next/image'
 import EditLocation from './edit-location'
 import { useRouter } from 'next/navigation'
-import { deleteLocations, toggleBranchVisibility } from '@/lib/actions/locations.actions'
+import { useLocationsStore } from '@/providers/store-provider'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useOnboarding } from '@/providers/onboarding-provider'
 import { useToast } from '@/hooks/use-toast'
@@ -29,10 +29,13 @@ interface Location {
     isDefault: boolean
     rate: number | null
     sports: string[]
+    facilities: number[]
     amenities: string[]
     locale: string
     hidden: boolean
-    createdAt: string | null // Added createdAt field
+    createdAt: string | null
+    pending?: boolean
+    tempId?: number
 }
 
 interface Sport {
@@ -58,9 +61,12 @@ export function LocationsDataTable({ data, sports, academySports }: LocationsDat
     const [selectedRows, setSelectedRows] = useState<number[]>([])
     const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false)
     const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
-    const [pendingVisibilityToggles, setPendingVisibilityToggles] = useState<number[]>([])
     const { mutate } = useOnboarding()
     const { toast } = useToast()
+
+    // Store actions
+    const deleteLocationsAction = useLocationsStore((state) => state.deleteLocations)
+    const toggleLocationVisibility = useLocationsStore((state) => state.toggleLocationVisibility)
 
     const handleSelectLocation = (id: number) => {
         setSelectedLocations(prev =>
@@ -109,9 +115,23 @@ export function LocationsDataTable({ data, sports, academySports }: LocationsDat
 
     const handleBulkDelete = async () => {
         setBulkDeleteLoading(true)
-        await deleteLocations(selectedRows)
+        const result = await deleteLocationsAction(selectedRows)
+
+        if (result.error) {
+            toast({
+                title: "Error",
+                description: result.error,
+                variant: "destructive",
+            })
+        } else {
+            setSelectedRows([])
+            toast({
+                title: "Success",
+                description: `Successfully deleted ${selectedRows.length} location(s)`,
+            })
+        }
+
         mutate()
-        router.refresh()
         setBulkDeleteLoading(false)
         setBulkDeleteOpen(false)
     }
@@ -119,30 +139,21 @@ export function LocationsDataTable({ data, sports, academySports }: LocationsDat
     const handleVisibilityToggle = useCallback(async (locationId: number, e: React.MouseEvent) => {
         e.stopPropagation() // Prevent row selection
 
-        // Add to pending state
-        setPendingVisibilityToggles(prev => [...prev, locationId])
+        const result = await toggleLocationVisibility(locationId)
 
-        try {
-            const result = await toggleBranchVisibility(locationId)
-            if (result.error) {
-                toast({
-                    title: "Error",
-                    description: result.error,
-                    variant: "destructive",
-                })
-            }
-        } catch (error) {
+        if (result.error) {
             toast({
                 title: "Error",
-                description: "Failed to toggle visibility",
+                description: result.error,
                 variant: "destructive",
             })
-        } finally {
-            // Remove from pending state
-            setPendingVisibilityToggles(prev => prev.filter(id => id !== locationId))
-            router.refresh()
+        } else {
+            toast({
+                title: "Success",
+                description: "Location visibility updated",
+            })
         }
-    }, [router, toast])
+    }, [toggleLocationVisibility, toast])
 
     useEffect(() => {
         // Filter and sort data whenever data or selectedSport changes
@@ -257,10 +268,10 @@ export function LocationsDataTable({ data, sports, academySports }: LocationsDat
                                     variant="ghost"
                                     size="icon"
                                     className="hover:bg-transparent"
-                                    disabled={pendingVisibilityToggles.includes(location.id)}
+                                    disabled={location.pending}
                                     onClick={(e) => handleVisibilityToggle(location.id, e)}
                                 >
-                                    {pendingVisibilityToggles.includes(location.id) ? (
+                                    {location.pending ? (
                                         <Loader2 className="h-4 w-4 animate-spin" />
                                     ) : location.hidden ? (
                                         <EyeOff className="h-4 w-4" />

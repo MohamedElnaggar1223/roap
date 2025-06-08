@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getAllSports } from '@/lib/actions/academics.actions';
 import { getAllFacilities } from '@/lib/actions/facilities.actions';
-import { createLocation } from '@/lib/actions/locations.actions';
+import { useLocationsStore } from '@/providers/store-provider';
 import { cn } from '@/lib/utils';
 import { Loader2, Plus, X } from 'lucide-react';
 import Image from 'next/image';
@@ -46,6 +46,9 @@ export default function AddNewLocation({ sports, academySports }: Props) {
     const { toast } = useToast()
 
     const { mutate } = useOnboarding()
+
+    // Store action
+    const addLocation = useLocationsStore((state) => state.addLocation)
 
     const [addNewSportOpen, setAddNewSportOpen] = useState(false)
 
@@ -97,15 +100,15 @@ export default function AddNewLocation({ sports, academySports }: Props) {
             //     }
             // }
 
-            const result = await createLocation({
+            const result = await addLocation({
                 facilities: selectedAmenities,
                 name: values.name,
                 nameInGoogleMap: values.nameInGoogleMap ?? '',
-                sports: selectedSports,
+                sports: selectedSports.map(s => s.toString()),
                 url: values.url,
                 isDefault: values.isDefault,
-                latitude: coordinates?.latitude ?? '',
-                longitude: coordinates?.longitude ?? ''
+                locale: 'en',
+                amenities: selectedAmenities.map(a => a.toString())
             })
 
             if (result.error) {
@@ -123,9 +126,17 @@ export default function AddNewLocation({ sports, academySports }: Props) {
                 return
             }
 
+            // Reset form and close dialog
+            form.reset()
+            setSelectedSports([])
+            setSelectedAmenities([])
             setAddNewSportOpen(false)
             mutate()
-            router.refresh()
+
+            toast({
+                title: "Success",
+                description: "Location created successfully",
+            })
         } catch (error) {
             console.error('Error creating location:', error)
             form.setError('root', {
