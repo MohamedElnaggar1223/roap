@@ -1,6 +1,7 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useProgramsStore, useAssessmentsStore } from '@/providers/store-provider';
+import { useProgramsStore } from '@/providers/store-provider';
+import { getAssessmentsData } from '@/lib/actions/assessments.actions';
 
 interface Props {
     open: boolean;
@@ -11,50 +12,51 @@ interface Props {
 
 export default function ImportSchedulesDialog({ open, onOpenChange, onScheduleImport, branchId }: Props) {
     const programs = useProgramsStore((state) => state.programs);
-    const assessments = useAssessmentsStore((state) => state.assessments);
-    const assessmentsFetched = useAssessmentsStore((state) => state.fetched);
-    const fetchAssessments = useAssessmentsStore((state) => state.fetchAssessments);
+    const [assessmentPrograms, setAssessmentPrograms] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        if (!assessmentsFetched && open) {
-            fetchAssessments();
+        if (open) {
+            const fetchAssessmentData = async () => {
+                setLoading(true);
+                try {
+                    const { data } = await getAssessmentsData();
+                    setAssessmentPrograms(data || []);
+                } catch (error) {
+                    console.error('Error fetching assessment data:', error);
+                    setAssessmentPrograms([]);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            fetchAssessmentData();
         }
-    }, [assessmentsFetched, fetchAssessments, open]);
+    }, [open]);
 
     const availablePackages = useMemo(() => {
-        // Convert assessments to the same format as programs for compatibility
-        const assessmentPrograms = assessments.map(assessment => ({
-            id: assessment.id,
-            name: 'Assessment',
-            branchId: assessment.branchId,
-            packages: [{
-                id: assessment.id,
-                name: assessment.description || 'Assessment Package',
-                schedules: [], // Assessments don't have schedules directly, so empty array
-                deleted: false
-            }]
-        }));
-
+        // Combine regular programs with assessment programs that have full package data
         const allPrograms = [...programs, ...assessmentPrograms];
 
         const finalPrograms = allPrograms
             .filter(program => program.branchId === branchId)
             .reduce<Array<any>>((acc, program) => {
-                const firstValidPackage = program.packages.find((pkg: any) => !pkg?.deleted);
+                const firstValidPackage = program.packages?.find((pkg: any) => !pkg?.deleted);
 
                 if (firstValidPackage) {
                     acc.push({
                         ...firstValidPackage,
-                        programName: program.name ?? ''
+                        programName: program.name ?? '',
+                        schedules: firstValidPackage.schedules || []
                     });
                 }
                 return acc;
             }, []);
 
         return finalPrograms;
-    }, [programs, assessments, branchId]);
+    }, [programs, assessmentPrograms, branchId]);
 
-    if (!assessmentsFetched) {
+    if (loading) {
         return (
             <Dialog open={open} onOpenChange={onOpenChange}>
                 <DialogContent className="bg-main-white max-w-2xl">
