@@ -85,7 +85,18 @@ export const getProgramsDataStore = async (): Promise<{
         orderBy: asc(programs.createdAt)
     })
 
-    return { data: programsData, error: null, field: null }
+    // Transform packages to include type field derived from name
+    const transformedProgramsData = programsData.map(program => ({
+        ...program,
+        packages: program.packages.map(pkg => ({
+            ...pkg,
+            type: (pkg.name.startsWith('Assessment') ? 'Assessment' :
+                pkg.name.startsWith('Term') ? 'Term' :
+                    pkg.name.includes('Monthly') ? 'Monthly' : 'Full Season') as "Term" | "Monthly" | "Full Season" | "Assessment"
+        }))
+    }));
+
+    return { data: transformedProgramsData, error: null, field: null }
 }
 
 export const getProgramsData = async (birthday?: string) => {
@@ -270,6 +281,9 @@ export const getProgramsData = async (birthday?: string) => {
         name: program.name === 'Assessment' ? 'Assessment ' + program.sportName + program.branchName : program.name,
         packages: (packagesByProgram[program.id] || []).map((pkg: any) => ({
             ...pkg,
+            type: (pkg.name.startsWith('Assessment') ? 'Assessment' :
+                pkg.name.startsWith('Term') ? 'Term' :
+                    pkg.name.includes('Monthly') ? 'Monthly' : 'Full Season') as "Term" | "Monthly" | "Full Season" | "Assessment",
             schedules: schedulesByPackage[pkg.id] || []
         })),
         coaches: coachesByProgram[program.id] || [],

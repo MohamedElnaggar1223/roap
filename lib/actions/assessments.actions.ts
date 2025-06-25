@@ -110,7 +110,18 @@ export const getAssessmentsData = async (): Promise<{
         orderBy: asc(programs.createdAt)
     })
 
-    return { data: programsData, error: null, field: null }
+    // Transform packages to include type field derived from name
+    const transformedProgramsData = programsData.map(program => ({
+        ...program,
+        packages: program.packages.map(pkg => ({
+            ...pkg,
+            type: (pkg.name.startsWith('Assessment') ? 'Assessment' :
+                pkg.name.startsWith('Term') ? 'Term' :
+                    pkg.name.includes('Monthly') ? 'Monthly' : 'Full Season') as "Term" | "Monthly" | "Full Season" | "Assessment"
+        }))
+    }));
+
+    return { data: transformedProgramsData, error: null, field: null }
 }
 
 export async function getAssessments() {

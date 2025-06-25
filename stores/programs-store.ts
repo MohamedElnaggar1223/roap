@@ -3,6 +3,7 @@ import { createStore } from 'zustand/vanilla'
 
 export type Package = {
     name: string;
+    type: "Term" | "Monthly" | "Full Season" | "Assessment";
     id?: number;
     tempId?: number;
     createdAt: string | null;

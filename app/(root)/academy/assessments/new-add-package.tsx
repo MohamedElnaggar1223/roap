@@ -94,7 +94,7 @@ const packageSchema = z.object({
 });
 
 interface Package {
-    type: "Term" | "Monthly" | "Full Season" | 'Assessment' | 'Assessment'
+    type: "Term" | "Monthly" | "Full Season" | 'Assessment' | "3 Months" | "6 Months" | "Annual"
     termNumber?: number
     name: string
     price: number

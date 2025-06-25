@@ -373,6 +373,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
             setEditedPackage({
                 editedPackage: {
                     name: '',
+                    type: "Term",
                     price: 0,
                     startDate: new Date().toString(),
                     endDate: new Date().toString(),
