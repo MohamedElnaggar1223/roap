@@ -48,6 +48,7 @@ import { Discount, Package } from '@/stores/programs-store';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { ageToMonths } from '@/lib/utils/age-calculations';
+import { getPackageDisplayName, type BackendPackageType } from '@/lib/utils/package-types';
 
 const addProgramSchema = z.object({
     name: z.string().min(1, "Name is required"),
@@ -947,7 +948,15 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                                                         )}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
-                                                        {packageData.name.length > 10 ? packageData.name.substring(0, 10) + "..." : packageData.name}
+                                                        {(() => {
+                                                            const displayName = getPackageDisplayName(
+                                                                packageData.type as BackendPackageType,
+                                                                packageData.startDate,
+                                                                packageData.endDate,
+                                                                packageData.name
+                                                            );
+                                                            return displayName.length > 10 ? displayName.substring(0, 10) + "..." : displayName;
+                                                        })()}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
                                                         {packageData.price}
@@ -987,7 +996,7 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                                                                     ...packageData,
                                                                     id: undefined,
                                                                     tempId: parseInt(uuid().split('-')[0], 16),
-                                                                    name: `${packageData.name}`,
+                                                                    name: packageData.name, // Keep the original name for copying
                                                                     schedules: packageData.schedules.map(schedule => ({
                                                                         ...schedule,
                                                                         id: undefined,

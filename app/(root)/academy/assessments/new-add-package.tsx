@@ -34,9 +34,16 @@ import { Badge } from '@/components/ui/badge';
 import ImportSchedulesDialog from './import-schedules-dialog';
 import { cn } from '@/lib/utils';
 import { monthsToAge, ageToMonths } from '@/lib/utils/age-calculations';
+import {
+    mapToBackendType,
+    calculateEndDate,
+    requiresAutoDateCalculation,
+    getPackageTypeOptions,
+    type FrontendPackageType
+} from '@/lib/utils/package-types';
 
 const packageSchema = z.object({
-    type: z.enum(["Term", "Monthly", "Full Season", "Assessment"]),
+    type: z.enum(["Term", "Monthly", "Full Season", "Assessment", "3 Months", "6 Months", "Annual"]),
     termNumber: z.string().optional(),
     name: z.string().optional(),
     price: z.string().min(1, "Price is required"),
@@ -392,11 +399,14 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
 
             if (programId) {
                 setLoading(true)
+                const backendType = mapToBackendType(values.type as FrontendPackageType);
                 const packageName = values.type === "Assessment" ?
                     `Assessment ${values.termNumber}` :
-                    values.type === "Monthly" ?
+                    backendType === "Monthly" ?
                         `Monthly ${values.name ?? ''}` :
-                        values.name
+                        backendType === "Term" ?
+                            (values.type === "Term" ? `Term ${values.termNumber}` : `Term ${values.type}`) :
+                            values.name
 
                 let finalStartDate = values.startDate;
                 let finalEndDate = values.endDate;
@@ -438,7 +448,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                         isEndAgeUnlimited: schedule.isEndAgeUnlimited
                     })),
                     capacity: 99999,
-                    type: values.type
+                    type: backendType
                 })
 
                 if (result?.error) {
@@ -454,11 +464,14 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                 router.refresh()
             }
             else if (setCreatedPackages) {
+                const backendType = mapToBackendType(values.type as FrontendPackageType);
                 const packageName = values.type === "Assessment" ?
                     `Assessment ${values.termNumber}` :
-                    values.type === "Monthly" ?
+                    backendType === "Monthly" ?
                         `Monthly ${values.name ?? ''}` :
-                        values.name
+                        backendType === "Term" ?
+                            (values.type === "Term" ? `Term ${values.termNumber}` : `Term ${values.type}`) :
+                            values.name
 
                 setCreatedPackages(prev => [...prev, {
                     name: packageName ?? '',
@@ -486,7 +499,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                         values.entryFeesStartDate : undefined,
                     entryFeesEndDate: values.type !== "Monthly" && showEntryFeesFields ?
                         values.entryFeesEndDate : undefined,
-                    type: values.type
+                    type: backendType
                 }])
                 onOpenChange(false)
             }
@@ -750,7 +763,7 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                             ))}
                                         </div>
                                     </div>
-                                ) : (
+                                ) : !requiresAutoDateCalculation(packageType as FrontendPackageType) ? (
                                     <div className="flex gap-4 max-lg:flex-col">
                                         <FormField
                                             control={form.control}
@@ -775,6 +788,17 @@ export default function AddPackage({ open, onOpenChange, programId, setCreatedPa
                                                 </FormItem>
                                             )}
                                         />
+                                    </div>
+                                ) : (
+                                    <div className="p-4 bg-gray-50 rounded-lg">
+                                        <p className="text-sm text-gray-600">
+                                            Start Date: <span className="font-medium">{new Date().toLocaleDateString()}</span>
+                                        </p>
+                                        <p className="text-sm text-gray-600">
+                                            End Date: <span className="font-medium">
+                                                {calculateEndDate(packageType as FrontendPackageType).toLocaleDateString()}
+                                            </span>
+                                        </p>
                                     </div>
                                 )}
 

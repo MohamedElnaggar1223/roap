@@ -35,6 +35,14 @@ import { Badge } from '@/components/ui/badge';
 import ImportSchedulesDialog from './import-schedules-dialog';
 import { cn } from '@/lib/utils';
 import { monthsToAge, ageToMonths } from '@/lib/utils/age-calculations';
+import {
+    mapToBackendType,
+    calculateEndDate,
+    requiresAutoDateCalculation,
+    getPackageTypeOptions,
+    getPackageDisplayType,
+    type FrontendPackageType
+} from '@/lib/utils/package-types';
 
 export const calculateAgeFromDate = (birthDate: string) => {
     const today = new Date();
@@ -104,7 +112,7 @@ const calculateDateFromAge = (age: number, unit: string): Date => {
 };
 
 const packageSchema = z.object({
-    type: z.enum(["Term", "Monthly", "Full Season", "Assessment"]),
+    type: z.enum(["Term", "Monthly", "Full Season", "Assessment", "3 Months", "6 Months", "Annual"]),
     termNumber: z.string().optional(),
     name: z.string().optional(),
     price: z.string().min(1, "Price is required"),
@@ -155,7 +163,7 @@ const packageSchema = z.object({
 });
 
 interface Package {
-    type: "Term" | "Monthly" | "Full Season" | 'Assessment'
+    type: "Term" | "Monthly" | "Full Season" | 'Assessment' | "3 Months" | "6 Months" | "Annual"
     termNumber?: number
     name: string
     price: number
@@ -291,8 +299,10 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
     const form = useForm<z.infer<typeof packageSchema>>({
         resolver: zodResolver(packageSchema),
         defaultValues: {
-            type: packageEdited.name.startsWith('Assessment') ? 'Assessment' : packageEdited.name.startsWith('Term') ? 'Term' :
-                packageEdited.name.includes('Monthly') ? 'Monthly' : 'Full Season',
+            type: packageEdited.name.startsWith('Assessment') ? 'Assessment' :
+                packageEdited.name.startsWith('Term') ?
+                    getPackageDisplayType('Term', packageEdited.startDate, packageEdited.endDate, packageEdited.name) as FrontendPackageType :
+                    packageEdited.name.includes('Monthly') ? 'Monthly' : 'Full Season',
             termNumber: packageEdited.name.startsWith('Term') ?
                 packageEdited.name.split(' ')[1] : undefined,
             name: packageEdited.name.startsWith('Term') ? '' :
@@ -558,11 +568,14 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
 
             if (packageEdited.id) {
                 setLoading(true)
-                const packageName = values.type === "Term" ?
+                const backendType = mapToBackendType(values.type as FrontendPackageType);
+                const packageName = values.type === "Assessment" ?
                     `Assessment ${values.termNumber}` :
-                    values.type === "Monthly" ?
+                    backendType === "Monthly" ?
                         `Monthly ${values.name}` :
-                        values.name
+                        backendType === "Term" ?
+                            (values.type === "Term" ? `Term ${values.termNumber}` : `Term ${values.type}`) :
+                            values.name
                 console.log("JUST BEFORE EDITING------------------------")
                 console.log(values.startDate)
                 console.log(values.endDate)
@@ -597,7 +610,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                     entryFeesEndDate: values.type !== "Monthly" && showEntryFeesFields ?
                         format(values.entryFeesEndDate!, 'yyyy-MM-dd 00:00:00') : undefined,
                     capacity: 9999,
-                    type: values.type
+                    type: backendType
                 })
 
                 if (result.error) {

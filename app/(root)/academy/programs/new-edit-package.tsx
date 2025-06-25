@@ -31,6 +31,14 @@ import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff } from 'lucide-react';
+import {
+    mapToBackendType,
+    calculateEndDate,
+    requiresAutoDateCalculation,
+    getPackageTypeOptions,
+    getPackageDisplayType,
+    type FrontendPackageType
+} from '@/lib/utils/package-types';
 
 const formatTimeValue = (value: string) => {
     if (!value) return '';
@@ -42,7 +50,7 @@ const formatTimeValue = (value: string) => {
 };
 
 const packageSchema = z.object({
-    type: z.enum(["Term", "Monthly", "Full Season", "Assessment"]),
+    type: z.enum(["Term", "Monthly", "Full Season", "Assessment", "3 Months", "6 Months", "Annual"]),
     termNumber: z.string().optional(),
     name: z.string().optional(),
     price: z.string().min(1, "Price is required"),
@@ -303,7 +311,8 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
         resolver: zodResolver(packageSchema),
         defaultValues: {
             type: packageData?.name.startsWith('Assessment') ? 'Assessment' :
-                packageData?.name.startsWith('Term') ? 'Term' :
+                packageData?.name.startsWith('Term') ?
+                    getPackageDisplayType('Term', packageData?.startDate ?? '', packageData?.endDate ?? '', packageData?.name) as FrontendPackageType :
                     packageData?.name.includes('Monthly') ? 'Monthly' : 'Full Season',
             termNumber: packageData?.name.startsWith('Term') ?
                 packageData?.name.split(' ')[1] : undefined,
@@ -468,9 +477,10 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
         try {
             if (packageData?.id || packageData?.tempId) {
                 setLoading(true)
-                const packageName = values.type === "Term" ?
-                    `Term ${values.termNumber}` :
-                    values.type === "Monthly" ?
+                const backendType = mapToBackendType(values.type as FrontendPackageType);
+                const packageName = backendType === "Term" ?
+                    (values.type === "Term" ? `Term ${values.termNumber}` : `Term ${values.type}`) :
+                    backendType === "Monthly" ?
                         `Monthly ${values.name}` :
                         `Full Season ${values.name ?? ''}`
 
@@ -643,6 +653,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                     console.log("Step 6: Final fields");
                     const updatedPackage = {
                         ...withEntryFees,
+                        type: backendType, // Use backend type for storage
                         capacity: program?.flexible ? null : (values.capacityType === "unlimited" ? 9999 : parseInt(values.capacity)),
                         sessionPerWeek: values.flexible ? (values.sessionPerWeek ?? 0) : values.schedules.length,
                         sessionDuration: values.flexible ? (values.sessionDuration ?? 0) : null,
@@ -811,16 +822,27 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Type <span className='text-xs text-red-500'>*</span></FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <Select onValueChange={(value) => {
+                                                field.onChange(value as FrontendPackageType);
+                                                // Auto-set dates for duration-based types
+                                                if (requiresAutoDateCalculation(value as FrontendPackageType)) {
+                                                    const today = new Date();
+                                                    const endDate = calculateEndDate(value as FrontendPackageType, today);
+                                                    form.setValue("startDate", today);
+                                                    form.setValue("endDate", endDate);
+                                                }
+                                            }} defaultValue={field.value}>
                                                 <FormControl>
                                                     <SelectTrigger className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'>
                                                         <SelectValue placeholder="Select type" />
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent className='!bg-[#F1F2E9]'>
-                                                    <SelectItem value="Monthly">Monthly</SelectItem>
-                                                    <SelectItem value="Term">Term</SelectItem>
-                                                    <SelectItem value="Full Season">Full Season</SelectItem>
+                                                    {getPackageTypeOptions().map((option) => (
+                                                        <SelectItem key={option.value} value={option.value}>
+                                                            {option.label}
+                                                        </SelectItem>
+                                                    ))}
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />
@@ -1079,7 +1101,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                         })}
                                         <FormMessage />
                                     </div>
-                                ) : (
+                                ) : !requiresAutoDateCalculation(packageType as FrontendPackageType) ? (
                                     <div className="flex gap-4">
                                         <FormField
                                             control={form.control}
@@ -1104,6 +1126,17 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                                 </FormItem>
                                             )}
                                         />
+                                    </div>
+                                ) : (
+                                    <div className="p-4 bg-gray-50 rounded-lg">
+                                        <p className="text-sm text-gray-600">
+                                            Start Date: <span className="font-medium">{new Date().toLocaleDateString()}</span>
+                                        </p>
+                                        <p className="text-sm text-gray-600">
+                                            End Date: <span className="font-medium">
+                                                {calculateEndDate(packageType as FrontendPackageType).toLocaleDateString()}
+                                            </span>
+                                        </p>
                                     </div>
                                 )}
 

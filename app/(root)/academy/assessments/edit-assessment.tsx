@@ -41,6 +41,7 @@ import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
 import { useGendersStore } from '@/providers/store-provider'
 import { ageToMonths, monthsToAge } from '@/lib/utils/age-calculations';
+import { getPackageDisplayName, type BackendPackageType } from '@/lib/utils/package-types';
 
 const calculateAgeFromDate = (birthDate: string) => {
     const today = new Date();
@@ -109,7 +110,7 @@ const editAssessmentSchema = z.object({
 })
 
 interface Package {
-    type: "Term" | "Monthly" | "Full Season" | 'Assessment' | 'Assessment'
+    type: "Term" | "Monthly" | "Full Season" | 'Assessment' | "3 Months" | "6 Months" | "Annual"
     termNumber?: number
     name: string
     price: number
@@ -475,7 +476,12 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                                             {createdPackages.map((packageData, index) => (
                                                 <div className="contents" key={index}>
                                                     <div className="py-4 px-4 bg-main-white rounded-l-[20px] flex items-center justify-start font-bold font-inter">
-                                                        {packageData.name}
+                                                        {getPackageDisplayName(
+                                                            packageData.type === "Assessment" ? "Assessment" : "Term" as BackendPackageType,
+                                                            packageData.startDate,
+                                                            packageData.endDate,
+                                                            packageData.name
+                                                        )}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
                                                         {packageData.price}
