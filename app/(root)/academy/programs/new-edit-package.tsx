@@ -848,7 +848,13 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                             </Select>
                                             {["Term", "3 Months", "6 Months", "Annual", "Full Season"].includes(packageType) && (
                                                 <FormDescription className="text-xs text-gray-500 mt-1">
-                                                    Pro Rate will be calculated automatically from the starting date and ending date
+                                                    {
+                                                        packageType.includes("3 Months") ? "Pro Rate will be calculated automatically 3 months from booking date" :
+                                                            packageType.includes("6 Months") ? "Pro Rate will be calculated automatically 6 months from booking date" :
+                                                                packageType.includes("Annual") ? "Pro Rate will be calculated automatically 1 year from booking date" :
+                                                                    packageType.includes("Full Season") ? "Pro Rate will be calculated automatically from the starting date and ending date" :
+                                                                        "Pro Rate will be calculated automatically from the starting date and ending date"
+                                                    }
                                                 </FormDescription>
                                             )}
                                             <FormMessage />
