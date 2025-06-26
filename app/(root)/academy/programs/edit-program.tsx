@@ -1519,12 +1519,12 @@ export default function EditProgram({ branches, sports, programEdited, academySp
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
                                                         {(() => {
                                                             const displayName = getPackageDisplayName(
-                                                                "Term" as BackendPackageType,
+                                                                packageData.name.startsWith('Assessment') ? 'Assessment' : packageData.name.startsWith('Term') ? 'Term' : packageData.name.startsWith('Monthly') ? 'Monthly' : packageData.name.startsWith('Full Season') ? 'Full Season' : 'Term',
                                                                 packageData.startDate,
                                                                 packageData.endDate,
                                                                 packageData.name
                                                             );
-                                                            return displayName.length > 10 ? displayName.substring(0, 10) + "..." : displayName;
+                                                            return displayName.length > 12 ? displayName.substring(0, 10) + "..." : displayName;
                                                         })()}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">

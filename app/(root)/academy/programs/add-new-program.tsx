@@ -950,7 +950,7 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
                                                         {(() => {
                                                             const displayName = getPackageDisplayName(
-                                                                packageData.type as BackendPackageType,
+                                                                packageData.name.startsWith('Assessment') ? 'Assessment' : packageData.name.startsWith('Term') ? 'Term' : packageData.name.startsWith('Monthly') ? 'Monthly' : packageData.name.startsWith('Full Season') ? 'Full Season' : 'Term' as BackendPackageType,
                                                                 packageData.startDate,
                                                                 packageData.endDate,
                                                                 packageData.name

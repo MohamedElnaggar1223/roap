@@ -673,6 +673,11 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                                                     ))}
                                                 </SelectContent>
                                             </Select>
+                                            {["Term", "3 Months", "6 Months", "Annual", "Full Season"].includes(packageType) && (
+                                                <FormDescription className="text-xs text-gray-500 mt-1">
+                                                    Pro Rate will be calculated automatically from the starting date and ending date
+                                                </FormDescription>
+                                            )}
                                             <FormMessage />
                                         </FormItem>
                                     )}
