@@ -849,9 +849,9 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                             {["Term", "3 Months", "6 Months", "Annual", "Full Season"].includes(packageType) && (
                                                 <FormDescription className="text-xs text-gray-500 mt-1">
                                                     {
-                                                        packageType.includes("3 Months") ? "Pro Rate will be calculated automatically 3 months from booking date" :
-                                                            packageType.includes("6 Months") ? "Pro Rate will be calculated automatically 6 months from booking date" :
-                                                                packageType.includes("Annual") ? "Pro Rate will be calculated automatically 1 year from booking date" :
+                                                        packageType.includes("3 Months") ? "Start and end dates will be calculated automatically 3 months from booking date" :
+                                                            packageType.includes("6 Months") ? "Start and end dates will be calculated automatically 6 months from booking date" :
+                                                                packageType.includes("Annual") ? "Start and end dates will be calculated automatically 1 year from booking date" :
                                                                     packageType.includes("Full Season") ? "Pro Rate will be calculated automatically from the starting date and ending date" :
                                                                         "Pro Rate will be calculated automatically from the starting date and ending date"
                                                     }
@@ -1140,16 +1140,17 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                         />
                                     </div>
                                 ) : (
-                                    <div className="p-4 bg-gray-50 rounded-lg">
-                                        <p className="text-sm text-gray-600">
-                                            Start Date: <span className="font-medium">{new Date().toLocaleDateString()}</span>
-                                        </p>
-                                        <p className="text-sm text-gray-600">
-                                            End Date: <span className="font-medium">
-                                                {calculateEndDate(packageType as FrontendPackageType).toLocaleDateString()}
-                                            </span>
-                                        </p>
-                                    </div>
+                                    // <div className="p-4 bg-gray-50 rounded-lg">
+                                    //     <p className="text-sm text-gray-600">
+                                    //         Start Date: <span className="font-medium">{new Date().toLocaleDateString()}</span>
+                                    //     </p>
+                                    //     <p className="text-sm text-gray-600">
+                                    //         End Date: <span className="font-medium">
+                                    //             {calculateEndDate(packageType as FrontendPackageType).toLocaleDateString()}
+                                    //         </span>
+                                    //     </p>
+                                    // </div>
+                                    <></>
                                 )}
 
                                 <FormField
