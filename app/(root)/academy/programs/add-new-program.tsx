@@ -48,7 +48,6 @@ import { Discount, Package } from '@/stores/programs-store';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { ageToMonths } from '@/lib/utils/age-calculations';
-import { getPackageDisplayName, type BackendPackageType } from '@/lib/utils/package-types';
 
 const addProgramSchema = z.object({
     name: z.string().min(1, "Name is required"),
@@ -949,12 +948,38 @@ export default function AddNewProgram({ branches, sports, academySports, takenCo
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
                                                         {(() => {
-                                                            const displayName = getPackageDisplayName(
-                                                                packageData.name.startsWith('Assessment') ? 'Assessment' : packageData.name.startsWith('Term') ? 'Term' : packageData.name.startsWith('Monthly') ? 'Monthly' : packageData.name.startsWith('Full Season') ? 'Full Season' : 'Term' as BackendPackageType,
-                                                                packageData.startDate,
-                                                                packageData.endDate,
-                                                                packageData.name
-                                                            );
+                                                            // Simple display logic that respects the actual package name
+                                                            let displayName = packageData.name;
+
+                                                            // For Term packages, check the pattern
+                                                            if (packageData.name.startsWith('Term')) {
+                                                                if (packageData.name.match(/^Term \d+$/)) {
+                                                                    // "Term 1" → show "Term 1"
+                                                                    displayName = packageData.name;
+                                                                } else if (packageData.name.includes('3 Months')) {
+                                                                    // "Term 3 Months" → show "3 Months"
+                                                                    displayName = "3 Months";
+                                                                } else if (packageData.name.includes('6 Months')) {
+                                                                    // "Term 6 Months" → show "6 Months"
+                                                                    displayName = "6 Months";
+                                                                } else if (packageData.name.includes('Annual')) {
+                                                                    // "Term Annual" → show "Annual"
+                                                                    displayName = "Annual";
+                                                                } else {
+                                                                    // Fallback to package name
+                                                                    displayName = packageData.name;
+                                                                }
+                                                            } else if (packageData.name.startsWith('Monthly')) {
+                                                                // "Monthly Something" → show "Monthly Something"
+                                                                displayName = packageData.name;
+                                                            } else if (packageData.name.startsWith('Full Season')) {
+                                                                // "Full Season Something" → show "Full Season Something"
+                                                                displayName = packageData.name;
+                                                            } else if (packageData.name.startsWith('Assessment')) {
+                                                                // "Assessment X" → show "Assessment X"
+                                                                displayName = packageData.name;
+                                                            }
+
                                                             return displayName.length > 10 ? displayName.substring(0, 10) + "..." : displayName;
                                                         })()}
                                                     </div>

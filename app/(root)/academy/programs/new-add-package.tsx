@@ -356,7 +356,10 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                 setLoading(true)
                 const backendType = mapToBackendType(values.type as FrontendPackageType);
                 const packageName = backendType === "Term" ?
-                    (values.type === "Term" ? `Term ${values.termNumber}` : `Term ${values.type}`) :
+                    (values.type === "Term" ? `Term ${values.termNumber}` :
+                        values.type === "3 Months" ? "Term 3 Months" :
+                            values.type === "6 Months" ? "Term 6 Months" :
+                                values.type === "Annual" ? "Term Annual" : `Term ${values.termNumber}`) :
                     backendType === "Monthly" ?
                         `Monthly ${values.name ?? ''}` :
                         `Full Season ${values.name ?? ''}`
@@ -658,6 +661,10 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                                                     const endDate = calculateEndDate(value as FrontendPackageType, today);
                                                     form.setValue("startDate", today);
                                                     form.setValue("endDate", endDate);
+                                                }
+                                                // Auto-set term number when changing to Term
+                                                if (value === "Term" && !form.getValues("termNumber")) {
+                                                    form.setValue("termNumber", "1");
                                                 }
                                             }} defaultValue={field.value}>
                                                 <FormControl>

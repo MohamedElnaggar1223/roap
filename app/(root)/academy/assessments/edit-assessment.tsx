@@ -41,7 +41,6 @@ import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
 import { useGendersStore } from '@/providers/store-provider'
 import { ageToMonths, monthsToAge } from '@/lib/utils/age-calculations';
-import { getPackageDisplayName, type BackendPackageType } from '@/lib/utils/package-types';
 
 const calculateAgeFromDate = (birthDate: string) => {
     const today = new Date();
@@ -476,12 +475,41 @@ export default function EditAssessment({ assessment, sports, branches }: Props) 
                                             {createdPackages.map((packageData, index) => (
                                                 <div className="contents" key={index}>
                                                     <div className="py-4 px-4 bg-main-white rounded-l-[20px] flex items-center justify-start font-bold font-inter">
-                                                        {getPackageDisplayName(
-                                                            packageData.type === "Assessment" ? "Assessment" : "Term" as BackendPackageType,
-                                                            packageData.startDate,
-                                                            packageData.endDate,
-                                                            packageData.name
-                                                        )}
+                                                        {(() => {
+                                                            // Simple display logic that respects the actual package name
+                                                            let displayName = packageData.name;
+
+                                                            // For Term packages, check the pattern
+                                                            if (packageData.name.startsWith('Term')) {
+                                                                if (packageData.name.match(/^Term \d+$/)) {
+                                                                    // "Term 1" → show "Term 1"
+                                                                    displayName = packageData.name;
+                                                                } else if (packageData.name.includes('3 Months')) {
+                                                                    // "Term 3 Months" → show "3 Months"
+                                                                    displayName = "3 Months";
+                                                                } else if (packageData.name.includes('6 Months')) {
+                                                                    // "Term 6 Months" → show "6 Months"
+                                                                    displayName = "6 Months";
+                                                                } else if (packageData.name.includes('Annual')) {
+                                                                    // "Term Annual" → show "Annual"
+                                                                    displayName = "Annual";
+                                                                } else {
+                                                                    // Fallback to package name
+                                                                    displayName = packageData.name;
+                                                                }
+                                                            } else if (packageData.name.startsWith('Monthly')) {
+                                                                // "Monthly Something" → show "Monthly Something"
+                                                                displayName = packageData.name;
+                                                            } else if (packageData.name.startsWith('Full Season')) {
+                                                                // "Full Season Something" → show "Full Season Something"
+                                                                displayName = packageData.name;
+                                                            } else if (packageData.name.startsWith('Assessment')) {
+                                                                // "Assessment X" → show "Assessment X"
+                                                                displayName = packageData.name;
+                                                            }
+
+                                                            return displayName;
+                                                        })()}
                                                     </div>
                                                     <div className="py-4 px-4 bg-main-white flex items-center justify-start font-bold font-inter">
                                                         {packageData.price}

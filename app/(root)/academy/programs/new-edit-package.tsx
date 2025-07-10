@@ -312,10 +312,16 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
         defaultValues: {
             type: packageData?.name.startsWith('Assessment') ? 'Assessment' :
                 packageData?.name.startsWith('Term') ?
-                    getPackageDisplayType('Term', packageData?.startDate ?? '', packageData?.endDate ?? '', packageData?.name) as FrontendPackageType :
+                    // Check if it's a simple "Term X" format (where X is just a number)
+                    (packageData?.name.match(/^Term \d+$/) ? 'Term' :
+                        packageData?.name.includes('3 Months') ? '3 Months' :
+                            packageData?.name.includes('6 Months') ? '6 Months' :
+                                packageData?.name.includes('Annual') ? 'Annual' : 'Term') :
                     packageData?.name.includes('Monthly') ? 'Monthly' : 'Full Season',
             termNumber: packageData?.name.startsWith('Term') ?
-                packageData?.name.split(' ')[1] : undefined,
+                (packageData?.name.match(/^Term (\d+)$/) ? packageData?.name.match(/^Term (\d+)$/)![1] :
+                    packageData?.name.includes('3 Months') || packageData?.name.includes('6 Months') || packageData?.name.includes('Annual') ? '1' :
+                        packageData?.name.split(' ')[1]) : undefined,
             name: packageData?.name.startsWith('Term') ? '' :
                 packageData?.name.startsWith('Monthly') ?
                     packageData?.name.split(' ')[1] : packageData?.name.split(' ')[1],
@@ -480,7 +486,10 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                 setLoading(true)
                 const backendType = mapToBackendType(values.type as FrontendPackageType);
                 const packageName = backendType === "Term" ?
-                    (values.type === "Term" ? `Term ${values.termNumber}` : `Term ${values.type}`) :
+                    (values.type === "Term" ? `Term ${values.termNumber}` :
+                        values.type === "3 Months" ? "Term 3 Months" :
+                            values.type === "6 Months" ? "Term 6 Months" :
+                                values.type === "Annual" ? "Term Annual" : `Term ${values.termNumber}`) :
                     backendType === "Monthly" ?
                         `Monthly ${values.name}` :
                         `Full Season ${values.name ?? ''}`
@@ -831,6 +840,10 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                                     const endDate = calculateEndDate(value as FrontendPackageType, today);
                                                     form.setValue("startDate", today);
                                                     form.setValue("endDate", endDate);
+                                                }
+                                                // Auto-set term number when changing to Term
+                                                if (value === "Term" && !form.getValues("termNumber")) {
+                                                    form.setValue("termNumber", "1");
                                                 }
                                             }} defaultValue={field.value}>
                                                 <FormControl>
