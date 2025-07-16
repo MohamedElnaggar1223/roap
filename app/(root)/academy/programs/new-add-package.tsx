@@ -148,6 +148,7 @@ const packageSchema = z.object({
     flexible: z.boolean().default(false),
     sessionPerWeek: z.string().transform(val => parseInt(val) || 0).optional(),
     sessionDuration: z.string().transform(val => parseInt(val) || null).optional().nullable(),
+    proRate: z.boolean().optional(),
 }).superRefine((data, ctx) => {
     if (parseFloat(data.entryFees) > 0 && !data.entryFeesExplanation) {
         ctx.addIssue({
@@ -294,6 +295,7 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
             months: [],
             capacityType: 'normal',
             flexible: program?.flexible ?? false,
+            proRate: false,
         }
     })
 
@@ -312,6 +314,7 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
     const startDate = form.watch("startDate")
     const endDate = form.watch("endDate")
     const months = form.watch("months") || []
+    const proRate = form.watch("proRate")
 
     const addMonth = () => {
         const newMonthEntry = {
@@ -508,6 +511,7 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                         capacity: program?.flexible ? null : (values.capacityType === "unlimited" ? 9999 : parseInt(values.capacity)),
                         sessionPerWeek: values.flexible ? (values.sessionPerWeek ?? 0) : values.schedules.length,
                         sessionDuration: values.flexible ? (values.sessionDuration ?? 0) : null,
+                        proRate: values.proRate,
                         createdAt: new Date().toISOString(),
                         updatedAt: new Date().toISOString(),
                         programId,
@@ -666,7 +670,7 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                                                 if (value === "Term" && !form.getValues("termNumber")) {
                                                     form.setValue("termNumber", "1");
                                                 }
-                                            }} defaultValue={field.value}>
+                                            }} value={field.value}>
                                                 <FormControl>
                                                     <SelectTrigger className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'>
                                                         <SelectValue placeholder="Select type" />
@@ -690,6 +694,25 @@ export default function AddPackage({ open, onOpenChange, programId }: Props) {
                                                                         "Pro Rate will be calculated automatically from the starting date and ending date"
                                                     }
                                                 </FormDescription>
+                                            )}
+                                            {field.value === 'Monthly' && (
+                                                <FormField
+                                                    control={form.control}
+                                                    name="proRate"
+                                                    render={({ field: proRateField }) => (
+                                                        <FormItem className="mt-2 flex flex-row items-center gap-2">
+                                                            <FormLabel className="text-xs">Pro Rate</FormLabel>
+                                                            <FormControl>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    className="!mt-0"
+                                                                    checked={!!proRateField.value}
+                                                                    onChange={e => proRateField.onChange(e.target.checked)}
+                                                                />
+                                                            </FormControl>
+                                                        </FormItem>
+                                                    )}
+                                                />
                                             )}
                                             <FormMessage />
                                         </FormItem>

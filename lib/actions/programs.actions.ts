@@ -462,6 +462,7 @@ interface Package {
     sessionDuration?: number | null
     capacity?: number | null
     flexible?: boolean | null
+    proRate?: boolean | null
 }
 interface ProgramDiscountData {
     id?: number
@@ -614,6 +615,7 @@ export async function createProgramStore(program: Program): Promise<{
                                 entryFeesEndDate: packageData.entryFeesEndDate,
                                 entryFeesExplanation: packageData.entryFeesExplanation,
                                 entryFeesAppliedUntil: packageData.entryFeesAppliedUntil || null,
+                                proRate: packageData.proRate,
                                 createdAt: sql`now()`,
                                 updatedAt: sql`now()`,
                             })
@@ -786,6 +788,7 @@ export async function createProgram(data: {
                                 entryFees: packageData.entryFees ?? 0,
                                 entryFeesExplanation: packageData.entryFeesExplanation,
                                 entryFeesAppliedUntil: packageData.entryFeesAppliedUntil || null,
+                                proRate: packageData.proRate,
                                 createdAt: sql`now()`,
                                 updatedAt: sql`now()`,
                             })
@@ -970,6 +973,7 @@ export async function updateProgramStore(program: Program, oldProgram: Program) 
                                 entryFeesEndDate: packageData.entryFeesEndDate,
                                 entryFeesExplanation: packageData.entryFeesExplanation,
                                 entryFeesAppliedUntil: packageData.entryFeesAppliedUntil || null,
+                                proRate: packageData.proRate,
                                 createdAt: sql`now()`,
                                 updatedAt: sql`now()`,
                             })
@@ -1041,7 +1045,8 @@ export async function updateProgramStore(program: Program, oldProgram: Program) 
                                     entryFeesEndDate: packageData.entryFeesEndDate,
                                     entryFeesExplanation: packageData.entryFeesExplanation,
                                     entryFeesAppliedUntil: packageData.entryFeesAppliedUntil || null,
-                                    hidden: packageData.hidden ?? false
+                                    hidden: packageData.hidden ?? false,
+                                    proRate: packageData.proRate,
                                 })
                                 .where(eq(packages.id, packageData.id!))
 
@@ -1275,6 +1280,7 @@ export async function updateProgram(id: number, data: {
                                 entryFees: packageData.entryFees ?? 0,
                                 entryFeesExplanation: packageData.entryFeesExplanation,
                                 entryFeesAppliedUntil: packageData.entryFeesAppliedUntil || null,
+                                proRate: packageData.proRate,
                                 createdAt: sql`now()`,
                                 updatedAt: sql`now()`,
                             })

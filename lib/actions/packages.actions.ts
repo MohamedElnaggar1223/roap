@@ -71,6 +71,7 @@ export async function createPackage(data: {
     schedules: Schedule[]
     capacity: number
     type: 'Monthly' | 'Term' | 'Full Season' | 'Assessment'
+    proRate?: boolean | null
 }) {
     const session = await auth()
 
@@ -110,7 +111,8 @@ export async function createPackage(data: {
                     createdAt: sql`now()`,
                     updatedAt: sql`now()`,
                     sessionPerWeek: data.schedules.length,
-                    capacity: data.capacity
+                    capacity: data.capacity,
+                    proRate: data.proRate
                 })
                 .returning({
                     id: packages.id
@@ -163,6 +165,7 @@ export async function updatePackage(id: number, data: {
     schedules: Schedule[]
     capacity: number
     type: 'Monthly' | 'Term' | 'Full Season' | 'Assessment'
+    proRate?: boolean | null
 }) {
     const session = await auth()
 
@@ -203,7 +206,8 @@ export async function updatePackage(id: number, data: {
                         data.entryFeesEndDate : null,
                     updatedAt: sql`now()`,
                     sessionPerWeek: data.schedules.length,
-                    capacity: data.capacity
+                    capacity: data.capacity,
+                    proRate: data.proRate
                 })
                 .where(eq(packages.id, id))
 

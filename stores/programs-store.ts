@@ -26,6 +26,7 @@ export type Package = {
     sessionDuration: number | null;
     deleted?: boolean;
     hidden?: boolean;
+    proRate?: boolean | null;
     schedules: {
         id?: number;
         createdAt: string | null;

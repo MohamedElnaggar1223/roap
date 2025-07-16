@@ -819,6 +819,7 @@ export const packages = pgTable("packages", {
     entryFeesEndDate: date("entry_fees_end_date"),
     flexible: boolean("flexible"),
     hidden: boolean("hidden").default(false).notNull(),
+    proRate: boolean("pro_rate").default(sql`NULL`), // Nullable boolean for Monthly pro rate
 }, (table) => {
     return {
         packagesProgramIdForeign: foreignKey({

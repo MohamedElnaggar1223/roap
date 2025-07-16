@@ -82,6 +82,7 @@ const packageSchema = z.object({
     flexible: z.boolean().optional(),
     sessionPerWeek: z.string().transform(val => parseInt(val) || 0).optional(),
     sessionDuration: z.string().transform(val => parseInt(val) || null).optional().nullable(),
+    proRate: z.boolean().optional(),
 }).superRefine((data, ctx) => {
     console.log("Data", data)
     if (parseFloat(data.entryFees) > 0 && !data.entryFeesExplanation) {
@@ -368,7 +369,8 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
             //@ts-ignore
             sessionPerWeek: packageData?.sessionPerWeek.toString() ?? '0',
             //@ts-ignore
-            sessionDuration: packageData?.sessionDuration?.toString() ?? null
+            sessionDuration: packageData?.sessionDuration?.toString() ?? null,
+            proRate: packageData?.proRate ?? false,
         }
     });
 
@@ -399,6 +401,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                     months: [],
                     sessionPerWeek: 0,
                     sessionDuration: 60,
+                    proRate: false,
                 }
             })
             form.reset()
@@ -669,6 +672,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                         sessionDuration: values.flexible ? (values.sessionDuration ?? 0) : null,
                         createdAt: new Date().toISOString(),
                         updatedAt: new Date().toISOString(),
+                        proRate: values.proRate,
                     };
 
                     console.log("Updated Package Object:", updatedPackage);
@@ -690,6 +694,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                         startDate: (startDate!).toISOString(),
                         endDate: (endDate!).toISOString(),
                         months: values.months ?? [],
+                        proRate: values.proRate,
                         schedules: values.schedules.map(s => ({
                             ...s,
                             capacity: parseInt(values.flexible ? s.capacity : values.capacity),
@@ -845,7 +850,7 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                                 if (value === "Term" && !form.getValues("termNumber")) {
                                                     form.setValue("termNumber", "1");
                                                 }
-                                            }} defaultValue={field.value}>
+                                            }} value={field.value}>
                                                 <FormControl>
                                                     <SelectTrigger className='px-2 py-6 rounded-[10px] border border-gray-500 font-inter'>
                                                         <SelectValue placeholder="Select type" />
@@ -869,6 +874,25 @@ export default function EditPackage({ packageEdited, open, onOpenChange, mutate,
                                                                         "Pro Rate will be calculated automatically from the starting date and ending date"
                                                     }
                                                 </FormDescription>
+                                            )}
+                                            {field.value === 'Monthly' && (
+                                                <FormField
+                                                    control={form.control}
+                                                    name="proRate"
+                                                    render={({ field: proRateField }) => (
+                                                        <FormItem className="flex flex-row items-center gap-2 mt-4">
+                                                            <FormLabel className="text-xs">Pro Rate</FormLabel>
+                                                            <FormControl>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    className="!mt-0"
+                                                                    checked={!!proRateField.value}
+                                                                    onChange={e => proRateField.onChange(e.target.checked)}
+                                                                />
+                                                            </FormControl>
+                                                        </FormItem>
+                                                    )}
+                                                />
                                             )}
                                             <FormMessage />
                                         </FormItem>
